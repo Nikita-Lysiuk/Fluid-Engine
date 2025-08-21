@@ -1,0 +1,9 @@
+[package]
+name = "fluid_engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+winit = "0.30.12"
+log = "0.4.27"
+simple_logger = "5.0.0"
