@@ -6,30 +6,31 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use log::{trace, warn};
 
 #[derive(Default)]
-pub struct WindowApp {
+pub struct WindowManager {
     window: Option<Window>
 }
 
-impl ApplicationHandler for WindowApp {
+impl ApplicationHandler for WindowManager {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         self.window = Some(event_loop.create_window(WindowAttributes::default()).unwrap())
     }
 
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, window_id: WindowId, event: WindowEvent) {
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, 
+                    _window_id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
                 trace!("Window close requested. Initiating application shutdown.");
                 event_loop.exit();
             },
             WindowEvent::RedrawRequested => {
-                self.window.as_ref().unwrap().request_redraw();
+                // Placeholder for future redraw handling logic
             },
             _ => (),
         }
     }
 }
 
-impl WindowApp {
+impl WindowManager {
     pub fn window_handle(&self) -> Option<WindowHandle> {
         self.window
             .as_ref()
