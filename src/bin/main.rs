@@ -3,7 +3,8 @@ use fluid_engine::engine::engine::Engine;
 
 fn main() {
     let mut engine = Engine::new();
-    if let Err(err) = engine.game_loop() {
-        error!("error in game loop {}", err);
+    let event_loop = engine.event_loop();
+    if let Err(e) = event_loop.run_app(&mut engine) {
+        error!("Event loop error: {}", e);
     }
 }

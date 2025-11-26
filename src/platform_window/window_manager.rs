@@ -1,36 +1,20 @@
-use winit::application::ApplicationHandler;
-use winit::event::WindowEvent;
-use winit::event_loop::ActiveEventLoop;
+
 use winit::raw_window_handle::{DisplayHandle, HasDisplayHandle, HasWindowHandle, WindowHandle};
-use winit::window::{Window, WindowAttributes, WindowId};
-use log::{trace, warn};
+use winit::window::Window;
+use log::warn;
 
 #[derive(Default)]
 pub struct WindowManager {
     window: Option<Window>
 }
 
-impl ApplicationHandler for WindowManager {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        self.window = Some(event_loop.create_window(WindowAttributes::default()).unwrap())
-    }
-
-    fn window_event(&mut self, event_loop: &ActiveEventLoop, 
-                    _window_id: WindowId, event: WindowEvent) {
-        match event {
-            WindowEvent::CloseRequested => {
-                trace!("Window close requested. Initiating application shutdown.");
-                event_loop.exit();
-            },
-            WindowEvent::RedrawRequested => {
-                // Placeholder for future redraw handling logic
-            },
-            _ => (),
-        }
-    }
-}
-
 impl WindowManager {
+    pub fn is_window_created(&self) -> bool {
+        self.window.is_some()
+    }
+    pub fn create_window(&mut self, window: Window) {
+        self.window = Some(window);
+    }
     pub fn window_handle(&self) -> Option<WindowHandle> {
         self.window
             .as_ref()
@@ -44,7 +28,6 @@ impl WindowManager {
                 )
             })
     }
-
     pub fn display_handle(&self) -> Option<DisplayHandle> {
         self.window
             .as_ref()
