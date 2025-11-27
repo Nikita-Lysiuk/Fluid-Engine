@@ -4,7 +4,9 @@ use ash::{Entry, Instance, Device, vk};
 use ash::vk::{ApplicationInfo, Handle, InstanceCreateInfo, SurfaceKHR, SwapchainKHR};
 use ash_window::enumerate_required_extensions;
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
-use log::{info, debug, warn, error}; // Додаємо різні рівні логування
+use log::{info, debug, warn, error};
+use crate::utils::constants::{APPLICATION_NAME, APPLICATION_VERSION, ENGINE_VERSION};
+// Додаємо різні рівні логування
 
 /// Core Vulkan renderer component, managing the Vulkan instance and lifecycle-dependent resources.
 pub struct Renderer {
@@ -45,12 +47,12 @@ impl Renderer {
     unsafe fn create_instance(entry: &Entry, display_handle: DisplayHandle) -> Result<Instance, Box<dyn Error>> {
         let surface_extensions = enumerate_required_extensions(display_handle.as_raw())?;
         debug!("[Vulkan] Required surface extensions: {}", surface_extensions.len());
-
-        let app_name = CString::new("Engine for Fluid Simulation").unwrap();
+        
         let app_info = ApplicationInfo {
-            p_application_name:  app_name.as_ptr(),
-            application_version: 0,
-            api_version: vk::make_api_version(0, 1, 1, 0),
+            p_application_name:  APPLICATION_NAME,
+            application_version: APPLICATION_VERSION,
+            api_version: APPLICATION_VERSION,
+            engine_version: ENGINE_VERSION,
             ..Default::default()
         };
 
@@ -69,7 +71,7 @@ impl Renderer {
         }
     }
     
-    pub unsafe fn create_surface(&mut self, display_handle: DisplayHandle, window_handle: WindowHandle) -> std::result::Result<(), &'static str> {
+    pub unsafe fn create_surface(&mut self, display_handle: DisplayHandle, window_handle: WindowHandle) -> Result<(), &'static str> {
         info!("[Surface] Attempting to create new Vulkan Surface.");
         unsafe {
             let surface = ash_window::create_surface(

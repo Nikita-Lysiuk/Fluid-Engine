@@ -1,5 +1,3 @@
-use std::fs::File;
-use ash::util;
 use log::{info, debug, warn, error};
 use crate::platform_window::window_manager::WindowManager;
 use crate::engine::renderer::Renderer;
@@ -7,8 +5,8 @@ use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::platform::windows::IconExtWindows;
-use winit::window::{Icon, WindowAttributes, WindowId};
+use winit::window::{WindowAttributes, WindowId};
+use crate::utils::constants::{IS_PAINT_FPS_COUNTER, WINDOW_ICON_PATH, WINDOW_SIZE, WINDOW_TITLE};
 use crate::utils::loader::Loader;
 
 /// Main Engine Core.
@@ -59,12 +57,11 @@ impl ApplicationHandler for Engine {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if !self.window.is_window_created() {
             info!("[Winit] Creating primary application window.");
-
-            let icon_bytes: &[u8] = include_bytes!("../../assets/logo.png");
    
             let attr = WindowAttributes::default()
-                .with_title("Fluid Simulation Engine")
-                .with_window_icon(Loader::load_icon(icon_bytes));
+                .with_title(WINDOW_TITLE)
+                .with_inner_size(WINDOW_SIZE)
+                .with_window_icon(Loader::load_icon(WINDOW_ICON_PATH));
             self.window.create_window(
                 event_loop.create_window(attr).expect("Winit failed to create the native window handle.")
             );
@@ -99,6 +96,10 @@ impl ApplicationHandler for Engine {
             WindowEvent::RedrawRequested => {
                 debug!("[Render] Redraw requested by the OS/Application. Rendering frame...");
                 //TODO SPH physics computation and SDF Raymarching rendering.
+                
+                if IS_PAINT_FPS_COUNTER {
+                    // TODO Implement FPS counter.
+                }
             },
             WindowEvent::Resized(size) => {
                 warn!("[Window] Window resized to {}x{}. Swapchain recreation required.", size.width, size.height);
