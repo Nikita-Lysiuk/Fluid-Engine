@@ -1,11 +1,11 @@
 use log::{info, debug, warn, error};
 use crate::platform_window::window_manager::WindowManager;
-use crate::engine::renderer::Renderer;
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{WindowAttributes, WindowId};
+use crate::renderer::Renderer;
 use crate::utils::constants::{IS_PAINT_FPS_COUNTER, WINDOW_ICON_PATH, WINDOW_SIZE, WINDOW_TITLE};
 use crate::utils::loader::Loader;
 
@@ -69,22 +69,20 @@ impl ApplicationHandler for Engine {
 
         let display_handle = self.window.display_handle().expect("Display Handle must be present after window creation.");
         let window_handle = self.window.window_handle().expect("Window Handle must be present after window creation.");
-
-        unsafe {
-            if self.renderer.is_none() {
-                info!("[Vulkan] Initializing core Renderer.");
-                self.renderer = Some(Renderer::new(display_handle).expect("Vulkan Instance creation failed. Check driver/API support."));
-                debug!("[Vulkan] Renderer object initialized.");
-            }
-
-            info!("[Vulkan] Creating Vulkan Surface for the window.");
-            self.renderer.as_mut().unwrap().create_surface(
-                display_handle,
-                window_handle,
-            ).expect("Failed to create Vulkan Surface from Winit handles.");
-
-            // TODO: Add initialization of Logical Device, Swapchain, and render targets here.
+        
+        if self.renderer.is_none() {
+            info!("[Vulkan] Initializing core Renderer.");
+            self.renderer = Some(Renderer::new(display_handle).expect("Vulkan Instance creation failed. Check driver/API support."));
+            debug!("[Vulkan] Renderer object initialized.");
         }
+        
+        info!("[Vulkan] Creating Vulkan Surface for the window.");
+        self.renderer.as_mut().unwrap().handle_presentation(
+            display_handle,
+            window_handle,
+        ).expect("Failed to create Vulkan Surface from Winit handles.");
+
+        // TODO: Add initialization of Logical Device, Swapchain, and render targets here.
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
@@ -113,12 +111,10 @@ impl ApplicationHandler for Engine {
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
         info!("[Vulkan] Application suspended. Destroying window-dependent Vulkan resources (Surface, Swapchain).");
-        unsafe {
-            if let Some(renderer) = self.renderer.as_mut() {
-                // TODO: Add renderer.destroy_swapchain();
-                renderer.destroy_surface();
-                debug!("[Vulkan] Surface successfully destroyed.");
-            }
+        if let Some(renderer) = self.renderer.as_mut() {
+            // TODO: Add renderer.destroy_swapchain();
+            renderer.delete_presentation();
+            debug!("[Vulkan] Surface successfully destroyed.");
         }
     }
 

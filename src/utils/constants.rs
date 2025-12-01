@@ -5,7 +5,7 @@ use ash::vk::make_api_version;
 use winit::dpi::{PhysicalSize, Size};
 
 pub const APPLICATION_NAME: *const c_char = c"Engine for Fluid Simulation".as_ptr();
-pub const APPLICATION_VERSION: u32 = make_api_version(0, 1, 1, 0);
+pub const APPLICATION_VERSION: u32 = make_api_version(0, 1, 3, 0);
 pub const ENGINE_VERSION: u32 = make_api_version(1, 0, 0, 0);
 
 pub const WINDOW_TITLE: &str = "Fluid Simulation Engine";
