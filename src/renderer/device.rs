@@ -1,5 +1,6 @@
 use std::error::Error;
-use ash::Device;
+use ash::{Device, Instance};
+use crate::errors::device_error::DeviceError;
 
 pub struct DeviceContext {
     device: Option<Device>,
@@ -7,12 +8,20 @@ pub struct DeviceContext {
 
 impl DeviceContext {
     
-    pub fn new() -> Result<Self, Box<dyn Error>> {
-        Ok ( DeviceContext {
-            device: None
-        })
+    pub fn new(instance: &Instance) -> Result<Self, DeviceError> {
+        unsafe {
+            let physical_devices = instance.enumerate_physical_devices()?;
+            
+            if physical_devices.is_empty() {
+                return Err(DeviceError::NoSuitableGpuFound);
+            }
+
+            Ok ( DeviceContext {
+                device: None
+            })
+        }
     }
-    unsafe fn create_device() -> Result<Device, Box<dyn Error>> {
+    unsafe fn create_device() -> Result<Device, DeviceError> {
         unimplemented!()
     }
 }

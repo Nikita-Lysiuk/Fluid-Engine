@@ -13,6 +13,8 @@ glam = "0.30.9"
 rayon = "1.11.0"
 gpu-allocator = "0.28.0"
 image = "0.25.9"
+thiserror = "2.0.17"
+anyhow = "1.0.100"
 
 [build-dependencies]
 shaderc = "0.10.1"

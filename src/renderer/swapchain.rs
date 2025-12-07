@@ -1,7 +1,9 @@
 use std::error::Error;
+use ash::{Entry, Instance};
 use ash::vk::{Handle, SurfaceKHR, SwapchainKHR};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
+use crate::errors::presentation_error::PresentationError;
 use crate::renderer::instance;
 
 pub struct SwapchainHandler {
@@ -11,19 +13,17 @@ pub struct SwapchainHandler {
 }
 
 impl SwapchainHandler {
-    pub fn new(instance_ctx: &instance::VulkanInstanceContext) -> Result<Self, Box<dyn Error>> {
-        unsafe {
-            let surface_loader = ash::khr::surface::Instance::new(&instance_ctx.entry, &instance_ctx.instance);
-            info!("[Vulkan] Surface extension loader initialized.");
+    pub fn new(entry: &Entry, instance: &Instance) -> Self {
+        let surface_loader = ash::khr::surface::Instance::new(&entry, &instance);
+        info!("[Vulkan] Surface extension loader initialized.");
             
-            Ok(SwapchainHandler {
-                surface_loader,
-                surface: None,
-                swapchain: None,
-            })
+        SwapchainHandler { 
+            surface_loader, 
+            surface: None, 
+            swapchain: None, 
         }
     }
-    pub unsafe fn create_surface(&mut self, instance_ctx: &instance::VulkanInstanceContext, display_handle: DisplayHandle, window_handle: WindowHandle) -> Result<(), &'static str> {
+    pub unsafe fn create_surface(&mut self, instance_ctx: &instance::VulkanInstanceContext, display_handle: DisplayHandle, window_handle: WindowHandle) -> Result<(), PresentationError> {
         info!("[Surface] Attempting to create new Vulkan Surface.");
         unsafe {
             let surface = ash_window::create_surface(
@@ -32,15 +32,12 @@ impl SwapchainHandler {
                 display_handle.as_raw(),
                 window_handle.as_raw(),
                 None,
-            ).map_err(|e| {
-                error!("[Surface] FATAL: Surface creation failed: {:?}", e);
-                panic!("Failed to create surface: {:?}", e);
-            }).unwrap();
+            ).map_err(PresentationError::SurfaceCreation)?;
 
             if let Some(old_surface) = self.surface.replace(surface) {
                 warn!("[Surface] Logic error: Surface creation detected an existing Surface ({:?}).", old_surface.as_raw());
                 self.surface.replace(old_surface);
-                return Err("Surface creation called when an existing Surface was already present. Did 'suspended' not run?");
+                return Err(PresentationError::SurfaceAlreadyExists);
             }
 
             info!("[Surface] Vulkan Surface created successfully. Handle: {:?}", surface.as_raw());

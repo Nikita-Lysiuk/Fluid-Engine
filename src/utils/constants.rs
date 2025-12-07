@@ -1,5 +1,6 @@
 use std::ffi::CStr;
 use std::os::raw::c_char;
+use std::time::Duration;
 use ash::ext::debug_utils;
 use ash::vk::make_api_version;
 use winit::dpi::{PhysicalSize, Size};
@@ -12,8 +13,9 @@ pub const WINDOW_TITLE: &str = "Fluid Simulation Engine";
 pub const WINDOW_ICON_PATH: &'static [u8] = include_bytes!("../../assets/logo.png");
 pub const WINDOW_SIZE: Size = Size::Physical(PhysicalSize { width: 1280, height: 720 });
 pub const MAX_FRAMES_IN_FLIGHT: usize = 2;
-pub const IS_PAINT_FPS_COUNTER: bool = false; 
+pub const IS_PAINT_FPS_COUNTER: bool = true; 
 pub const PREFERRED_FPS: u32 = 120;
+pub const TARGET_FRAME_DURATION: Duration = Duration::from_nanos(8_333_333);
 pub const VALIDATION_LAYERS: [*const c_char; 1] = [
     c"VK_LAYER_KHRONOS_validation".as_ptr()
 ];

@@ -2,14 +2,28 @@ use std::error::Error;
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr;
 use ash::{vk, Entry, Instance};
-use ash::vk::{ApplicationInfo, DebugUtilsMessageSeverityFlagsEXT as Severity, DebugUtilsMessengerCreateInfoEXT, InstanceCreateInfo, StructureType};
-use ash::vk::DebugUtilsMessageTypeFlagsEXT as Type;
+use ash::vk::{
+    ApplicationInfo, 
+    DebugUtilsMessageSeverityFlagsEXT as Severity, 
+    DebugUtilsMessageTypeFlagsEXT as Type, 
+    DebugUtilsMessengerCreateInfoEXT, 
+    InstanceCreateInfo, 
+    StructureType
+};
 use crate::utils::debug_utils::vulkan_debug_callback;
 use ash::ext::debug_utils;
 use ash_window::enumerate_required_extensions;
 use log::{debug, error, info, warn};
 use winit::raw_window_handle::DisplayHandle;
-use crate::utils::constants::{APPLICATION_NAME, APPLICATION_VERSION, DEBUG_UTILS_EXTENSION_NAME, ENABLE_VALIDATION_LAYERS, ENGINE_VERSION, VALIDATION_LAYERS};
+use crate::errors::vulkan_instance_error::VulkanInstanceError;
+use crate::utils::constants::{
+    APPLICATION_NAME, 
+    APPLICATION_VERSION, 
+    DEBUG_UTILS_EXTENSION_NAME, 
+    ENABLE_VALIDATION_LAYERS, 
+    ENGINE_VERSION, 
+    VALIDATION_LAYERS
+};
 
 pub struct VulkanInstanceContext {
     pub entry: Entry,
@@ -21,7 +35,7 @@ pub struct VulkanInstanceContext {
 }
 
 impl VulkanInstanceContext {
-    pub fn new(display_handle: DisplayHandle) -> Result<Self, Box<dyn Error>> { 
+    pub fn new(display_handle: DisplayHandle) -> Result<Self, VulkanInstanceError> { 
         unsafe { 
             let entry = Entry::linked();
             info!("[Vulkan] Entry handle acquired successfully.");
@@ -43,8 +57,10 @@ impl VulkanInstanceContext {
             })
         }
     }
-    unsafe fn create_instance(entry: &Entry, display_handle: DisplayHandle) -> Result<Instance, Box<dyn Error>> {
-        let mut surface_extensions = enumerate_required_extensions(display_handle.as_raw())?.to_vec();
+    unsafe fn create_instance(entry: &Entry, display_handle: DisplayHandle) -> Result<Instance, VulkanInstanceError> {
+        let mut surface_extensions = enumerate_required_extensions(display_handle.as_raw())
+            .map_err(VulkanInstanceError::ExtensionEnumeration)? 
+            .to_vec();
         debug!("[Vulkan] Required surface extensions: {}", surface_extensions.len());
 
         let app_info = ApplicationInfo {
@@ -88,7 +104,7 @@ impl VulkanInstanceContext {
         unsafe {
             entry.create_instance(&instance_info, None).map_err(|e| {
                 error!("[Vulkan] Failed to create Instance: {:?}", e);
-                e.into()
+                VulkanInstanceError::Vulkan(e)
             })
         }
     }
@@ -104,7 +120,7 @@ impl VulkanInstanceContext {
             .pfn_user_callback(Some(vulkan_debug_callback))
     }
 
-    unsafe fn setup_debug_messenger(entry: &Entry, instance: &Instance) -> Result<(debug_utils::Instance, vk::DebugUtilsMessengerEXT), Box<dyn Error>> {
+    unsafe fn setup_debug_messenger(entry: &Entry, instance: &Instance) -> Result<(debug_utils::Instance, vk::DebugUtilsMessengerEXT), VulkanInstanceError> {
         let debug_info = Self::create_debug_utils_info();
         let debug_utils_loader = debug_utils::Instance::new(&entry, &instance);
         let debug_messenger = unsafe { debug_utils_loader.create_debug_utils_messenger(&debug_info, None)? };
@@ -114,7 +130,7 @@ impl VulkanInstanceContext {
         entry: &Entry,
         instance_info: &mut InstanceCreateInfo,
         required_layers: &[*const c_char],
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), VulkanInstanceError> {
 
         if !ENABLE_VALIDATION_LAYERS {
             info!("[Vulkan] Validation layers are disabled in this build.");
@@ -143,7 +159,7 @@ impl VulkanInstanceContext {
             instance_info.pp_enabled_layer_names = required_layers.as_ptr();
             Ok(())
         } else {
-            Err("One or more required validation layers are not supported.".into())
+            Err(VulkanInstanceError::ValidationLayerNotSupported("One or more required validation layers are not supported.".to_string()))
         }
     }
     
