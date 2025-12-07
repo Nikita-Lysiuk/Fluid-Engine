@@ -18,6 +18,9 @@ pub enum DeviceError {
     #[error("Failed to create the logical Vulkan device: {0:?}")]
     DeviceCreationFailure(VkResult),
 
+    #[error("Missing dependency: Vulkan Surface (Window) was not initialized when required.")]
+    SurfaceDependencyMissing,
+
     #[error("An unexpected device-related error occurred: {0}")]
     Other(String),
 }

@@ -40,7 +40,7 @@ impl VulkanInstanceContext {
             info!("[Vulkan] Entry handle acquired successfully.");
     
             let instance = Self::create_instance(&entry, display_handle)?;
-            info!("[Vulkan] Vulkan Instance (version 1.1+) created.");
+            info!("[Vulkan] Vulkan Instance (version 1.3) created.");
     
             #[cfg(debug_assertions)]
             let (debug_utils_loader, debug_messenger) = Self::setup_debug_messenger(&entry, &instance)?;

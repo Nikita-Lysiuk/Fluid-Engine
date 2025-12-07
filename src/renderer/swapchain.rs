@@ -1,8 +1,9 @@
 use std::error::Error;
 use ash::{Entry, Instance};
-use ash::vk::{Handle, SurfaceKHR, SwapchainKHR};
+use ash::vk::{Handle, PhysicalDevice, SurfaceKHR, SwapchainKHR};
 use log::{debug, info, warn};
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
+use crate::errors::device_error::DeviceError;
 use crate::errors::presentation_error::PresentationError;
 use crate::renderer::instance;
 
@@ -51,6 +52,18 @@ impl SwapchainHandler {
             info!("[Surface] Surface destroyed successfully.");
         } else {
             debug!("[Surface] Surface destroy called, but Surface was already None.");
+        }
+    }
+    
+    pub unsafe fn get_physical_device_surface_support(
+        &self,
+        physical_device: PhysicalDevice,
+        queue_family_index: u32,
+    ) -> Result<bool, DeviceError> {
+        unsafe {
+            let surface = self.surface.ok_or(DeviceError::SurfaceDependencyMissing)?;
+            self.surface_loader.get_physical_device_surface_support(physical_device, queue_family_index, surface)
+                .map_err(|e| DeviceError::Vulkan(e))
         }
     }
     pub unsafe fn create_swapchain() -> Result<SwapchainKHR, Box<dyn Error>> {

@@ -10,7 +10,7 @@ mod swapchain;
 /// Core Vulkan renderer component, managing the Vulkan instance and lifecycle-dependent resources.
 pub struct Renderer {
     instance_ctx: instance::VulkanInstanceContext,
-    device_ctx: device::DeviceContext,
+    device_ctx: Option<device::DeviceContext>,
     swapchain_handler: swapchain::SwapchainHandler,
 }
 
@@ -18,13 +18,12 @@ impl Renderer {
     /// Initializes the core, window-independent Vulkan components (Entry, Instance, Surface Loader).
     pub fn new(display_handle: DisplayHandle) -> Result<Self, ApplicationError> {
         let instance_ctx = instance::VulkanInstanceContext::new(display_handle)?;
-        let device_ctx = device::DeviceContext::new(&instance_ctx.instance)?;
         let swapchain_handler = swapchain::SwapchainHandler::new(&instance_ctx.entry, &instance_ctx.instance);
         
         info!("[Vulkan] Renderer core successfully initialized.");
         Ok (Renderer {
             swapchain_handler,
-            device_ctx,
+            device_ctx: None,
             instance_ctx,
         })
     }
@@ -32,9 +31,12 @@ impl Renderer {
     pub fn handle_presentation(
         &mut self,
         display_handle: DisplayHandle, 
-        window_handle: WindowHandle) -> Result<(), PresentationError> {
+        window_handle: WindowHandle) -> Result<(), ApplicationError> {
         unsafe {
-            self.swapchain_handler.create_surface(&self.instance_ctx, display_handle, window_handle)
+            self.swapchain_handler.create_surface(&self.instance_ctx, display_handle, window_handle)?;
+            self.device_ctx = Some(device::DeviceContext::new(&self.instance_ctx.instance, &self.swapchain_handler)?);
+            
+            Ok(())
         }
     }
     
@@ -48,8 +50,8 @@ impl Drop for Renderer {
     fn drop(&mut self) {
         info!("[Renderer] Beginning explicit shutdown sequence.");
         unsafe {
-            self.swapchain_handler.destroy_surface();
-            self.device_ctx.destroy_self();
+            self.device_ctx.take();
+            self.delete_presentation();
             self.instance_ctx.destroy_self();
             info!("[Vulkan] Renderer Drop sequence completed.");
         }        

@@ -137,7 +137,6 @@ impl ApplicationHandler for Engine {
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
         info!("[Vulkan] Application suspended. Destroying window-dependent Vulkan resources (Surface, Swapchain).");
         if let Some(renderer) = self.renderer.as_mut() {
-            // TODO: Add renderer.destroy_swapchain();
             renderer.delete_presentation();
             debug!("[Vulkan] Surface successfully destroyed.");
         }
