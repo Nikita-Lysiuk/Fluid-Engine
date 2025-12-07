@@ -58,8 +58,8 @@ impl Engine {
             self.window.create_window(window);
         }
         
-        let display_handle = self.window.display_handle().ok_or(ApplicationError::External(Box::from("Display handle missing after window creation.")))?;
-        let window_handle = self.window.window_handle().ok_or(ApplicationError::External(Box::from("Window handle missing after window creation.")))?;
+        let display_handle = self.window.display_handle()?;
+        let window_handle = self.window.window_handle()?;
         
         if self.renderer.is_none() {
             info!("[Vulkan] Initializing core Renderer.");
@@ -80,7 +80,9 @@ impl Engine {
     /// This is typically called once in `main()`.
     pub fn event_loop(&mut self) -> EventLoop<()> {
         debug!("[Engine] Transferring ownership of the Winit Event Loop.");
-        self.event_loop.take().expect("Engine initialization guarantees EventLoop is present until ownership is transferred.")
+        self.event_loop
+            .take()
+            .expect("Engine initialization guarantees EventLoop is present until ownership is transferred.")
     }
     
 }
@@ -109,10 +111,17 @@ impl ApplicationHandler for Engine {
                 let frame_end_time = self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION;
                 event_loop.set_control_flow(ControlFlow::WaitUntil(frame_end_time));
                 
-                self.window.redraw();
+                if let Err(e) = self.window.redraw() {
+                    error!("FATAL: Redraw failed: {}", e);
+                    event_loop.exit();
+                    return;
+                }
 
                 if IS_PAINT_FPS_COUNTER {
-                    self.window.change_window_title(&self.fps_counter.fps().to_string());
+                    let fps_str = self.fps_counter.fps().to_string();
+                    if let Err(e) = self.window.change_window_title(&fps_str) {
+                        warn!("Could not update window title: {}", e);
+                    }
                 }
             },
             WindowEvent::Resized(size) => {
