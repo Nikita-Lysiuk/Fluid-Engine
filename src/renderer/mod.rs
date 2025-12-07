@@ -46,11 +46,12 @@ impl Renderer {
 }
 impl Drop for Renderer {
     fn drop(&mut self) {
-        warn!("[Renderer] Beginning explicit shutdown sequence.");
+        info!("[Renderer] Beginning explicit shutdown sequence.");
         unsafe {
             self.swapchain_handler.destroy_surface();
+            self.device_ctx.destroy_self();
             self.instance_ctx.destroy_self();
-            warn!("[Vulkan] Renderer Drop sequence completed.");
+            info!("[Vulkan] Renderer Drop sequence completed.");
         }        
     }
 }

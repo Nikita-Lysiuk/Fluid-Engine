@@ -52,7 +52,7 @@ impl Engine {
             let attr = WindowAttributes::default()
                 .with_title(WINDOW_TITLE)
                 .with_inner_size(WINDOW_SIZE)
-                .with_window_icon(Loader::load_icon(WINDOW_ICON_PATH));
+                .with_window_icon(Some(Loader::load_icon(WINDOW_ICON_PATH)?));
             
             let window = event_loop.create_window(attr)?;
             self.window.create_window(window);

@@ -12,5 +12,5 @@ pub enum EngineError {
     HandleMissing(String),
     
     #[error("Error during window manipulation: {0}")]
-    WindowManagement(String)
+    WindowManagement(String),
 }

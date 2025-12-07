@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr;
 use ash::{vk, Entry, Instance};
@@ -167,7 +166,7 @@ impl VulkanInstanceContext {
         unsafe {
             #[cfg(debug_assertions)]
             {
-                warn!("[Vulkan] Destroying Debug Messenger.");
+                info!("[Vulkan] Destroying Debug Messenger.");
                 self.debug_utils_loader.destroy_debug_utils_messenger(self.debug_messenger, None);
             }
 
