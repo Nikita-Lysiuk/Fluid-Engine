@@ -9,6 +9,7 @@ mod instance;
 mod device;
 mod presentation;
 mod swapchain_resources;
+mod graphics_pipeline;
 
 /// Core Vulkan renderer component, managing the Vulkan instance and lifecycle-dependent resources.
 pub struct Renderer {
@@ -16,6 +17,7 @@ pub struct Renderer {
     device_ctx: Option<device::DeviceContext>,
     swapchain_handler: presentation::PresentationContext,
     swapchain_resources: Option<swapchain_resources::SwapchainResources>,
+    graphics_pipeline: Option<graphics_pipeline::GraphicsPipeline>,
 }
 
 impl Renderer {
@@ -30,6 +32,7 @@ impl Renderer {
             device_ctx: None,
             instance_ctx,
             swapchain_resources: None,
+            graphics_pipeline: None,
         })
     }
     pub fn handle_resize(&mut self, window: &Window) -> Result<(), ApplicationError> {
@@ -58,6 +61,17 @@ impl Renderer {
             self.device_ctx = Some(device::DeviceContext::new(&self.instance_ctx.instance, &self.swapchain_handler)?);
             self.create_swapchain(window)?;
             self.create_image_views()?;
+            self.graphics_pipeline = Some(graphics_pipeline::GraphicsPipeline::new(
+                &self.device_ctx
+                    .as_ref()
+                    .ok_or(DeviceError::DeviceContextRetrievalFailure("Logical Device".to_string()))
+                    .unwrap()
+                    .device,
+                &self.swapchain_resources
+                    .as_ref()
+                    .ok_or(PresentationError::SwapchainResourcesNotInitialized)?
+                    .swapchain_extent
+            )?);
             
             Ok(())
         }
@@ -77,6 +91,14 @@ impl Renderer {
                     .take()
                     .map(|res| res.swapchain)
             );
+            self.graphics_pipeline
+                .as_ref()
+                .map(|pipeline| pipeline.destroy_pipeline_layout(
+                    &self.device_ctx
+                        .as_ref()
+                        .unwrap()
+                        .device
+                ));
         }
     }
     unsafe fn create_swapchain(&mut self, window: &Window) -> Result<(), ApplicationError> {
