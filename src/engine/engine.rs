@@ -69,13 +69,13 @@ impl Engine {
         
         info!("[Vulkan] Creating Vulkan Surface for the window.");
         self.renderer.as_mut().unwrap().handle_presentation(
+            self.window.window.as_ref().unwrap(),
             display_handle,
             window_handle,
         )?; 
 
         Ok(())
     }
-
     /// Consumes the stored EventLoop to start the application's main thread loop.
     /// This is typically called once in `main()`.
     pub fn event_loop(&mut self) -> EventLoop<()> {
@@ -84,7 +84,6 @@ impl Engine {
             .take()
             .expect("Engine initialization guarantees EventLoop is present until ownership is transferred.")
     }
-    
 }
 
 impl ApplicationHandler for Engine {
@@ -93,7 +92,6 @@ impl ApplicationHandler for Engine {
             Ok(_) => {},
             Err(e) => {
                 error!("FATAL INITIALIZATION ERROR: {}", e);
-                // Тут ми ловимо помилку і ініціюємо вихід, якщо ініціалізація не вдалася
                 event_loop.exit();
             }
         }
@@ -126,7 +124,14 @@ impl ApplicationHandler for Engine {
             },
             WindowEvent::Resized(size) => {
                 warn!("[Window] Window resized to {}x{}. Swapchain recreation required.", size.width, size.height);
-                // TODO: Handle Swapchain and frame buffer recreation.
+                self.renderer.as_mut().map(|renderer| {
+                    if let Some(winit_window) = self.window.window.as_ref() {
+                        if let Err(e) = renderer.handle_resize(winit_window) {
+                            error!("FATAL: Swapchain recreation failed after window resize: {}", e);
+                            event_loop.exit();
+                        }
+                    }
+                });
             }
             _ => {
                 // debug!("[Winit] Unhandled window event: {:?}", event);

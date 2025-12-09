@@ -7,7 +7,7 @@ use crate::utils::constants::WINDOW_TITLE;
 
 #[derive(Default)]
 pub struct WindowManager {
-    window: Option<Window>
+    pub window: Option<Window>
 }
 
 impl WindowManager {

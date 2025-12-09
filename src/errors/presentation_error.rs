@@ -14,5 +14,11 @@ pub enum PresentationError {
 
     #[error("Surface creation called when an existing Surface was already present. Did 'suspended' not run?")]
     SurfaceAlreadyExists,
+
+    #[error("No suitable surface format found for the swapchain.")]
+    NoSuitableSurfaceFormatFound,
+    
+    #[error("Swapchain relied resources were not initialized before use.")]
+    SwapchainResourcesNotInitialized,
 }
 

@@ -19,5 +19,8 @@ pub const TARGET_FRAME_DURATION: Duration = Duration::from_nanos(8_333_333);
 pub const VALIDATION_LAYERS: [*const c_char; 1] = [
     c"VK_LAYER_KHRONOS_validation".as_ptr()
 ];
+pub const DEVICE_EXTENSIONS: [*const c_char; 1] = [
+ash::khr::swapchain::NAME.as_ptr()
+];
 pub const ENABLE_VALIDATION_LAYERS: bool = cfg!(debug_assertions);
 pub const DEBUG_UTILS_EXTENSION_NAME: &CStr = debug_utils::NAME;

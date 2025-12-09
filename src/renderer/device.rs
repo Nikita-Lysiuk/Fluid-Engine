@@ -4,12 +4,13 @@ use ash::{vk, Device, Instance};
 use ash::vk::{DeviceCreateInfo, DeviceQueueCreateInfo, PhysicalDevice, PhysicalDeviceFeatures, PhysicalDeviceType, Queue, QueueFlags, StructureType};
 use log::{debug, info, warn};
 use crate::errors::device_error::DeviceError;
-use crate::renderer::swapchain::SwapchainHandler;
+use crate::renderer::presentation::{PresentationContext};
+use crate::utils::constants::DEVICE_EXTENSIONS;
 
 #[derive(Default)]
-struct QueueFamilyIndices {
-    graphics_family: Option<u32>,
-    present_family: Option<u32>
+pub struct QueueFamilyIndices {
+    pub graphics_family: Option<u32>,
+    pub present_family: Option<u32>
 }
 impl QueueFamilyIndices {
     fn is_complete(&self) -> bool {
@@ -18,6 +19,8 @@ impl QueueFamilyIndices {
 }
 
 pub struct DeviceContext {
+    pub indices: QueueFamilyIndices,
+    pub physical_device: PhysicalDevice,
     pub device: Device,
     pub graphics_queue: Queue,
     pub present_queue: Queue,
@@ -25,7 +28,7 @@ pub struct DeviceContext {
 
 impl DeviceContext {
     
-    pub fn new(instance: &Instance, surface_ctx: &SwapchainHandler) -> Result<Self, DeviceError> {
+    pub fn new(instance: &Instance, surface_ctx: &PresentationContext) -> Result<Self, DeviceError> {
         unsafe {
             let (physical_device, queue_family_indices) = Self::find_physical_device(instance, surface_ctx)?;
             info!("[Vulkan] Physical device selected: {:?}", physical_device);
@@ -36,13 +39,15 @@ impl DeviceContext {
             let present_queue = logical_device.get_device_queue(queue_family_indices.present_family.unwrap(), 0);
 
             Ok(DeviceContext {
+                indices: queue_family_indices,
+                physical_device,
                 device: logical_device,
                 graphics_queue,
                 present_queue,
             })
         }
     }
-    unsafe fn find_physical_device(instance: &Instance, surface_ctx: &SwapchainHandler) -> Result<(PhysicalDevice, QueueFamilyIndices), DeviceError> {
+    unsafe fn find_physical_device(instance: &Instance, surface_ctx: &PresentationContext) -> Result<(PhysicalDevice, QueueFamilyIndices), DeviceError> {
         unsafe {
             let physical_devices = instance.enumerate_physical_devices()?;
             if physical_devices.is_empty() { return Err(DeviceError::NoSuitableGpuFound); }
@@ -56,11 +61,20 @@ impl DeviceContext {
                 .max_by_key(|(score, _)| *score);
 
             let (score, physical_device) = best_candidate.ok_or(DeviceError::NoSuitableGpuFound)?;
-
             let indices = Self::find_queue_families(physical_device, surface_ctx, instance)?;
+            let extensions_supported = Self::check_device_extension_support(physical_device, instance)?;
+            let swapchain_support = surface_ctx.query_swapchain_support(physical_device)?;
 
-            if score > 0 {
-                info!("Selected GPU with score: {}", score);
+            let mut swapchain_adequate = false;
+            if extensions_supported {
+                swapchain_adequate = !swapchain_support.formats.is_empty() && !swapchain_support.present_modes.is_empty()
+            }
+
+            if score > 0 && extensions_supported && swapchain_adequate {
+                info!("[Device] All required device extensions are supported.");
+                info!("[Device] Selected GPU with score: {}", score);
+                info!("[Device] Selected Physical Device is swappable and meets swapchain requirements.");
+                
                 Ok((physical_device, indices))
             } else {
                 Err(DeviceError::NoSuitableGpuFound)
@@ -109,7 +123,7 @@ impl DeviceContext {
     }
     unsafe fn find_queue_families(
         device: PhysicalDevice,
-        surface_ctx: &SwapchainHandler,
+        surface_ctx: &PresentationContext,
         instance: &Instance) -> Result<QueueFamilyIndices, DeviceError> {
         unsafe {
             let mut indices = QueueFamilyIndices::default();
@@ -152,6 +166,8 @@ impl DeviceContext {
             p_queue_create_infos: queue_create_info.as_ptr(),
             queue_create_info_count: queue_create_info.len() as u32,
             p_enabled_features: &device_features,
+            pp_enabled_extension_names: DEVICE_EXTENSIONS.as_ptr(),
+            enabled_extension_count: DEVICE_EXTENSIONS.len() as u32,
             ..DeviceCreateInfo::default()
         };
 
@@ -161,7 +177,6 @@ impl DeviceContext {
 
         Ok(device)
     }
-
     fn create_unique_queue_infos(indices: &QueueFamilyIndices) -> Vec<DeviceQueueCreateInfo> {
         let mut unique_queue_families = HashSet::<u32>::new();
 
@@ -179,6 +194,21 @@ impl DeviceContext {
                 ..DeviceQueueCreateInfo::default()
             }
         }).collect()
+    }
+    fn check_device_extension_support(device: PhysicalDevice, instance: &Instance) -> Result<bool, DeviceError> {
+       unsafe {
+           let mut required_extensions: HashSet<&[u8]> = DEVICE_EXTENSIONS.iter()
+               .map(|&ext_ptr| {
+                   let cstr = CStr::from_ptr(ext_ptr);
+                   cstr.to_bytes()
+               }).collect();
+ 
+           instance.enumerate_device_extension_properties(device)?.into_iter().for_each(|extension| {
+               required_extensions.remove(CStr::from_ptr(extension.extension_name.as_ptr()).to_bytes());
+           });
+           
+           Ok(required_extensions.is_empty())
+       }
     }
 }
 

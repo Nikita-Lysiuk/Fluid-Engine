@@ -20,7 +20,10 @@ pub enum DeviceError {
 
     #[error("Missing dependency: Vulkan Surface (Window) was not initialized when required.")]
     SurfaceDependencyMissing,
-
+    
+    #[error("Failed to retrieve device context information: {0}")]
+    DeviceContextRetrievalFailure(String),
+    
     #[error("An unexpected device-related error occurred: {0}")]
     Other(String),
 }
