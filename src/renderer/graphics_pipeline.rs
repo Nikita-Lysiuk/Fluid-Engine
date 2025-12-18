@@ -1,16 +1,17 @@
 use ash::{vk, Device};
-use ash::vk::{ColorComponentFlags, CullModeFlags, DynamicState, Extent2D, FrontFace, Offset2D, PipelineColorBlendAttachmentState, PipelineDynamicStateCreateInfo, PipelineInputAssemblyStateCreateInfo, PipelineLayout, PipelineMultisampleStateCreateInfo, PipelineRasterizationStateCreateInfo, PipelineShaderStageCreateInfo, PipelineVertexInputStateCreateInfo, PipelineViewportStateCreateInfo, PolygonMode, PrimitiveTopology, Rect2D, SampleCountFlags, ShaderModule, ShaderModuleCreateInfo, ShaderStageFlags, StructureType, Viewport};
-use log::info;
+use ash::vk::{AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, ColorComponentFlags, CullModeFlags, DynamicState, Extent2D, FrontFace, ImageLayout, Offset2D, PipelineBindPoint, PipelineColorBlendAttachmentState, PipelineDynamicStateCreateInfo, PipelineInputAssemblyStateCreateInfo, PipelineLayout, PipelineMultisampleStateCreateInfo, PipelineRasterizationStateCreateInfo, PipelineShaderStageCreateInfo, PipelineVertexInputStateCreateInfo, PipelineViewportStateCreateInfo, PolygonMode, PrimitiveTopology, Rect2D, RenderPass, RenderPassCreateInfo, SampleCountFlags, ShaderModule, ShaderModuleCreateInfo, ShaderStageFlags, StructureType, SubpassDescription, Viewport};
+use log::{info};
 use crate::errors::application_error::ApplicationError;
 use crate::errors::graphics_pipeline_error::GraphicsPipelineError;
 use crate::utils::loader::Loader;
 
 pub struct GraphicsPipeline {
+    pub render_pass: RenderPass,
     pub pipeline_layout: PipelineLayout,
 }
 
 impl GraphicsPipeline {
-    pub fn new (device: &Device, extent2d: &Extent2D) -> Result<GraphicsPipeline, ApplicationError> {
+    pub fn new (device: &Device, swapchain_image_format: vk::Format) -> Result<GraphicsPipeline, ApplicationError> {
         unsafe {
             let vert_shader_module = Self::create_shader_module(
                 device,
@@ -28,10 +29,11 @@ impl GraphicsPipeline {
             let rasterization_state_info = Self::create_rasterization_state_info();
             let multisample_state_info = Self::create_multisample_state_info();
             let color_blend_state_info = Self::create_color_blend_state_info();
+            
             let pipeline_layout = Self::create_pipeline_layout(device)?;
-            
-            
-            
+            info!("[Graphics Pipeline] Pipeline layout created.");
+            let render_pass = Self::create_render_pass(device, swapchain_image_format)?;
+            info!("[Graphics Pipeline] Render pass created.");
 
             info!("[Vulkan] Graphics pipeline successfully created.");
 
@@ -41,26 +43,60 @@ impl GraphicsPipeline {
                 fragment_shader_module);
 
             Ok(GraphicsPipeline {
+                render_pass,
                 pipeline_layout,
             })
         }
     }
-    unsafe fn create_pipeline_layout(device: &Device) -> Result<PipelineLayout, GraphicsPipelineError> {
+    pub unsafe fn create_pipeline_layout(device: &Device) -> Result<PipelineLayout, GraphicsPipelineError> {
         unsafe {
             let layout_info = vk::PipelineLayoutCreateInfo {
                 s_type: StructureType::PIPELINE_LAYOUT_CREATE_INFO,
                 ..vk::PipelineLayoutCreateInfo::default()
             };
-            
+
             device.create_pipeline_layout(&layout_info, None)
                 .map_err(GraphicsPipelineError::PipelineLayoutCreationError)
         }
     }
-    pub unsafe fn destroy_pipeline_layout(&self, device: &Device) {
+    pub unsafe fn create_render_pass(device: &Device, swapchain_image_format: vk::Format) -> Result<RenderPass, GraphicsPipelineError> {
         unsafe {
-            info!("[Graphics Pipeline] Deleting pipeline layout...");
-            device.destroy_pipeline_layout(self.pipeline_layout, None);
-            info!("[Graphics Pipeline] Pipeline layout deleted.");
+            let color_attachment = AttachmentDescription {
+                format: swapchain_image_format,
+                samples: SampleCountFlags::TYPE_1,
+                load_op: AttachmentLoadOp::CLEAR,
+                store_op: AttachmentStoreOp::STORE,
+                stencil_load_op: AttachmentLoadOp::DONT_CARE,
+                stencil_store_op: AttachmentStoreOp::DONT_CARE,
+                initial_layout: ImageLayout::UNDEFINED,
+                final_layout: ImageLayout::PRESENT_SRC_KHR,
+                ..AttachmentDescription::default()
+            };
+
+            let color_attachment_ref = AttachmentReference {
+                attachment: 0,
+                layout: ImageLayout::COLOR_ATTACHMENT_OPTIMAL,
+                ..AttachmentReference::default()
+            };
+
+            let subpass = SubpassDescription {
+                pipeline_bind_point: PipelineBindPoint::GRAPHICS,
+                color_attachment_count: 1,
+                p_color_attachments: &color_attachment_ref,
+                ..SubpassDescription::default()
+            };
+
+            let render_pass_info = RenderPassCreateInfo {
+                s_type: StructureType::RENDER_PASS_CREATE_INFO,
+                attachment_count: 1,
+                p_attachments: &color_attachment,
+                subpass_count: 1,
+                p_subpasses: &subpass,
+                ..RenderPassCreateInfo::default()
+            };
+            
+            device.create_render_pass(&render_pass_info, None)
+                .map_err(GraphicsPipelineError::RenderPassCreationError)
         }
     }
     unsafe fn create_shader_module(device: &Device, code: Vec<u32>) -> Result<ShaderModule, GraphicsPipelineError> {
@@ -205,6 +241,18 @@ impl GraphicsPipeline {
             device.destroy_shader_module(vert_shader_module, None);
             device.destroy_shader_module(fragment_shader_module, None);
             info!("[Graphics Pipeline] Shader modules deleted.");
+        }
+    }
+    pub unsafe fn destroy_pipeline_layout(&self, device: &Device) {
+        unsafe {
+            device.destroy_pipeline_layout(self.pipeline_layout, None);
+            info!("[Graphics Pipeline] Pipeline layout deleted.");
+        }
+    }
+    pub unsafe fn destroy_render_pass(&self, device: &Device) {
+        unsafe {
+            device.destroy_render_pass(self.render_pass, None);
+            info!("[Graphics Pipeline] Render pass deleted");
         }
     }
 }

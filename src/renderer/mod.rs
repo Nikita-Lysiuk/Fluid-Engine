@@ -37,111 +37,105 @@ impl Renderer {
     }
     pub fn handle_resize(&mut self, window: &Window) -> Result<(), ApplicationError> {
         unsafe {
-            self.swapchain_resources
-                .as_mut()
-                .map(|res| res.destroy_image_views(
-                    &self.device_ctx
-                        .as_ref()
-                        .unwrap()
-                        .device
-                ));
             self.create_swapchain(window)?;
-            self.create_image_views()?;
-            
-            Ok(())
+
+            if let (Some(res), Some(ctx)) = (self.swapchain_resources.as_mut(), self.device_ctx.as_ref()) {
+                let device = &ctx.device;
+
+                res.create_image_views(device)?;
+
+                Ok(())
+            } else {
+                Err(PresentationError::SwapchainResourcesNotInitialized.into())
+            }
         }
     }
     pub fn handle_presentation(
         &mut self,
         window: &Window,
-        display_handle: DisplayHandle, 
-        window_handle: WindowHandle) -> Result<(), ApplicationError> {
+        display_handle: DisplayHandle,
+        window_handle: WindowHandle
+    ) -> Result<(), ApplicationError> {
         unsafe {
             self.swapchain_handler.create_surface(&self.instance_ctx, display_handle, window_handle)?;
-            self.device_ctx = Some(device::DeviceContext::new(&self.instance_ctx.instance, &self.swapchain_handler)?);
-            self.create_swapchain(window)?;
-            self.create_image_views()?;
-            self.graphics_pipeline = Some(graphics_pipeline::GraphicsPipeline::new(
-                &self.device_ctx
-                    .as_ref()
-                    .ok_or(DeviceError::DeviceContextRetrievalFailure("Logical Device".to_string()))
-                    .unwrap()
-                    .device,
-                &self.swapchain_resources
-                    .as_ref()
-                    .ok_or(PresentationError::SwapchainResourcesNotInitialized)?
-                    .swapchain_extent
-            )?);
+
+            let device_context = device::DeviceContext::new(&self.instance_ctx.instance, &self.swapchain_handler)?;
+            self.device_ctx = Some(device_context);
             
+            self.create_swapchain(window)?;
+            
+            if let (Some(res), Some(ctx)) = (self.swapchain_resources.as_mut(), self.device_ctx.as_ref()) {
+                let device = &ctx.device;
+                
+                res.create_image_views(device)?;
+                
+                self.graphics_pipeline = Some(graphics_pipeline::GraphicsPipeline::new(
+                    device,
+                    res.swapchain_image_format
+                )?);
+            } else {
+                return Err(PresentationError::SwapchainResourcesNotInitialized.into());
+            }
+
             Ok(())
         }
     }
     pub fn delete_presentation(&mut self) {
         unsafe {
-            self.swapchain_resources
-                .as_mut()
-                .map(|res| res.destroy_image_views(
-                    &self.device_ctx
-                        .as_ref()
-                        .unwrap()
-                        .device
-                ));
-            self.swapchain_handler.destroy_swapchain(
-                self.swapchain_resources
-                    .take()
-                    .map(|res| res.swapchain)
-            );
-            self.graphics_pipeline
+            let device = &self.device_ctx
                 .as_ref()
-                .map(|pipeline| pipeline.destroy_pipeline_layout(
-                    &self.device_ctx
-                        .as_ref()
-                        .unwrap()
-                        .device
-                ));
+                .ok_or(DeviceError::DeviceContextRetrievalFailure("Logical Device".to_string()))
+                .unwrap()
+                .device;
+
+            if let Some(pipeline) = self.graphics_pipeline.take() {
+                pipeline.destroy_render_pass(device);
+                pipeline.destroy_pipeline_layout(device);
+                // TODO: pipeline.destroy_pipeline(device); // Не забудьте видалити сам VkPipeline пізніше
+            }
+
+            if let Some(res) = self.swapchain_resources.as_mut() {
+                res.destroy_image_views(device);
+            }
+
+            let resources = self.swapchain_resources.take();
+            self.swapchain_handler.destroy_swapchain(
+                resources.map(|res| res.swapchain)
+            );
         }
     }
     unsafe fn create_swapchain(&mut self, window: &Window) -> Result<(), ApplicationError> {
         unsafe {
-            let swapchain_context = self.swapchain_handler.create_swapchain(
-                &self.instance_ctx.instance,
-                &self.device_ctx
-                    .as_ref()
-                    .ok_or(DeviceError::DeviceContextRetrievalFailure("Logical Device".to_string()))
-                    .unwrap()
-                    .device,
-                self.swapchain_resources.take().map(|res| res.swapchain),
-                self.device_ctx
-                    .as_ref()
-                    .ok_or(DeviceError::DeviceContextRetrievalFailure("Physical Device".to_string()))
-                    .unwrap()
-                    .physical_device,
-                &self.device_ctx
-                    .as_ref()
-                    .ok_or(DeviceError::DeviceContextRetrievalFailure("Device Queue Families".to_string()))
-                    .unwrap()
-                    .indices,
-                window,
-            )?;
-            
-            self.swapchain_resources = Some(swapchain_resources::SwapchainResources::new(swapchain_context));
+            if let Some(ctx) = self.device_ctx.as_ref() {
+                if let Some(mut old_resources) = self.swapchain_resources.take() {
+                    old_resources.destroy_image_views(&ctx.device);
 
-            Ok(())
+                    let swapchain_context = self.swapchain_handler.create_swapchain(
+                        &self.instance_ctx.instance,
+                        &ctx.device,
+                        Some(old_resources.swapchain),
+                        ctx.physical_device,
+                        &ctx.indices,
+                        window,
+                    )?;
+                    self.swapchain_resources = Some(swapchain_resources::SwapchainResources::new(swapchain_context));
+                } else {
+                    let swapchain_context = self.swapchain_handler.create_swapchain(
+                        &self.instance_ctx.instance,
+                        &ctx.device,
+                        None,
+                        ctx.physical_device,
+                        &ctx.indices,
+                        window,
+                    )?;
+                    self.swapchain_resources = Some(swapchain_resources::SwapchainResources::new(swapchain_context));
+                }
+
+                Ok(())
+            } else {
+                Err(DeviceError::DeviceContextRetrievalFailure("Logical Device".to_string()).into())
+            }
         }
-    }
-    unsafe fn create_image_views(&mut self) -> Result<(), ApplicationError> {
-        self.swapchain_resources
-            .as_mut()
-            .ok_or(PresentationError::SwapchainResourcesNotInitialized)?
-            .create_image_views(
-                &self.device_ctx
-                    .as_ref()
-                    .ok_or(DeviceError::DeviceContextRetrievalFailure("Logical Device".to_string()))
-                    .unwrap()
-                    .device
-            )?;
-        
-        Ok(())
     }
 }
 impl Drop for Renderer {

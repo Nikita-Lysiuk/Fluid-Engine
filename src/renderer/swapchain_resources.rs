@@ -1,6 +1,6 @@
 use ash::{vk, Device};
-use ash::vk::{ImageAspectFlags, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType, StructureType};
-use log::info;
+use ash::vk::{AttachmentReference, AttachmentStoreOp, ImageAspectFlags, ImageLayout, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType, PipelineBindPoint, PipelineLayout, RenderPass, RenderPassCreateInfo, SampleCountFlags, StructureType, SubpassDescription};
+use log::{info};
 use crate::errors::device_error::DeviceError;
 
 pub struct SwapchainResources {
@@ -14,7 +14,7 @@ pub struct SwapchainResources {
 
 impl SwapchainResources {
     pub fn new(swapchain_context: (vk::SwapchainKHR, Vec<vk::Image>, vk::Format, vk::Extent2D)) -> Self {
-        info!("[Vulkan] Swapchain resources initialized.");
+        info!("[Swapchain Resources] Swapchain resources initialized.");
 
         SwapchainResources {
             swapchain_image_views: vec![vk::ImageView::null(); swapchain_context.1.len()],
@@ -24,7 +24,6 @@ impl SwapchainResources {
             swapchain_extent: swapchain_context.3,
         }
     }
-
     pub fn create_image_views(&mut self, device: &Device) -> Result<(), DeviceError> {
         for (i, image_view) in self.swapchain_image_views.iter_mut().enumerate() {
             let create_info = ImageViewCreateInfo {
@@ -44,16 +43,15 @@ impl SwapchainResources {
             *image_view = unsafe { device.create_image_view(&create_info, None)? };
         }
 
-        info!("[Vulkan] Swapchain image views created.");
+        info!("[Swapchain Resources] Swapchain image views created.");
         Ok(())
     }
-    
     pub fn destroy_image_views(&mut self, device: &Device) {
-        for image_view in &self.swapchain_image_views {
+        for image_view in self.swapchain_image_views.drain(..) {
             unsafe {
-                device.destroy_image_view(*image_view, None);
+                device.destroy_image_view(image_view, None);
             }
         }
-        info!("[Vulkan] Swapchain image views destroyed.");
+        info!("[Swapchain Resources] Swapchain image views destroyed.");
     }
 }
