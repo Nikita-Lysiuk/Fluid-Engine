@@ -14,4 +14,7 @@ pub enum GraphicsPipelineError {
 
     #[error("Failed to create render pass: {0}")]
     RenderPassCreationError(VkResult),
+
+    #[error("Failed to create graphics pipeline: {0}")]
+    PipelineCreationError(VkResult),
 }

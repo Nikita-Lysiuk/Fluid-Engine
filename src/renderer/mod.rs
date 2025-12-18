@@ -26,7 +26,7 @@ impl Renderer {
         let instance_ctx = instance::VulkanInstanceContext::new(display_handle)?;
         let swapchain_handler = presentation::PresentationContext::new(&instance_ctx.entry, &instance_ctx.instance);
         
-        info!("[Vulkan] Renderer core successfully initialized.");
+        info!("[Renderer] Renderer core successfully initialized.");
         Ok (Renderer {
             swapchain_handler,
             device_ctx: None,
@@ -91,7 +91,7 @@ impl Renderer {
             if let Some(pipeline) = self.graphics_pipeline.take() {
                 pipeline.destroy_render_pass(device);
                 pipeline.destroy_pipeline_layout(device);
-                // TODO: pipeline.destroy_pipeline(device); // Не забудьте видалити сам VkPipeline пізніше
+                pipeline.destroy_graphics_pipeline(device);
             }
 
             if let Some(res) = self.swapchain_resources.as_mut() {
@@ -146,7 +146,7 @@ impl Drop for Renderer {
             self.device_ctx.take();
             self.swapchain_handler.destroy_surface();
             self.instance_ctx.destroy_self();
-            info!("[Vulkan] Renderer Drop sequence completed.");
+            info!("[Renderer] Renderer Drop sequence completed.");
         }        
     }
 }

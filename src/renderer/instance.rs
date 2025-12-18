@@ -37,14 +37,14 @@ impl VulkanInstanceContext {
     pub fn new(display_handle: DisplayHandle) -> Result<Self, VulkanInstanceError> { 
         unsafe { 
             let entry = Entry::linked();
-            info!("[Vulkan] Entry handle acquired successfully.");
+            info!("[Instance Context] Entry handle acquired successfully.");
     
             let instance = Self::create_instance(&entry, display_handle)?;
-            info!("[Vulkan] Vulkan Instance (version 1.3) created.");
+            info!("[Instance Context] Vulkan Instance (version 1.3) created.");
     
             #[cfg(debug_assertions)]
             let (debug_utils_loader, debug_messenger) = Self::setup_debug_messenger(&entry, &instance)?;
-            info!("[Vulkan] Debug Messenger initialized.");
+            info!("[Instance Context] Debug Messenger initialized.");
         
             Ok(VulkanInstanceContext {
                 entry,
@@ -60,7 +60,7 @@ impl VulkanInstanceContext {
         let mut surface_extensions = enumerate_required_extensions(display_handle.as_raw())
             .map_err(VulkanInstanceError::ExtensionEnumeration)? 
             .to_vec();
-        debug!("[Vulkan] Required surface extensions: {}", surface_extensions.len());
+        debug!("[Instance Context] Required surface extensions: {}", surface_extensions.len());
 
         let app_info = ApplicationInfo {
             s_type: StructureType::APPLICATION_INFO,
@@ -102,7 +102,7 @@ impl VulkanInstanceContext {
 
         unsafe {
             entry.create_instance(&instance_info, None).map_err(|e| {
-                error!("[Vulkan] Failed to create Instance: {:?}", e);
+                error!("[Instance Context] Failed to create Instance: {:?}", e);
                 VulkanInstanceError::Vulkan(e)
             })
         }
@@ -132,7 +132,7 @@ impl VulkanInstanceContext {
     ) -> Result<(), VulkanInstanceError> {
 
         if !ENABLE_VALIDATION_LAYERS {
-            info!("[Vulkan] Validation layers are disabled in this build.");
+            info!("[Instance Context] Validation layers are disabled in this build.");
             return Ok(());
         }
 
@@ -147,13 +147,13 @@ impl VulkanInstanceContext {
 
             if !is_supported {
                 let req_name_str = unsafe { CStr::from_ptr(required_layer_ptr).to_string_lossy() };
-                error!("[Vulkan] Required validation layer '{}' is NOT supported.", req_name_str);
+                error!("[Instance Context] Required validation layer '{}' is NOT supported.", req_name_str);
             }
             is_supported
         });
 
         if all_supported {
-            info!("[Vulkan] All required validation layers are supported and enabled.");
+            info!("[Instance Context] All required validation layers are supported and enabled.");
             instance_info.enabled_layer_count = required_layers.len() as u32;
             instance_info.pp_enabled_layer_names = required_layers.as_ptr();
             Ok(())
@@ -166,12 +166,12 @@ impl VulkanInstanceContext {
         unsafe {
             #[cfg(debug_assertions)]
             {
-                info!("[Vulkan] Destroying Debug Messenger.");
+                info!("[Instance Context] Destroying Debug Messenger.");
                 self.debug_utils_loader.destroy_debug_utils_messenger(self.debug_messenger, None);
             }
 
             self.instance.destroy_instance(None);
-            info!("[Vulkan] Vulkan Instance destroyed in Drop.");
+            info!("[Instance Context] Vulkan Instance destroyed in Drop.");
         }
     }
 }

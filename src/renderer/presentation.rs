@@ -38,7 +38,7 @@ pub struct PresentationContext {
 impl PresentationContext {
     pub fn new(entry: &Entry, instance: &Instance) -> Self {
         let surface_loader = ash::khr::surface::Instance::new(&entry, &instance);
-        info!("[Vulkan] Surface extension loader initialized.");
+        info!("[Presentation Context] Surface extension loader initialized.");
 
             
         PresentationContext { 
@@ -48,7 +48,7 @@ impl PresentationContext {
         }
     }
     pub unsafe fn create_surface(&mut self, instance_ctx: &instance::VulkanInstanceContext, display_handle: DisplayHandle, window_handle: WindowHandle) -> Result<(), PresentationError> {
-        info!("[Surface] Attempting to create new Vulkan Surface.");
+        info!("[Presentation Context] Attempting to create new Vulkan Surface.");
         unsafe {
             let surface = ash_window::create_surface(
                 &instance_ctx.entry,
@@ -59,22 +59,22 @@ impl PresentationContext {
             ).map_err(PresentationError::SurfaceCreation)?;
 
             if let Some(old_surface) = self.surface.replace(surface) {
-                warn!("[Surface] Logic error: Surface creation detected an existing Surface ({:?}).", old_surface.as_raw());
+                warn!("[Presentation Context] Logic error: Surface creation detected an existing Surface ({:?}).", old_surface.as_raw());
                 self.surface.replace(old_surface);
                 return Err(PresentationError::SurfaceAlreadyExists);
             }
 
-            info!("[Surface] Vulkan Surface created successfully. Handle: {:?}", surface.as_raw());
+            info!("[Presentation Context] Vulkan Surface created successfully. Handle: {:?}", surface.as_raw());
             Ok(())
         }
     }
     pub unsafe fn destroy_surface(&mut self) {
         if let Some(surface) = self.surface.take() {
-            info!("[Surface] Destroying Vulkan Surface. Handle: {:?}", surface.as_raw());
+            info!("[Presentation Context] Destroying Vulkan Surface. Handle: {:?}", surface.as_raw());
             unsafe { self.surface_loader.destroy_surface(surface, None); }
-            info!("[Surface] Surface destroyed successfully.");
+            info!("[Presentation Context] Surface destroyed successfully.");
         } else {
-            debug!("[Surface] Surface destroy called, but Surface was already None.");
+            debug!("[Presentation Context] Surface destroy called, but Surface was already None.");
         }
     }
     pub unsafe fn create_swapchain(
@@ -129,7 +129,7 @@ impl PresentationContext {
 
         let mut old_swapchain_handle = None;
         if let Some(swapchain) = old_swapchain.take() {
-            warn!("[Swapchain] Logic error: Swapchain creation detected an existing Swapchain ({:?}). Replacing it.", swapchain.as_raw());
+            warn!("[Presentation Context] Logic error: Swapchain creation detected an existing Swapchain ({:?}). Replacing it.", swapchain.as_raw());
             create_info.old_swapchain = swapchain;
             old_swapchain_handle = Some(swapchain);
         }
@@ -138,7 +138,7 @@ impl PresentationContext {
             swapchain_loader.create_swapchain(&create_info, None)?
         };
 
-        info!("[Swapchain] Swapchain created successfully. Handle: {:?}. With extent: {:?}", swapchain.as_raw(), extent);
+        info!("[Presentation Context] Swapchain created successfully. Handle: {:?}. With extent: {:?}", swapchain.as_raw(), extent);
 
         if let Some(swapchain) = old_swapchain_handle {
             unsafe {
@@ -149,17 +149,17 @@ impl PresentationContext {
         let images = unsafe { swapchain_loader.get_swapchain_images(swapchain)? };
 
         self.swapchain_loader = Some(swapchain_loader);
-        info!("[Vulkan] Swapchain extension loader initialized.");
+        info!("[Presentation Context] Swapchain extension loader initialized.");
 
         Ok((swapchain, images, surface_format.format, extent))
     }
     pub unsafe fn destroy_swapchain(&mut self, mut swapchain: Option<SwapchainKHR>) {
         if let Some(swapchain) = swapchain.take() {
-            info!("[Swapchain] Destroying Swapchain. Handle: {:?}", swapchain.as_raw());
+            info!("[Presentation Context] Destroying Swapchain. Handle: {:?}", swapchain.as_raw());
             unsafe { self.swapchain_loader.as_ref().unwrap().destroy_swapchain(swapchain, None) }
-            info!("[Swapchain] Swapchain destroyed successfully.");
+            info!("[Presentation Context] Swapchain destroyed successfully.");
         } else {
-            debug!("[Swapchain] Swapchain destroy called, but Swapchain was already None.");
+            debug!("[Presentation Context] Swapchain destroy called, but Swapchain was already None.");
         }
     }
     pub unsafe fn query_swapchain_support(&self, physical_device: PhysicalDevice) -> Result<SwapchainSupportDetails, DeviceError> {

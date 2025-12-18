@@ -31,9 +31,9 @@ impl DeviceContext {
     pub fn new(instance: &Instance, surface_ctx: &PresentationContext) -> Result<Self, DeviceError> {
         unsafe {
             let (physical_device, queue_family_indices) = Self::find_physical_device(instance, surface_ctx)?;
-            info!("[Vulkan] Physical device selected: {:?}", physical_device);
+            info!("[Device Context] Physical device selected: {:?}", physical_device);
             let logical_device = Self::create_logical_device(&instance, physical_device, &queue_family_indices)?;
-            info!("[Vulkan] Logical device created successfully.");
+            info!("[Device Context] Logical device created successfully.");
 
             let graphics_queue = logical_device.get_device_queue(queue_family_indices.graphics_family.unwrap(), 0);
             let present_queue = logical_device.get_device_queue(queue_family_indices.present_family.unwrap(), 0);
@@ -71,9 +71,9 @@ impl DeviceContext {
             }
 
             if score > 0 && extensions_supported && swapchain_adequate {
-                info!("[Device] All required device extensions are supported.");
-                info!("[Device] Selected GPU with score: {}", score);
-                info!("[Device] Selected Physical Device is swappable and meets swapchain requirements.");
+                info!("[Device Context] All required device extensions are supported.");
+                info!("[Device Context] Selected GPU with score: {}", score);
+                info!("[Device Context] Selected Physical Device is swappable and meets swapchain requirements.");
                 
                 Ok((physical_device, indices))
             } else {
@@ -215,6 +215,6 @@ impl DeviceContext {
 impl Drop for DeviceContext {
     fn drop(&mut self) {
         unsafe { self.device.destroy_device(None) }
-        info!("[Vulkan] Logical device destroyed.");
+        info!("[Device Context] Logical device destroyed.");
     }
 }
