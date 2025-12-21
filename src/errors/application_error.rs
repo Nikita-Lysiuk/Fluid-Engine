@@ -1,6 +1,6 @@
 use thiserror::Error;
-use std::error::Error as StdError;
 use winit::error::{EventLoopError, OsError};
+use crate::errors::command_error::CommandError;
 use crate::errors::device_error::DeviceError;
 use crate::errors::engine_error::EngineError;
 use crate::errors::graphics_pipeline_error::GraphicsPipelineError;
@@ -26,6 +26,9 @@ pub enum ApplicationError {
 
     #[error(transparent)]
     Device(#[from] DeviceError),
+    
+    #[error(transparent)]
+    CommandError(#[from] CommandError),
 
     #[error(transparent)]
     Engine(#[from] EngineError)

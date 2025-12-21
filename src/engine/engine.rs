@@ -28,7 +28,7 @@ pub struct Engine {
 impl Engine {
     pub fn new() -> Result<Self, ApplicationError> {
         SimpleLogger::new().init().unwrap();
-        info!("[Init] Logger initialized successfully.");
+        info!("[Engine] Logger initialized successfully.");
 
         let window = WindowManager::default();
 
@@ -47,7 +47,7 @@ impl Engine {
 
     fn initialize_window_and_renderer(&mut self, event_loop: &ActiveEventLoop) -> Result<(), ApplicationError> {
         if !self.window.is_window_created() {
-            info!("[Winit] Creating primary application window.");
+            info!("[Engine] Creating primary application window.");
 
             let attr = WindowAttributes::default()
                 .with_title(WINDOW_TITLE)
@@ -62,12 +62,12 @@ impl Engine {
         let window_handle = self.window.window_handle()?;
         
         if self.renderer.is_none() {
-            info!("[Vulkan] Initializing core Renderer.");
+            info!("[Engine] Initializing core Renderer.");
             self.renderer = Some(Renderer::new(display_handle)?);
-            debug!("[Vulkan] Renderer object initialized.");
+            debug!("[Engine] Renderer object initialized.");
         }
         
-        info!("[Vulkan] Creating Vulkan Surface for the window.");
+        info!("[Engine] Creating Vulkan Surface for the window.");
         self.renderer.as_mut().unwrap().handle_presentation(
             self.window.window.as_ref().unwrap(),
             display_handle,
@@ -82,7 +82,7 @@ impl Engine {
         debug!("[Engine] Transferring ownership of the Winit Event Loop.");
         self.event_loop
             .take()
-            .expect("Engine initialization guarantees EventLoop is present until ownership is transferred.")
+            .expect("[Engine] Engine initialization guarantees EventLoop is present until ownership is transferred.")
     }
 }
 
@@ -91,7 +91,7 @@ impl ApplicationHandler for Engine {
         match self.initialize_window_and_renderer(event_loop) {
             Ok(_) => {},
             Err(e) => {
-                error!("FATAL INITIALIZATION ERROR: {}", e);
+                error!("[Engine] FATAL INITIALIZATION ERROR: {}", e);
                 event_loop.exit();
             }
         }
@@ -100,7 +100,7 @@ impl ApplicationHandler for Engine {
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
         match event {
             WindowEvent::CloseRequested => {
-                info!("[Winit] Close request received. Initiating event loop exit.");
+                info!("[Engine] Close request received. Initiating event loop exit.");
                 event_loop.exit();
             },
             WindowEvent::RedrawRequested => {
@@ -108,9 +108,16 @@ impl ApplicationHandler for Engine {
 
                 let frame_end_time = self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION;
                 event_loop.set_control_flow(ControlFlow::WaitUntil(frame_end_time));
+
+                if let Some(renderer) = self.renderer.as_ref() {
+                    renderer.update(dt).map_err(|e| {
+                        error!("[Engine] FATAL: Renderer update failed: {}", e);
+                        event_loop.exit();
+                    }).ok();
+                }
                 
                 if let Err(e) = self.window.redraw() {
-                    error!("FATAL: Redraw failed: {}", e);
+                    error!("[Engine] FATAL: Redraw failed: {}", e);
                     event_loop.exit();
                     return;
                 }
@@ -118,16 +125,16 @@ impl ApplicationHandler for Engine {
                 if IS_PAINT_FPS_COUNTER {
                     let fps_str = self.fps_counter.fps().to_string();
                     if let Err(e) = self.window.change_window_title(&fps_str) {
-                        warn!("Could not update window title: {}", e);
+                        warn!("[Engine] Could not update window title: {}", e);
                     }
                 }
             },
             WindowEvent::Resized(size) => {
-                warn!("[Window] Window resized to {}x{}. Swapchain recreation required.", size.width, size.height);
+                warn!("[Engine] Window resized to {}x{}. Swapchain recreation required.", size.width, size.height);
                 self.renderer.as_mut().map(|renderer| {
                     if let Some(winit_window) = self.window.window.as_ref() {
                         if let Err(e) = renderer.handle_resize(winit_window) {
-                            error!("FATAL: Swapchain recreation failed after window resize: {}", e);
+                            error!("[Engine] FATAL: Swapchain recreation failed after window resize: {}", e);
                             event_loop.exit();
                         }
                     }
@@ -140,10 +147,10 @@ impl ApplicationHandler for Engine {
     }
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
-        info!("[Vulkan] Application suspended. Destroying window-dependent Vulkan resources (Surface, Swapchain).");
+        info!("[Engine] Application suspended. Destroying window-dependent Vulkan resources (Surface, Swapchain).");
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.delete_presentation();
-            debug!("[Vulkan] Surface successfully destroyed.");
+            debug!("[Engine] Surface successfully destroyed.");
         }
     }
 

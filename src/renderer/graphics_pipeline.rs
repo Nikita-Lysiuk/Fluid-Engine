@@ -211,22 +211,6 @@ impl GraphicsPipeline {
             ..PipelineInputAssemblyStateCreateInfo::default()
         }
     }
-    fn create_viewport(extent2d: &Extent2D) -> Viewport {
-        Viewport {
-            x: 0.0,
-            y: 0.0,
-            width: extent2d.width as f32,
-            height: extent2d.height as f32,
-            min_depth: 0.0,
-            max_depth: 1.0,
-        }
-    }
-    fn create_scissor(extent2d: &Extent2D) -> Rect2D {
-        Rect2D {
-            offset: Offset2D { x: 0, y: 0 },
-            extent: *extent2d,
-        }
-    }
     fn create_viewport_state_info() -> PipelineViewportStateCreateInfo<'static> {
         PipelineViewportStateCreateInfo {
             s_type: StructureType::PIPELINE_VIEWPORT_STATE_CREATE_INFO,

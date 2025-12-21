@@ -17,4 +17,7 @@ pub enum GraphicsPipelineError {
 
     #[error("Failed to create graphics pipeline: {0}")]
     PipelineCreationError(VkResult),
+
+    #[error("Graphics pipeline has not been initialized.")]
+    GraphicsPipelineNotInitialized,
 }
