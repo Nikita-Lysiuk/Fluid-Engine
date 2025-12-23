@@ -1,3 +1,4 @@
+use crate::errors::sync_error::SyncError;
 use std::time::Duration;
 use log::{info};
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
@@ -13,6 +14,7 @@ mod presentation;
 mod swapchain_resources;
 mod graphics_pipeline;
 mod command;
+mod sync_objects;
 
 /// Core Vulkan renderer component, managing the Vulkan instance and lifecycle-dependent resources.
 pub struct Renderer {
@@ -22,6 +24,7 @@ pub struct Renderer {
     swapchain_resources: Option<swapchain_resources::SwapchainResources>,
     graphics_pipeline: Option<graphics_pipeline::GraphicsPipeline>,
     command_ctx: command::CommandContext,
+    sync_objects: Option<sync_objects::SyncObjects>,
 }
 
 impl Renderer {
@@ -38,47 +41,89 @@ impl Renderer {
             swapchain_resources: None,
             graphics_pipeline: None,
             command_ctx,
+            sync_objects: None,
         })
     }
-    pub fn update(&self, dt: Duration) -> Result<(), ApplicationError> {
-        //TODO: Draw frame and update logic
-        if let (
-            Some(ctx), 
-            Some(res), 
-            Some(gp)
-        ) = (
-            self.device_ctx.as_ref(), 
-            self.swapchain_resources.as_ref(), 
-            self.graphics_pipeline.as_ref()
-        ) {
-            let device = &ctx.device;
-            self.command_ctx.record_command_buffer(
-                device,
-                0
-            )?;
-            self.command_ctx.recording_render_pass(
-                device,
-                &gp.render_pass,
-                res,
-                0
-            )?;
-            self.command_ctx.record_graphics_commands(
-                device,
-                res,
-                gp,
-                0
-            )?;
-            self.command_ctx.end_recording(
-                device,
-                0
-            )?;
+    pub fn update(&self) -> Result<(), ApplicationError> {
+        unsafe {
+            if let (
+                Some(ctx),
+                Some(res),
+                Some(gp),
+                Some(sync)
+            ) = (
+                self.device_ctx.as_ref(),
+                self.swapchain_resources.as_ref(),
+                self.graphics_pipeline.as_ref(),
+                self.sync_objects.as_ref(),
+            ) {
+                let device = &ctx.device;
+
+                device.wait_for_fences(
+                    &[sync.in_flight_fence],
+                    true,
+                    u64::MAX
+                ).map_err(|e| SyncError::FailedToWaitForFence(e))?;
+
+                device.reset_fences(&[sync.in_flight_fence])
+                    .map_err(|e| SyncError::FailedToResetFence(e))?;
+
+                let (image_index, _is_suboptimal) = self.presentation_handler.acquire_next_image(
+                    res.swapchain,
+                    u64::MAX,
+                    sync
+                )?;
+
+                self.command_ctx.reset_command_buffer(
+                    device,
+                    image_index as usize
+                )?;
+
+                self.command_ctx.record_command_buffer(
+                    device,
+                    image_index as usize
+                )?;
+
+                self.command_ctx.recording_render_pass(
+                    device,
+                    &gp.render_pass,
+                    res,
+                    image_index as usize
+                )?;
+
+                self.command_ctx.record_graphics_commands(
+                    device,
+                    res,
+                    gp,
+                    image_index as usize
+                )?;
+
+                self.command_ctx.end_recording(
+                    device,
+                    image_index as usize
+                )?;
+
+                self.command_ctx.submit_command_buffer(
+                    device,
+                    ctx.graphics_queue,
+                    sync
+                )?;
+
+                self.presentation_handler.present(
+                    sync,
+                    res.swapchain,
+                    ctx.present_queue,
+                    image_index
+                )?;
+            }
+
+            Ok(())
         }
-        
-        Ok(())
     }
     pub fn handle_resize(&mut self, window: &Window) -> Result<(), ApplicationError> {
         unsafe {
             self.create_swapchain(window)?;
+
 
             if let (
                 Some(res),
@@ -96,6 +141,9 @@ impl Renderer {
                     device,
                     pipeline.render_pass
                 )?;
+
+                let image_count = res.swapchain_images.len();
+                self.command_ctx.reallocate_command_buffers(device, image_count)?;
 
                 Ok(())
             } else {
@@ -138,9 +186,14 @@ impl Renderer {
                     device,
                     &ctx.indices
                 )?;
+
                 self.command_ctx.create_command_buffer(
                     device
                 )?;
+
+                self.sync_objects = Some(sync_objects::SyncObjects::new(
+                    device
+                )?);
             } else {
                 return Err(PresentationError::SwapchainResourcesNotInitialized.into());
             }
@@ -152,6 +205,13 @@ impl Renderer {
         unsafe {
             if let Some(ctx) = self.device_ctx.as_ref() {
                 let device = &ctx.device;
+
+                device.device_wait_idle()
+                    .expect("[Renderer] Failed to wait for device idle during presentation deletion.");
+
+                if let Some(sync) = self.sync_objects.take() {
+                    sync.destroy(device);
+                }
 
                 self.command_ctx.destroy_command_pool(device);
 
@@ -179,6 +239,11 @@ impl Renderer {
         }
     }
     unsafe fn create_swapchain(&mut self, window: &Window) -> Result<(), ApplicationError> {
+        let inner_size = window.inner_size();
+        if inner_size.width == 0 || inner_size.height == 0 {
+            info!("[Renderer] Window is minimized, skipping swapchain recreation.");
+            return Ok(());
+        }
         unsafe {
             if let Some(ctx) = self.device_ctx.as_ref() {
                 if let Some(mut old_resources) = self.swapchain_resources.take() {

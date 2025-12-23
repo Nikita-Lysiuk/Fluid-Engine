@@ -14,7 +14,7 @@ use crate::utils::loader::Loader;
 /// Main Engine Core.
 ///
 /// Serves as the primary entry point and facade for the fluid simulation application.
-/// Manages the top-level application flow, including:
+/// Manages the top-level application flow, including
 /// 1. Initialization and execution of the Winit event loop.
 /// 2. Lifecycle management of the rendering subsystem (Vulkan/Renderer).
 /// 3. Coordination of input events and simulation updates.
@@ -110,7 +110,7 @@ impl ApplicationHandler for Engine {
                 event_loop.set_control_flow(ControlFlow::WaitUntil(frame_end_time));
 
                 if let Some(renderer) = self.renderer.as_ref() {
-                    renderer.update(dt).map_err(|e| {
+                    renderer.update().map_err(|e| {
                         error!("[Engine] FATAL: Renderer update failed: {}", e);
                         event_loop.exit();
                     }).ok();

@@ -1,5 +1,5 @@
 use ash::{vk, Device};
-use ash::vk::{AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, ColorComponentFlags, CullModeFlags, DynamicState, Extent2D, FrontFace, GraphicsPipelineCreateInfo, ImageLayout, Offset2D, Pipeline, PipelineBindPoint, PipelineCache, PipelineColorBlendAttachmentState, PipelineDynamicStateCreateInfo, PipelineInputAssemblyStateCreateInfo, PipelineLayout, PipelineMultisampleStateCreateInfo, PipelineRasterizationStateCreateInfo, PipelineShaderStageCreateInfo, PipelineVertexInputStateCreateInfo, PipelineViewportStateCreateInfo, PolygonMode, PrimitiveTopology, Rect2D, RenderPass, RenderPassCreateInfo, SampleCountFlags, ShaderModule, ShaderModuleCreateInfo, ShaderStageFlags, StructureType, SubpassDescription, Viewport};
+use ash::vk::{AccessFlags, AttachmentDescription, AttachmentLoadOp, AttachmentReference, AttachmentStoreOp, ColorComponentFlags, CullModeFlags, DependencyFlags, DynamicState, FrontFace, GraphicsPipelineCreateInfo, ImageLayout, Pipeline, PipelineBindPoint, PipelineCache, PipelineColorBlendAttachmentState, PipelineDynamicStateCreateInfo, PipelineInputAssemblyStateCreateInfo, PipelineLayout, PipelineMultisampleStateCreateInfo, PipelineRasterizationStateCreateInfo, PipelineShaderStageCreateInfo, PipelineStageFlags, PipelineVertexInputStateCreateInfo, PipelineViewportStateCreateInfo, PolygonMode, PrimitiveTopology, RenderPass, RenderPassCreateInfo, SampleCountFlags, ShaderModule, ShaderModuleCreateInfo, ShaderStageFlags, StructureType, SubpassDependency, SubpassDescription };
 use log::{info};
 use crate::errors::application_error::ApplicationError;
 use crate::errors::graphics_pipeline_error::GraphicsPipelineError;
@@ -122,12 +122,24 @@ impl GraphicsPipeline {
                 ..SubpassDescription::default()
             };
 
+            let dependency = SubpassDependency {
+                src_subpass: vk::SUBPASS_EXTERNAL,
+                dst_subpass: 0,
+                src_stage_mask: PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+                src_access_mask: AccessFlags::empty(),
+                dst_stage_mask: PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT,
+                dst_access_mask: AccessFlags::COLOR_ATTACHMENT_WRITE,
+                dependency_flags: DependencyFlags::empty(),
+            };
+
             let render_pass_info = RenderPassCreateInfo {
                 s_type: StructureType::RENDER_PASS_CREATE_INFO,
                 attachment_count: 1,
                 p_attachments: &color_attachment,
                 subpass_count: 1,
                 p_subpasses: &subpass,
+                dependency_count: 1,
+                p_dependencies: &dependency,
                 ..RenderPassCreateInfo::default()
             };
 

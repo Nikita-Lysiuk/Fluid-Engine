@@ -7,3 +7,4 @@ pub mod application_error;
 pub mod engine_error;
 pub mod graphics_pipeline_error;
 pub mod command_error;
+pub mod sync_error;

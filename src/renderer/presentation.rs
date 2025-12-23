@@ -1,19 +1,5 @@
 use ash::{vk, Device, Entry, Instance};
-use ash::vk::{
-    CompositeAlphaFlagsKHR,
-    Extent2D,
-    Handle,
-    ImageUsageFlags,
-    PhysicalDevice,
-    PresentModeKHR,
-    SharingMode,
-    StructureType,
-    SurfaceCapabilitiesKHR,
-    SurfaceFormatKHR,
-    SurfaceKHR,
-    SwapchainCreateInfoKHR,
-    SwapchainKHR
-};
+use ash::vk::{CompositeAlphaFlagsKHR, Extent2D, Fence, Handle, ImageUsageFlags, PhysicalDevice, PresentInfoKHR, PresentModeKHR, Queue, Semaphore, SharingMode, StructureType, SurfaceCapabilitiesKHR, SurfaceFormatKHR, SurfaceKHR, SwapchainCreateInfoKHR, SwapchainKHR};
 use log::{debug, info, warn};
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
 use winit::window::Window;
@@ -21,6 +7,7 @@ use crate::errors::device_error::DeviceError;
 use crate::errors::presentation_error::PresentationError;
 use crate::renderer::device::QueueFamilyIndices;
 use crate::renderer::instance;
+use crate::renderer::sync_objects::SyncObjects;
 
 #[derive(Default)]
 pub struct SwapchainSupportDetails {
@@ -32,6 +19,7 @@ pub struct SwapchainSupportDetails {
 pub struct PresentationContext {
     surface_loader: ash::khr::surface::Instance,
     surface: Option<SurfaceKHR>,
+
     swapchain_loader: Option<ash::khr::swapchain::Device>,
 }
 
@@ -45,6 +33,51 @@ impl PresentationContext {
             surface_loader, 
             surface: None,
             swapchain_loader: None,
+        }
+    }
+    pub fn present(
+        &self,
+        sync_objects: &SyncObjects,
+        swapchain: SwapchainKHR,
+        present_queue: Queue,
+        image_index: u32
+    ) -> Result<bool, PresentationError> {
+        let present_info = PresentInfoKHR {
+            s_type: StructureType::PRESENT_INFO_KHR,
+            wait_semaphore_count: 1,
+            p_wait_semaphores: [sync_objects.render_finished_semaphore].as_ptr(),
+            swapchain_count: 1,
+            p_swapchains: [swapchain].as_ptr(),
+            p_image_indices: [image_index].as_ptr(),
+            ..PresentInfoKHR::default()
+        };
+
+        unsafe {
+            if let Some(swapchain_loader) = &self.swapchain_loader {
+                swapchain_loader.queue_present(present_queue, &present_info)
+                    .map_err(|e| PresentationError::QueuePresentFailed(e))
+            } else {
+                Err(PresentationError::SwapchainDependencyMissing)
+            }
+        }
+    }
+    pub fn acquire_next_image(
+        &self,
+        swapchain: SwapchainKHR,
+        timeout: u64,
+        sync_objects: &SyncObjects
+    ) -> Result<(u32, bool), PresentationError> {
+        unsafe {
+            if let Some(swapchain_loader) = &self.swapchain_loader {
+                swapchain_loader.acquire_next_image(
+                    swapchain,
+                    timeout,
+                    sync_objects.image_available_semaphore,
+                    Fence::null(),
+                ).map_err(|e| PresentationError::AcquireNextImage(e))
+            } else {
+                Err(PresentationError::SwapchainDependencyMissing)
+            }
         }
     }
     pub unsafe fn create_surface(&mut self, instance_ctx: &instance::VulkanInstanceContext, display_handle: DisplayHandle, window_handle: WindowHandle) -> Result<(), PresentationError> {

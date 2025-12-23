@@ -13,5 +13,11 @@ pub enum CommandError {
     CommandBufferNotAllocated,
 
     #[error("Framebuffer not found for the given index.")]
-    FramebufferNotFound
+    FramebufferNotFound,
+
+    #[error("Failed to allocate command buffers: {0:?}")]
+    FailedToResetCommandBuffer(VkResult),
+
+    #[error("Failed to submit command buffer: {0:?}")]
+    FailedToSubmitCommandBuffer(VkResult),
 }

@@ -1,11 +1,12 @@
 use ash::Device;
-use ash::vk::{ClearColorValue, ClearValue, CommandBuffer, CommandBufferAllocateInfo, CommandBufferBeginInfo, CommandBufferLevel, CommandPool, CommandPoolCreateFlags, CommandPoolCreateInfo, Offset2D, PipelineBindPoint, Rect2D, RenderPass, RenderPassBeginInfo, StructureType};
+use ash::vk::{ClearColorValue, ClearValue, CommandBuffer, CommandBufferAllocateInfo, CommandBufferBeginInfo, CommandBufferLevel, CommandBufferResetFlags, CommandPool, CommandPoolCreateFlags, CommandPoolCreateInfo, Offset2D, PipelineBindPoint, PipelineStageFlags, Queue, Rect2D, RenderPass, RenderPassBeginInfo, StructureType, SubmitInfo};
 use log::info;
 use crate::errors::command_error::CommandError;
 use crate::errors::device_error::DeviceError;
 use crate::renderer::device::QueueFamilyIndices;
 use crate::renderer::graphics_pipeline::GraphicsPipeline;
 use crate::renderer::swapchain_resources::SwapchainResources;
+use crate::renderer::sync_objects::SyncObjects;
 
 pub struct CommandContext {
     pub command_pool: Option<CommandPool>,
@@ -20,11 +21,59 @@ impl CommandContext {
             command_buffer: Vec::new(),
         }
     }
+    pub fn submit_command_buffer(
+        &self,
+        device: &Device,
+        graphics_queue: Queue,
+        sync_objects: &SyncObjects
+    ) -> Result<(), CommandError> {
+        let submit_info = SubmitInfo {
+            s_type: StructureType::SUBMIT_INFO,
+            wait_semaphore_count: 1,
+            p_wait_semaphores: [sync_objects.image_available_semaphore].as_ptr(),
+            p_wait_dst_stage_mask: [PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT].as_ptr(),
+            command_buffer_count: self.command_buffer.len() as u32,
+            p_command_buffers: self.command_buffer.as_ptr(),
+            signal_semaphore_count: 1,
+            p_signal_semaphores: [sync_objects.render_finished_semaphore].as_ptr(),
+            ..SubmitInfo::default()
+        };
+
+        unsafe {
+            device.queue_submit(graphics_queue, &[submit_info], sync_objects.in_flight_fence)
+                .map_err(|e| CommandError::FailedToSubmitCommandBuffer(e))
+        }
+    }
+    pub fn reset_command_buffer(&self, device: &Device, image_index: usize) -> Result<(), CommandError> {
+        unsafe {
+            device.reset_command_buffer(
+                *self.command_buffer.get(image_index)
+                    .ok_or(CommandError::CommandBufferNotAllocated)?,
+                CommandBufferResetFlags::empty()
+            ).map_err(|e| CommandError::FailedToResetCommandBuffer(e))
+        }
+    }
+    pub fn reallocate_command_buffers(&mut self, device: &Device, image_count: usize) -> Result<(), CommandError> {
+        let allocate_info = CommandBufferAllocateInfo {
+            s_type: StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
+            command_pool: self.command_pool.ok_or(CommandError::CommandPoolNotCreated)?,
+            level: CommandBufferLevel::PRIMARY,
+            command_buffer_count: image_count as u32,
+            ..CommandBufferAllocateInfo::default()
+        };
+
+        self.command_buffer = unsafe {
+            device.allocate_command_buffers(&allocate_info)?
+        };
+        info!("[Command Context] Command buffers re-allocated.");
+        Ok(())
+    }
     pub fn create_command_pool(&mut self, device: &Device, queue_family_indices: &QueueFamilyIndices) -> Result<(), DeviceError> {
         let pool_info = CommandPoolCreateInfo {
             s_type: StructureType::COMMAND_POOL_CREATE_INFO,
             flags: CommandPoolCreateFlags::RESET_COMMAND_BUFFER,
-            queue_family_index: queue_family_indices.graphics_family.ok_or(DeviceError::QueueFamilyNotFound("Graphics".to_string()))?,
+            queue_family_index: queue_family_indices.graphics_family
+                .ok_or(DeviceError::QueueFamilyNotFound("Graphics".to_string()))?,
             ..CommandPoolCreateInfo::default()
         };
 

@@ -20,5 +20,14 @@ pub enum PresentationError {
     
     #[error("Swapchain relied resources were not initialized before use.")]
     SwapchainResourcesNotInitialized,
+
+    #[error("Swapchain dependency (loader) is missing.")]
+    SwapchainDependencyMissing,
+
+    #[error("Failed to create swapchain: {0:?}")]
+    AcquireNextImage(VkResult),
+
+    #[error("Failed to present swapchain image: {0:?}")]
+    QueuePresentFailed(VkResult),
 }
 

@@ -5,6 +5,7 @@ use crate::errors::device_error::DeviceError;
 use crate::errors::engine_error::EngineError;
 use crate::errors::graphics_pipeline_error::GraphicsPipelineError;
 use crate::errors::presentation_error::PresentationError;
+use crate::errors::sync_error::SyncError;
 use crate::errors::vulkan_instance_error::VulkanInstanceError;
 
 #[derive(Debug, Error)]
@@ -29,6 +30,9 @@ pub enum ApplicationError {
     
     #[error(transparent)]
     CommandError(#[from] CommandError),
+    
+    #[error(transparent)]
+    SyncError(#[from] SyncError),
 
     #[error(transparent)]
     Engine(#[from] EngineError)
