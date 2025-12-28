@@ -23,6 +23,9 @@ pub enum DeviceError {
     
     #[error("Failed to retrieve device context information: {0}")]
     DeviceContextRetrievalFailure(String),
+
+    #[error("Failed to wait for device to become idle: {0:?}")]
+    FailedToWaitDeviceIdle(VkResult),
     
     #[error("An unexpected device-related error occurred: {0}")]
     Other(String),

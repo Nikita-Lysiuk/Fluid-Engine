@@ -35,6 +35,9 @@ pub enum ApplicationError {
     SyncError(#[from] SyncError),
 
     #[error(transparent)]
-    Engine(#[from] EngineError)
+    Engine(#[from] EngineError),
+    
+    #[error("An unexpected application error occurred: {0}")]
+    Other(String),
 }
 

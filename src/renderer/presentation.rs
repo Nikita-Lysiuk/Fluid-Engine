@@ -1,5 +1,5 @@
 use ash::{vk, Device, Entry, Instance};
-use ash::vk::{CompositeAlphaFlagsKHR, Extent2D, Fence, Handle, ImageUsageFlags, PhysicalDevice, PresentInfoKHR, PresentModeKHR, Queue, Semaphore, SharingMode, StructureType, SurfaceCapabilitiesKHR, SurfaceFormatKHR, SurfaceKHR, SwapchainCreateInfoKHR, SwapchainKHR};
+use ash::vk::{CompositeAlphaFlagsKHR, Extent2D, Fence, Handle, ImageUsageFlags, PhysicalDevice, PresentInfoKHR, PresentModeKHR, Queue, SharingMode, StructureType, SurfaceCapabilitiesKHR, SurfaceFormatKHR, SurfaceKHR, SwapchainCreateInfoKHR, SwapchainKHR};
 use log::{debug, info, warn};
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
 use winit::window::Window;
@@ -40,12 +40,12 @@ impl PresentationContext {
         sync_objects: &SyncObjects,
         swapchain: SwapchainKHR,
         present_queue: Queue,
-        image_index: u32
+        image_index: u32,
     ) -> Result<bool, PresentationError> {
         let present_info = PresentInfoKHR {
             s_type: StructureType::PRESENT_INFO_KHR,
             wait_semaphore_count: 1,
-            p_wait_semaphores: [sync_objects.render_finished_semaphore].as_ptr(),
+            p_wait_semaphores: &sync_objects.render_finished_semaphores[image_index as usize],
             swapchain_count: 1,
             p_swapchains: [swapchain].as_ptr(),
             p_image_indices: [image_index].as_ptr(),
@@ -55,7 +55,10 @@ impl PresentationContext {
         unsafe {
             if let Some(swapchain_loader) = &self.swapchain_loader {
                 swapchain_loader.queue_present(present_queue, &present_info)
-                    .map_err(|e| PresentationError::QueuePresentFailed(e))
+                    .map_err(|e| match e {
+                        vk::Result::ERROR_OUT_OF_DATE_KHR => PresentationError::SwapchainOutOfDate,
+                        other => PresentationError::QueuePresentFailed(other),
+                    })
             } else {
                 Err(PresentationError::SwapchainDependencyMissing)
             }
@@ -65,16 +68,20 @@ impl PresentationContext {
         &self,
         swapchain: SwapchainKHR,
         timeout: u64,
-        sync_objects: &SyncObjects
+        sync_objects: &SyncObjects,
+        current_frame: usize,
     ) -> Result<(u32, bool), PresentationError> {
         unsafe {
             if let Some(swapchain_loader) = &self.swapchain_loader {
                 swapchain_loader.acquire_next_image(
                     swapchain,
                     timeout,
-                    sync_objects.image_available_semaphore,
+                    sync_objects.image_available_semaphores[current_frame],
                     Fence::null(),
-                ).map_err(|e| PresentationError::AcquireNextImage(e))
+                ).map_err(|e| match e {
+                    vk::Result::ERROR_OUT_OF_DATE_KHR => PresentationError::SwapchainOutOfDate,
+                    other => PresentationError::AcquireNextImage(other),
+                })
             } else {
                 Err(PresentationError::SwapchainDependencyMissing)
             }

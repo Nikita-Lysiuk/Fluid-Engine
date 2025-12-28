@@ -22,7 +22,8 @@ pub struct Engine {
     window: WindowManager,
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
-    fps_counter: FpsCounter
+    fps_counter: FpsCounter,
+    is_focused: bool,
 }
 
 impl Engine {
@@ -41,7 +42,8 @@ impl Engine {
             window,
             renderer: None,
             event_loop: Some(event_loop),
-            fps_counter: FpsCounter::new(PREFERRED_FPS)
+            fps_counter: FpsCounter::new(PREFERRED_FPS),
+            is_focused: false,
         })
     }
 
@@ -106,11 +108,24 @@ impl ApplicationHandler for Engine {
             WindowEvent::RedrawRequested => {
                 let dt = self.fps_counter.tick();
 
+                if !self.is_focused {
+                    event_loop.set_control_flow(ControlFlow::WaitUntil(
+                        self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION + dt
+                    ));
+                    return;
+                }
+
+                let size = self.window.window.as_ref().map(|w| w.inner_size());
+                if size.is_none() || size.unwrap().width == 0 || size.unwrap().height == 0 {
+                    warn!("[Engine] Window is minimized. Skipping redraw.");
+                    return;
+                }
+
                 let frame_end_time = self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION;
                 event_loop.set_control_flow(ControlFlow::WaitUntil(frame_end_time));
 
-                if let Some(renderer) = self.renderer.as_ref() {
-                    renderer.update().map_err(|e| {
+                if let (Some(renderer), Some(window)) = (self.renderer.as_mut(), self.window.window.as_ref()) {
+                    renderer.update(window).map_err(|e| {
                         error!("[Engine] FATAL: Renderer update failed: {}", e);
                         event_loop.exit();
                     }).ok();
@@ -139,17 +154,25 @@ impl ApplicationHandler for Engine {
                         }
                     }
                 });
-            }
+            },
+            WindowEvent::Focused(focused) => {
+                self.is_focused = focused;
+                info!("[Engine] Window focus changed: {}", if focused { "Focused" } else { "Unfocused" });
+            },
             _ => {
                 // debug!("[Winit] Unhandled window event: {:?}", event);
             },
+        }
+
+        if self.window.is_window_created() && self.is_focused {
+            self.window.window.as_ref().unwrap().request_redraw();
         }
     }
 
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
         info!("[Engine] Application suspended. Destroying window-dependent Vulkan resources (Surface, Swapchain).");
         if let Some(renderer) = self.renderer.as_mut() {
-            renderer.delete_presentation();
+            renderer.delete_presentation().expect("[Engine] Surface destruction should always succeed.");
             debug!("[Engine] Surface successfully destroyed.");
         }
     }

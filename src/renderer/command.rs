@@ -10,7 +10,7 @@ use crate::renderer::sync_objects::SyncObjects;
 
 pub struct CommandContext {
     pub command_pool: Option<CommandPool>,
-    pub command_buffer: Vec<CommandBuffer>,
+    command_buffers: Vec<CommandBuffer>,
 }
 
 impl CommandContext {
@@ -18,55 +18,42 @@ impl CommandContext {
 
         Self {
             command_pool: None,
-            command_buffer: Vec::new(),
+            command_buffers: Vec::new(),
         }
     }
     pub fn submit_command_buffer(
         &self,
         device: &Device,
         graphics_queue: Queue,
-        sync_objects: &SyncObjects
+        sync_objects: &SyncObjects,
+        current_frame: usize,
+        image_index: usize
     ) -> Result<(), CommandError> {
         let submit_info = SubmitInfo {
             s_type: StructureType::SUBMIT_INFO,
             wait_semaphore_count: 1,
-            p_wait_semaphores: [sync_objects.image_available_semaphore].as_ptr(),
+            p_wait_semaphores: &sync_objects.image_available_semaphores[current_frame],
             p_wait_dst_stage_mask: [PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT].as_ptr(),
-            command_buffer_count: self.command_buffer.len() as u32,
-            p_command_buffers: self.command_buffer.as_ptr(),
+            command_buffer_count: 1,
+            p_command_buffers: &self.command_buffers[image_index],
             signal_semaphore_count: 1,
-            p_signal_semaphores: [sync_objects.render_finished_semaphore].as_ptr(),
+            p_signal_semaphores: &sync_objects.render_finished_semaphores[image_index],
             ..SubmitInfo::default()
         };
 
         unsafe {
-            device.queue_submit(graphics_queue, &[submit_info], sync_objects.in_flight_fence)
+            device.queue_submit(graphics_queue, &[submit_info], sync_objects.in_flight_fences[current_frame])
                 .map_err(|e| CommandError::FailedToSubmitCommandBuffer(e))
         }
     }
     pub fn reset_command_buffer(&self, device: &Device, image_index: usize) -> Result<(), CommandError> {
         unsafe {
             device.reset_command_buffer(
-                *self.command_buffer.get(image_index)
+                *self.command_buffers.get(image_index)
                     .ok_or(CommandError::CommandBufferNotAllocated)?,
-                CommandBufferResetFlags::empty()
+                CommandBufferResetFlags::RELEASE_RESOURCES,
             ).map_err(|e| CommandError::FailedToResetCommandBuffer(e))
         }
-    }
-    pub fn reallocate_command_buffers(&mut self, device: &Device, image_count: usize) -> Result<(), CommandError> {
-        let allocate_info = CommandBufferAllocateInfo {
-            s_type: StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
-            command_pool: self.command_pool.ok_or(CommandError::CommandPoolNotCreated)?,
-            level: CommandBufferLevel::PRIMARY,
-            command_buffer_count: image_count as u32,
-            ..CommandBufferAllocateInfo::default()
-        };
-
-        self.command_buffer = unsafe {
-            device.allocate_command_buffers(&allocate_info)?
-        };
-        info!("[Command Context] Command buffers re-allocated.");
-        Ok(())
     }
     pub fn create_command_pool(&mut self, device: &Device, queue_family_indices: &QueueFamilyIndices) -> Result<(), DeviceError> {
         let pool_info = CommandPoolCreateInfo {
@@ -81,16 +68,16 @@ impl CommandContext {
         info!("[Command Context] Command pool created.");
         Ok(())
     }
-    pub fn create_command_buffer(&mut self, device: &Device) -> Result<(), CommandError> {
+    pub fn create_command_buffer(&mut self, device: &Device, image_count: u32) -> Result<(), CommandError> {
         let allocate_info = CommandBufferAllocateInfo {
             s_type: StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             command_pool: self.command_pool.ok_or(CommandError::CommandPoolNotCreated)?,
             level: CommandBufferLevel::PRIMARY,
-            command_buffer_count: 1,
+            command_buffer_count: image_count,
             ..CommandBufferAllocateInfo::default()
         };
 
-        self.command_buffer = unsafe {
+        self.command_buffers = unsafe {
             device.allocate_command_buffers(&allocate_info)?
         };
         info!("[Command Context] Command buffer allocated.");
@@ -104,7 +91,7 @@ impl CommandContext {
         };
 
         unsafe {
-            device.begin_command_buffer(self.command_buffer[image_index], &begin_info)?
+            device.begin_command_buffer(self.command_buffers[image_index], &begin_info)?
         }
         Ok(())
     }
@@ -135,7 +122,7 @@ impl CommandContext {
 
         unsafe {
             device.cmd_begin_render_pass(
-                *self.command_buffer
+                *self.command_buffers
                     .get(image_index).ok_or(CommandError::CommandBufferNotAllocated)?,
                 &render_pass_info,
                 ash::vk::SubpassContents::INLINE,
@@ -145,7 +132,7 @@ impl CommandContext {
     }
     pub fn record_graphics_commands(&self, device: &Device, swapchain_resources: &SwapchainResources, graphics_pipeline: &GraphicsPipeline, image_index: usize) -> Result<(), CommandError> {
         unsafe {
-            let command_buffer = *self.command_buffer.get(image_index).ok_or(CommandError::CommandBufferNotAllocated)?;
+            let command_buffer = *self.command_buffers.get(image_index).ok_or(CommandError::CommandBufferNotAllocated)?;
 
             device.cmd_bind_pipeline(
                 command_buffer,
@@ -178,7 +165,7 @@ impl CommandContext {
     }
     pub fn end_recording(&self, device: &Device, image_index: usize) -> Result<(), CommandError> {
         unsafe {
-            let command_buffer = *self.command_buffer.get(image_index).ok_or(CommandError::CommandBufferNotAllocated)?;
+            let command_buffer = *self.command_buffers.get(image_index).ok_or(CommandError::CommandBufferNotAllocated)?;
             device.cmd_end_render_pass(
                 command_buffer,
             );

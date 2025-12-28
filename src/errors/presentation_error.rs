@@ -29,5 +29,8 @@ pub enum PresentationError {
 
     #[error("Failed to present swapchain image: {0:?}")]
     QueuePresentFailed(VkResult),
+
+    #[error("Swapchain is out of date and needs to be recreated.")]
+    SwapchainOutOfDate
 }
 

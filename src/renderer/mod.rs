@@ -1,5 +1,5 @@
+use ash::vk::Fence;
 use crate::errors::sync_error::SyncError;
-use std::time::Duration;
 use log::{info};
 use winit::raw_window_handle::{DisplayHandle, WindowHandle};
 use winit::window::Window;
@@ -7,6 +7,7 @@ use crate::errors::application_error::ApplicationError;
 use crate::errors::device_error::DeviceError;
 use crate::errors::graphics_pipeline_error::GraphicsPipelineError;
 use crate::errors::presentation_error::PresentationError;
+use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
 mod instance;
 mod device;
@@ -25,6 +26,7 @@ pub struct Renderer {
     graphics_pipeline: Option<graphics_pipeline::GraphicsPipeline>,
     command_ctx: command::CommandContext,
     sync_objects: Option<sync_objects::SyncObjects>,
+    current_frame: usize,
 }
 
 impl Renderer {
@@ -42,9 +44,10 @@ impl Renderer {
             graphics_pipeline: None,
             command_ctx,
             sync_objects: None,
+            current_frame: 0,
         })
     }
-    pub fn update(&self) -> Result<(), ApplicationError> {
+    pub fn update(&mut self, window: &Window) -> Result<(), ApplicationError> {
         unsafe {
             if let (
                 Some(ctx),
@@ -55,24 +58,43 @@ impl Renderer {
                 self.device_ctx.as_ref(),
                 self.swapchain_resources.as_ref(),
                 self.graphics_pipeline.as_ref(),
-                self.sync_objects.as_ref(),
+                self.sync_objects.as_mut(),
             ) {
                 let device = &ctx.device;
 
                 device.wait_for_fences(
-                    &[sync.in_flight_fence],
+                    &[sync.in_flight_fences[self.current_frame]],
                     true,
                     u64::MAX
                 ).map_err(|e| SyncError::FailedToWaitForFence(e))?;
 
-                device.reset_fences(&[sync.in_flight_fence])
-                    .map_err(|e| SyncError::FailedToResetFence(e))?;
-
-                let (image_index, _is_suboptimal) = self.presentation_handler.acquire_next_image(
+                let (image_index, is_suboptimal) = match self.presentation_handler.acquire_next_image(
                     res.swapchain,
                     u64::MAX,
-                    sync
-                )?;
+                    sync,
+                    self.current_frame
+                ) {
+                    Ok(val) => val,
+                    Err(PresentationError::SwapchainOutOfDate) => {
+                        self.handle_resize(window)?;
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e.into()),
+                };
+
+                let image_fence = sync.images_in_flight[image_index as usize];
+                if image_fence != Fence::null() {
+                    device.wait_for_fences(
+                        &[image_fence],
+                        true,
+                        u64::MAX
+                        ).map_err(|e| SyncError::FailedToWaitForFence(e))?;
+                }
+
+                sync.images_in_flight[image_index as usize] = sync.in_flight_fences[self.current_frame];
+
+                device.reset_fences(&[sync.in_flight_fences[self.current_frame]])
+                    .map_err(|e| SyncError::FailedToResetFence(e))?;
 
                 self.command_ctx.reset_command_buffer(
                     device,
@@ -106,24 +128,47 @@ impl Renderer {
                 self.command_ctx.submit_command_buffer(
                     device,
                     ctx.graphics_queue,
-                    sync
+                    sync,
+                    self.current_frame,
+                    image_index as usize
                 )?;
 
-                self.presentation_handler.present(
+                match self.presentation_handler.present(
                     sync,
                     res.swapchain,
                     ctx.present_queue,
-                    image_index
-                )?;
+                    image_index,
+                ) {
+                    Ok(val) => {
+                        if val || is_suboptimal {
+                            self.handle_resize(window)?;
+                        }
+                    }
+                    Err(PresentationError::SwapchainOutOfDate) => {
+                        self.handle_resize(window)?;
+                    }
+                    Err(e) => return Err(e.into()),
+                }
             }
 
+            self.current_frame = (self.current_frame + 1) % MAX_FRAMES_IN_FLIGHT as usize;
             Ok(())
         }
     }
     pub fn handle_resize(&mut self, window: &Window) -> Result<(), ApplicationError> {
         unsafe {
+            if let Some(ctx) = self.device_ctx.as_ref() {
+                let device = &ctx.device;
+                device.device_wait_idle()
+                    .map_err(|e| DeviceError::FailedToWaitDeviceIdle(e))?;
+            }
+
             self.create_swapchain(window)?;
 
+            let size = window.inner_size();
+            if size.width == 0 || size.height == 0 {
+                return Ok(());
+            }
 
             if let (
                 Some(res),
@@ -142,8 +187,16 @@ impl Renderer {
                     pipeline.render_pass
                 )?;
 
-                let image_count = res.swapchain_images.len();
-                self.command_ctx.reallocate_command_buffers(device, image_count)?;
+                let image_count = res.swapchain_images.len() as u32;
+
+                self.command_ctx.create_command_buffer(
+                    device,
+                    image_count,
+                )?;
+
+                if let Some(sync) = self.sync_objects.as_mut() {
+                    sync.resize_images_in_flight(image_count as usize);
+                }
 
                 Ok(())
             } else {
@@ -187,12 +240,16 @@ impl Renderer {
                     &ctx.indices
                 )?;
 
+                let image_count = res.swapchain_images.len() as u32;
+
                 self.command_ctx.create_command_buffer(
-                    device
+                    device,
+                    image_count,
                 )?;
 
                 self.sync_objects = Some(sync_objects::SyncObjects::new(
-                    device
+                    device,
+                    image_count as usize
                 )?);
             } else {
                 return Err(PresentationError::SwapchainResourcesNotInitialized.into());
@@ -201,13 +258,13 @@ impl Renderer {
             Ok(())
         }
     }
-    pub fn delete_presentation(&mut self) {
+    pub fn delete_presentation(&mut self) -> Result<(), ApplicationError> {
         unsafe {
             if let Some(ctx) = self.device_ctx.as_ref() {
                 let device = &ctx.device;
 
                 device.device_wait_idle()
-                    .expect("[Renderer] Failed to wait for device idle during presentation deletion.");
+                    .map_err(|e| DeviceError::FailedToWaitDeviceIdle(e))?;
 
                 if let Some(sync) = self.sync_objects.take() {
                     sync.destroy(device);
@@ -233,8 +290,10 @@ impl Renderer {
                 self.presentation_handler.destroy_swapchain(
                     resources.map(|res| res.swapchain)
                 );
+                Ok(())
             } else {
                 info!("[Renderer] No Device Context found during presentation deletion. Skipping device-dependent resource cleanup.");
+                Err(ApplicationError::Other("Device Context not initialized during presentation deletion.".to_string()))
             }
         }
     }
@@ -282,7 +341,7 @@ impl Drop for Renderer {
     fn drop(&mut self) {
         info!("[Renderer] Beginning explicit shutdown sequence.");
         unsafe {
-            self.delete_presentation();
+            self.delete_presentation().expect("[Renderer] FATAL: Failed to delete presentation resources during Renderer drop.");
             self.device_ctx.take();
             self.presentation_handler.destroy_surface();
             self.instance_ctx.destroy_self();
