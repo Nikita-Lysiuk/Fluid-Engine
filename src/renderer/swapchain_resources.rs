@@ -1,5 +1,5 @@
 use ash::{vk, Device};
-use ash::vk::{CommandPoolCreateInfo, FramebufferCreateInfo, ImageAspectFlags, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType, RenderPass, StructureType};
+use ash::vk::{FramebufferCreateInfo, ImageAspectFlags, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType, RenderPass, StructureType};
 use log::{info};
 use crate::errors::device_error::DeviceError;
 

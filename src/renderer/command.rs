@@ -10,7 +10,7 @@ use crate::renderer::sync_objects::SyncObjects;
 
 pub struct CommandContext {
     pub command_pool: Option<CommandPool>,
-    command_buffers: Vec<CommandBuffer>,
+    pub command_buffers: Vec<CommandBuffer>,
 }
 
 impl CommandContext {
@@ -69,6 +69,13 @@ impl CommandContext {
         Ok(())
     }
     pub fn create_command_buffer(&mut self, device: &Device, image_count: u32) -> Result<(), CommandError> {
+        if !self.command_buffers.is_empty() {
+            unsafe {
+                device.free_command_buffers(self.command_pool.unwrap(), &self.command_buffers);
+            }
+            self.command_buffers.clear();
+        }
+
         let allocate_info = CommandBufferAllocateInfo {
             s_type: StructureType::COMMAND_BUFFER_ALLOCATE_INFO,
             command_pool: self.command_pool.ok_or(CommandError::CommandPoolNotCreated)?,

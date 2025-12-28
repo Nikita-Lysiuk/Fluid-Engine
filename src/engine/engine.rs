@@ -1,4 +1,5 @@
-use log::{info, debug, warn, error};
+use std::time::Instant;
+use log::{info, warn, error};
 use crate::platform_window::window_manager::WindowManager;
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
@@ -31,17 +32,10 @@ impl Engine {
         SimpleLogger::new().init().unwrap();
         info!("[Engine] Logger initialized successfully.");
 
-        let window = WindowManager::default();
-
-        let event_loop = EventLoop::new()?;
-
-        event_loop.set_control_flow(ControlFlow::Wait);
-        info!("[Engine] Event Loop initialized. Control Flow set to: Wait");
-
         Ok(Self {
-            window,
+            window: WindowManager::default(),
             renderer: None,
-            event_loop: Some(event_loop),
+            event_loop: Some(EventLoop::new()?),
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             is_focused: false,
         })
@@ -64,9 +58,8 @@ impl Engine {
         let window_handle = self.window.window_handle()?;
         
         if self.renderer.is_none() {
-            info!("[Engine] Initializing core Renderer.");
             self.renderer = Some(Renderer::new(display_handle)?);
-            debug!("[Engine] Renderer object initialized.");
+            info!("[Engine] Renderer object initialized.");
         }
         
         info!("[Engine] Creating Vulkan Surface for the window.");
@@ -81,7 +74,6 @@ impl Engine {
     /// Consumes the stored EventLoop to start the application's main thread loop.
     /// This is typically called once in `main()`.
     pub fn event_loop(&mut self) -> EventLoop<()> {
-        debug!("[Engine] Transferring ownership of the Winit Event Loop.");
         self.event_loop
             .take()
             .expect("[Engine] Engine initialization guarantees EventLoop is present until ownership is transferred.")
@@ -90,90 +82,75 @@ impl Engine {
 
 impl ApplicationHandler for Engine {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        match self.initialize_window_and_renderer(event_loop) {
-            Ok(_) => {},
-            Err(e) => {
-                error!("[Engine] FATAL INITIALIZATION ERROR: {}", e);
-                event_loop.exit();
-            }
+        if let Err(e) = self.initialize_window_and_renderer(event_loop) {
+            error!("[Engine] FATAL INITIALIZATION ERROR: {}", e);
+            event_loop.exit();
         }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _window_id: WindowId, event: WindowEvent) {
         match event {
-            WindowEvent::CloseRequested => {
-                info!("[Engine] Close request received. Initiating event loop exit.");
-                event_loop.exit();
-            },
-            WindowEvent::RedrawRequested => {
-                let dt = self.fps_counter.tick();
-
-                if !self.is_focused {
-                    event_loop.set_control_flow(ControlFlow::WaitUntil(
-                        self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION + dt
-                    ));
-                    return;
-                }
-
-                let size = self.window.window.as_ref().map(|w| w.inner_size());
-                if size.is_none() || size.unwrap().width == 0 || size.unwrap().height == 0 {
-                    warn!("[Engine] Window is minimized. Skipping redraw.");
-                    return;
-                }
-
-                let frame_end_time = self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION;
-                event_loop.set_control_flow(ControlFlow::WaitUntil(frame_end_time));
-
-                if let (Some(renderer), Some(window)) = (self.renderer.as_mut(), self.window.window.as_ref()) {
-                    renderer.update(window).map_err(|e| {
-                        error!("[Engine] FATAL: Renderer update failed: {}", e);
-                        event_loop.exit();
-                    }).ok();
-                }
-                
-                if let Err(e) = self.window.redraw() {
-                    error!("[Engine] FATAL: Redraw failed: {}", e);
-                    event_loop.exit();
-                    return;
-                }
-
-                if IS_PAINT_FPS_COUNTER {
-                    let fps_str = self.fps_counter.fps().to_string();
-                    if let Err(e) = self.window.change_window_title(&fps_str) {
-                        warn!("[Engine] Could not update window title: {}", e);
-                    }
-                }
-            },
-            WindowEvent::Resized(size) => {
-                warn!("[Engine] Window resized to {}x{}. Swapchain recreation required.", size.width, size.height);
-                self.renderer.as_mut().map(|renderer| {
-                    if let Some(winit_window) = self.window.window.as_ref() {
-                        if let Err(e) = renderer.handle_resize(winit_window) {
-                            error!("[Engine] FATAL: Swapchain recreation failed after window resize: {}", e);
-                            event_loop.exit();
-                        }
-                    }
-                });
-            },
+            WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Focused(focused) => {
                 self.is_focused = focused;
-                info!("[Engine] Window focus changed: {}", if focused { "Focused" } else { "Unfocused" });
-            },
-            _ => {
-                // debug!("[Winit] Unhandled window event: {:?}", event);
-            },
-        }
+                if focused { self.fps_counter.tick(); }
+                info!("[Engine] Window focus: {}", if focused { "Focused" } else { "Unfocused" });
 
-        if self.window.is_window_created() && self.is_focused {
-            self.window.window.as_ref().unwrap().request_redraw();
+            }
+            WindowEvent::Resized(size) => {
+                warn!("[Engine] Window resized to {}x{}. Swapchain recreation required.", size.width, size.height);
+                if size.width > 0 && size.height > 0 {
+                    if let (Some(renderer), Some(window)) = (self.renderer.as_mut(), self.window.window.as_ref()) {
+                        renderer.handle_resize(window).ok();
+                    }
+                }
+            }
+            WindowEvent::RedrawRequested => {
+                if let (Some(renderer), Some(window)) = (self.renderer.as_mut(), self.window.window.as_ref()) {
+                    if let Err(e) = renderer.update(window) {
+                        error!("[Engine] Renderer failed: {}", e);
+                    }
+                }
+                let _ = self.window.redraw();
+            }
+            _ => (),
         }
     }
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        let window = match self.window.window.as_ref() {
+            Some(w) => w,
+            None => return,
+        };
 
+        let size = window.inner_size();
+        let is_minimized = size.width == 0 || size.height == 0;
+
+        if is_minimized || !self.is_focused {
+            event_loop.set_control_flow(ControlFlow::Wait);
+            return;
+        }
+
+        event_loop.set_control_flow(ControlFlow::Poll);
+
+        let now = Instant::now();
+        let next_frame_time = self.fps_counter.last_frame_time() + TARGET_FRAME_DURATION;
+
+        if now >= next_frame_time {
+            self.fps_counter.tick();
+
+            // ТУТ БУДЕ: оновлення фізики та камери
+
+            window.request_redraw();
+
+            if IS_PAINT_FPS_COUNTER {
+                let _ = self.window.change_window_title(&format!("{} | FPS: {}", WINDOW_TITLE, self.fps_counter.fps()));
+            }
+        }
+    }
     fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
         info!("[Engine] Application suspended. Destroying window-dependent Vulkan resources (Surface, Swapchain).");
         if let Some(renderer) = self.renderer.as_mut() {
-            renderer.delete_presentation().expect("[Engine] Surface destruction should always succeed.");
-            debug!("[Engine] Surface successfully destroyed.");
+            let _ = renderer.delete_presentation();
         }
     }
 

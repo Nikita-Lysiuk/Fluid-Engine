@@ -19,7 +19,7 @@ impl Loader {
     }
 
     pub fn load_shader_code(path: &str) -> Result<Vec<u32>, EngineError> {
-        let mut spv_file = File::open(path).map_err(|e| {;
+        let mut spv_file = File::open(path).map_err(|e| {
             EngineError::ResourceLoad(format!("Failed to open shader file at path {}: {}", path, e))
         })?;
         util::read_spv(&mut spv_file).map_err(|e| {

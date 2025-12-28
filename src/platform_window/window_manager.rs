@@ -1,9 +1,7 @@
 
 use winit::raw_window_handle::{DisplayHandle, HasDisplayHandle, HasWindowHandle, WindowHandle};
 use winit::window::Window;
-use log::warn;
 use crate::errors::engine_error::EngineError;
-use crate::utils::constants::WINDOW_TITLE;
 
 #[derive(Default)]
 pub struct WindowManager {
@@ -18,11 +16,9 @@ impl WindowManager {
         self.window = Some(window);
     }
     pub fn change_window_title(&self, title: &String) -> Result<(), EngineError> {
-        let new_title = format!("{} | FPS: {}", WINDOW_TITLE, title);
-
         self.window.as_ref()
             .ok_or(EngineError::WindowManagement("Cannot change window title: Window is not created!".to_string()))?
-            .set_title(new_title.as_str());
+            .set_title(title.as_str());
 
         Ok(())
     }

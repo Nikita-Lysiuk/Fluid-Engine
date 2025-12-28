@@ -14,7 +14,7 @@ pub const WINDOW_ICON_PATH: &'static [u8] = include_bytes!("../../assets/logo.pn
 pub const WINDOW_SIZE: Size = Size::Physical(PhysicalSize { width: 1280, height: 720 });
 pub const MAX_FRAMES_IN_FLIGHT: u32 = 3;
 pub const IS_PAINT_FPS_COUNTER: bool = true; 
-pub const PREFERRED_FPS: u32 = 120;
+pub const PREFERRED_FPS: u32 = 60;
 pub const TARGET_FRAME_DURATION: Duration = Duration::from_nanos(1_000_000_000 / PREFERRED_FPS as u64);
 pub const VALIDATION_LAYERS: [*const c_char; 1] = [
     c"VK_LAYER_KHRONOS_validation".as_ptr()
@@ -22,5 +22,5 @@ pub const VALIDATION_LAYERS: [*const c_char; 1] = [
 pub const DEVICE_EXTENSIONS: [*const c_char; 1] = [
 ash::khr::swapchain::NAME.as_ptr()
 ];
-pub const ENABLE_VALIDATION_LAYERS: bool = cfg!(debug_assertions);
+pub const ENABLE_VALIDATION_LAYERS: bool = true; //cfg!(debug_assertions);
 pub const DEBUG_UTILS_EXTENSION_NAME: &CStr = debug_utils::NAME;

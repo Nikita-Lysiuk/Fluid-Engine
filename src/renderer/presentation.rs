@@ -139,6 +139,10 @@ impl PresentationContext {
             image_count = swapchain_support.capabilities.max_image_count;
         }
 
+        let mut queue_family_indices = Vec::new();
+        if let Some(gfx) = indices.graphics_family { queue_family_indices.push(gfx); }
+        if let Some(pres) = indices.present_family { queue_family_indices.push(pres); }
+
         let mut create_info = SwapchainCreateInfoKHR {
             s_type: StructureType::SWAPCHAIN_CREATE_INFO_KHR,
             surface: self.surface.ok_or(DeviceError::SurfaceDependencyMissing)?,
@@ -157,7 +161,6 @@ impl PresentationContext {
         };
 
         if indices.graphics_family != indices.present_family {
-            let queue_family_indices = [indices.graphics_family.unwrap(), indices.present_family.unwrap()];
             create_info.image_sharing_mode = SharingMode::CONCURRENT;
             create_info.queue_family_index_count = queue_family_indices.len() as u32;
             create_info.p_queue_family_indices = queue_family_indices.as_ptr();

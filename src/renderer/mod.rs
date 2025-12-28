@@ -48,6 +48,9 @@ impl Renderer {
         })
     }
     pub fn update(&mut self, window: &Window) -> Result<(), ApplicationError> {
+        if self.swapchain_resources.is_none() || self.sync_objects.is_none() {
+            return Ok(());
+        }
         unsafe {
             if let (
                 Some(ctx),
@@ -68,8 +71,10 @@ impl Renderer {
                     u64::MAX
                 ).map_err(|e| SyncError::FailedToWaitForFence(e))?;
 
+                let swapchain_handle = res.swapchain;
+
                 let (image_index, is_suboptimal) = match self.presentation_handler.acquire_next_image(
-                    res.swapchain,
+                    swapchain_handle,
                     u64::MAX,
                     sync,
                     self.current_frame
@@ -135,7 +140,7 @@ impl Renderer {
 
                 match self.presentation_handler.present(
                     sync,
-                    res.swapchain,
+                    swapchain_handle,
                     ctx.present_queue,
                     image_index,
                 ) {
@@ -197,7 +202,6 @@ impl Renderer {
                 if let Some(sync) = self.sync_objects.as_mut() {
                     sync.resize_images_in_flight(image_count as usize);
                 }
-
                 Ok(())
             } else {
                 if self.swapchain_resources.is_none() { Err(PresentationError::SwapchainResourcesNotInitialized.into()) }

@@ -1,6 +1,6 @@
 use std::ffi::{c_char, c_void, CStr};
 use std::ptr;
-use ash::{vk, Entry, Instance};
+use ash::{Entry, Instance};
 use ash::vk::{
     ApplicationInfo, 
     DebugUtilsMessageSeverityFlagsEXT as Severity, 
@@ -10,9 +10,8 @@ use ash::vk::{
     StructureType
 };
 use crate::utils::debug_utils::vulkan_debug_callback;
-use ash::ext::debug_utils;
 use ash_window::enumerate_required_extensions;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 use winit::raw_window_handle::DisplayHandle;
 use crate::errors::vulkan_instance_error::VulkanInstanceError;
 use crate::utils::constants::{
@@ -23,6 +22,10 @@ use crate::utils::constants::{
     ENGINE_VERSION, 
     VALIDATION_LAYERS
 };
+#[cfg(debug_assertions)]
+use ash::vk;
+#[cfg(debug_assertions)]
+use ash::ext::debug_utils;
 
 pub struct VulkanInstanceContext {
     pub entry: Entry,
@@ -107,7 +110,6 @@ impl VulkanInstanceContext {
             })
         }
     }
-
     fn create_debug_utils_info() -> DebugUtilsMessengerCreateInfoEXT<'static> {
         DebugUtilsMessengerCreateInfoEXT::default()
             .message_severity(
@@ -118,7 +120,7 @@ impl VulkanInstanceContext {
             )
             .pfn_user_callback(Some(vulkan_debug_callback))
     }
-
+    #[cfg(debug_assertions)]
     unsafe fn setup_debug_messenger(entry: &Entry, instance: &Instance) -> Result<(debug_utils::Instance, vk::DebugUtilsMessengerEXT), VulkanInstanceError> {
         let debug_info = Self::create_debug_utils_info();
         let debug_utils_loader = debug_utils::Instance::new(&entry, &instance);
@@ -161,7 +163,6 @@ impl VulkanInstanceContext {
             Err(VulkanInstanceError::ValidationLayerNotSupported("One or more required validation layers are not supported.".to_string()))
         }
     }
-    
     pub unsafe fn destroy_self(&mut self) {
         unsafe {
             #[cfg(debug_assertions)]
