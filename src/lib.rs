@@ -1,7 +1,6 @@
 
 
-mod platform_window;
-pub mod engine;
+pub mod core;
 mod utils;
 mod renderer;
 mod errors;

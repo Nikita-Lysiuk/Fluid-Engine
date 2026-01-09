@@ -1,9 +1,8 @@
 
-use fluid_engine::engine::engine::Engine;
+use fluid_engine::core::engine::Engine;
 
 fn main() -> anyhow::Result<()> {
-    let mut engine =  Engine::new()?;
-    let event_loop = engine.event_loop();
-    event_loop.run_app(&mut engine)?;
+    let mut engine =  Engine::new().map_err(|e| anyhow::anyhow!("Failed to initialize Engine: {}", e))?;
+    engine.run();
     Ok(())
 }
