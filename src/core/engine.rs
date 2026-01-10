@@ -6,7 +6,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{Icon, WindowAttributes, WindowId};
-
+use crate::core::scene::Scene;
 use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
@@ -28,6 +28,7 @@ fn load_icon(bytes: &[u8]) -> Result<Icon, ApplicationError> {
 pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
+    scene: Option<Scene>,
     fps_counter: FpsCounter,
     is_focused: bool,
 }
@@ -45,6 +46,7 @@ impl Engine {
         Ok(Self {
             renderer: None,
             event_loop: Some(event_loop),
+            scene: Some(Scene::new()),
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             is_focused: true,
         })
@@ -79,6 +81,7 @@ impl ApplicationHandler for Engine {
                 }
             };
             self.renderer = Some(Renderer::new(window));
+            self.scene = Some(Scene::new());
             info!("[Engine] Systems initialized successfully.");
         }
     }

@@ -1,17 +1,19 @@
-mod frame_resources;
-
 use std::sync::Arc;
 use log::{debug, error, info, warn};
 use vulkano::device::DeviceFeatures;
+use vulkano::format::Format;
 use vulkano::image::ImageUsage;
 use vulkano::instance::debug::{DebugUtilsMessageSeverity, DebugUtilsMessageType, DebugUtilsMessengerCallback, DebugUtilsMessengerCallbackData, DebugUtilsMessengerCreateInfo};
 use vulkano::instance::{InstanceCreateInfo, InstanceExtensions};
+use vulkano::swapchain::PresentMode;
 use vulkano::Version;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 use vulkano_util::renderer::VulkanoWindowRenderer;
 use vulkano_util::window::WindowDescriptor;
 use winit::window::Window;
 use crate::utils::constants::WINDOW_TITLE;
+
+mod resources;
 
 pub struct Renderer {
     pub context: Arc<VulkanoContext>,
@@ -54,7 +56,6 @@ impl Renderer {
         let config = VulkanoConfig {
             instance_create_info: InstanceCreateInfo {
                 enabled_layers: layers,
-
                 enabled_extensions: InstanceExtensions {
                     ext_debug_utils: true,
                     ..InstanceExtensions::default()
@@ -67,6 +68,10 @@ impl Renderer {
             device_features: DeviceFeatures {
                 geometry_shader: true,
                 sampler_anisotropy: true,
+                dynamic_rendering: true,
+                synchronization2: true,
+                scalar_block_layout: true,
+                buffer_device_address: true,
                 ..DeviceFeatures::empty()
             },
             ..VulkanoConfig::default()
@@ -74,23 +79,37 @@ impl Renderer {
 
         let context = VulkanoContext::new(config);
 
-        let window_renderer = VulkanoWindowRenderer::new(
+        let mut window_renderer = VulkanoWindowRenderer::new(
             &context,
             window,
             &WindowDescriptor {
                 title: WINDOW_TITLE.into(),
                 width: 1280.,
                 height: 720.,
+                present_mode: PresentMode::Fifo,
                 ..Default::default()
             },
             |create_info| {
                 create_info.image_usage = ImageUsage::COLOR_ATTACHMENT | ImageUsage::TRANSFER_DST;
+                create_info.min_image_count = 3;
             }
+        );
+
+        let depth_format = Format::D24_UNORM_S8_UINT;
+
+        window_renderer.add_additional_image_view(
+            1,
+            depth_format,
+            ImageUsage::DEPTH_STENCIL_ATTACHMENT
         );
 
         Self {
             context: Arc::new(context),
             window_renderer
         }
+    }
+
+    pub fn update(&mut self) {
+       
     }
 }
