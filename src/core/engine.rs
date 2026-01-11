@@ -1,11 +1,14 @@
 use log::{info, debug, error};
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
-use winit::dpi::{PhysicalSize, Size};
-use winit::event::WindowEvent;
+use winit::event::{DeviceEvent, DeviceId, ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::platform::windows::WindowAttributesExtWindows;
-use winit::window::{Icon, WindowAttributes, WindowId};
+use winit::window::{CursorGrabMode, Icon, WindowAttributes, WindowId};
+use crate::commands::camera_commands::RotateCameraCommand;
+use crate::commands::Command;
+use crate::core::controller::{Controller, KeyboardAction};
 use crate::core::scene::Scene;
 use crate::renderer::Renderer;
 
@@ -29,6 +32,7 @@ pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
     scene: Option<Scene>,
+    controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
 }
@@ -48,6 +52,7 @@ impl Engine {
             event_loop: Some(event_loop),
             scene: Some(Scene::new()),
             fps_counter: FpsCounter::new(PREFERRED_FPS),
+            controller: Controller::new(),
             is_focused: true,
         })
     }
@@ -67,7 +72,7 @@ impl ApplicationHandler for Engine {
             info!("[Engine] System Resumed. Initializing Window and Graphics...");
 
             let window_attributes = WindowAttributes::default()
-                .with_inner_size(Size::Physical(PhysicalSize { width: 1280, height: 720 }))
+                .with_inner_size(event_loop.primary_monitor().unwrap().size())
                 .with_window_icon(load_icon(WINDOW_ICON_PATH).ok())
                 .with_taskbar_icon(load_icon(WINDOW_ICON_PATH).ok());
 
@@ -92,27 +97,66 @@ impl ApplicationHandler for Engine {
                 info!("[Engine] Exit requested.");
                 event_loop.exit();
             }
-
             WindowEvent::Focused(focused) => {
                 self.is_focused = focused;
-                debug!("[Engine] Focus changed: {}", focused);
-            }
 
+                if let Some(renderer) = self.renderer.as_mut() {
+                    let window = renderer.window_renderer.window();
+                    if focused {
+                        window.set_cursor_grab(CursorGrabMode::Locked)
+                            .or_else(|_| window.set_cursor_grab(CursorGrabMode::Confined))
+                            .unwrap_or_else(|e| error!("Failed to grab cursor: {}", e));
+                        window.set_cursor_visible(false);
+                    } else {
+                        window.set_cursor_grab(CursorGrabMode::None).ok();
+                        window.set_cursor_visible(true);
+                    }
+                }
+            }
             WindowEvent::Resized(_new_size) => {
                 if let Some(renderer) = self.renderer.as_mut() {
                     renderer.window_renderer.resize();
                 }
             }
-
+            WindowEvent::KeyboardInput {
+                event: key_event,
+                ..
+            } => {
+                match (key_event.physical_key, key_event.state) {
+                    (PhysicalKey::Code(KeyCode::Escape), ElementState::Pressed) => {
+                        self.is_focused = false;
+                        if let Some(renderer) = self.renderer.as_mut() {
+                            renderer.window_renderer.window().set_cursor_grab(CursorGrabMode::None).ok();
+                            renderer.window_renderer.window().set_cursor_visible(true);
+                        }
+                    }
+                    (physical_key, ElementState::Pressed) => {
+                        if let PhysicalKey::Code(code)  = physical_key {
+                            self.controller.update_key(code, KeyboardAction::Pressed);
+                        }
+                    }
+                    (physical_key, ElementState::Released) => {
+                        if let PhysicalKey::Code(code)  = physical_key {
+                            self.controller.update_key(code, KeyboardAction::Released);
+                        }
+                    }
+                }
+            }
             WindowEvent::RedrawRequested => {
-                let dt = self.fps_counter.tick();
-
                 if !self.is_focused {
                     event_loop.set_control_flow(ControlFlow::WaitUntil(
                         std::time::Instant::now() + TARGET_FRAME_DURATION
                     ));
                     return;
                 }
+
+                let dt = self.fps_counter.tick();
+                let scene = self.scene.as_mut().expect("[Engine] Scene missing on redraw request.");
+
+                for command in self.controller.get_active_commands() {
+                    command.execute(scene, dt.as_secs_f32());
+                }
+                scene.update(dt.as_secs_f32());
 
                 self.renderer.as_mut().expect("[Engine] Renderer missing on redraw request.")
                     .render(self.scene.as_ref().expect("[Engine] Scene missing on redraw request."));
@@ -134,7 +178,23 @@ impl ApplicationHandler for Engine {
             }
         }
     }
+    fn device_event(&mut self, _event_loop: &ActiveEventLoop, _device_id: DeviceId, event: DeviceEvent) {
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                if self.is_focused {
+                    let sensitivity = 0.1;
+                    let dx = delta.0 as f32 * sensitivity;
+                    let dy = delta.1 as f32 * sensitivity;
 
+                    let command = RotateCameraCommand::new(dx, dy);
+                    if let Some(scene) = self.scene.as_mut() {
+                        command.execute(scene, 0.0);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
         info!("[Engine] Graceful shutdown...");
     }

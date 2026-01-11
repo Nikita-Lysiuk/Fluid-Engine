@@ -40,7 +40,7 @@ void main() {
     gl_Position = camera.proj * camera.view * vec4(p.position, 1.0);
     
     float dist = length(camera.camera_pos - p.position);
-    gl_PointSize = (p.radius * 1000.0) /dist;
+    gl_PointSize = (p.radius * 1000.0) / dist;
     
     out_color = p.color;
 }

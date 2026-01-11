@@ -5,3 +5,4 @@ mod utils;
 mod renderer;
 mod errors;
 mod entities;
+mod commands;

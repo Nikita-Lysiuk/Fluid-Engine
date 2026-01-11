@@ -14,10 +14,10 @@ pub struct FrameResources {
     pub command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
     pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
 
-    pub uniform_buffers: Vec<Subbuffer<ShaderData>>,
-    pub particle_buffers: Vec<Subbuffer<[ParticleVertex]>>,
+    uniform_buffers: Vec<Subbuffer<ShaderData>>,
+    particle_buffers: Vec<Subbuffer<[ParticleVertex]>>,
 
-    pub current_frame_idx: usize
+    current_frame_idx: usize
 }
 
 impl FrameResources {

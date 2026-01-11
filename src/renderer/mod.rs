@@ -99,7 +99,7 @@ impl Renderer {
                 title: WINDOW_TITLE.into(),
                 width: 1280.,
                 height: 720.,
-                present_mode: PresentMode::Mailbox,
+                present_mode: PresentMode::Fifo,
                 ..Default::default()
             },
             |create_info| {
@@ -153,10 +153,9 @@ impl Renderer {
     }
 
     pub fn render(&mut self, scene: &Scene) {
-        let frame_idx = self.resources.current_frame_idx;
 
         let camera_data = scene.get_camera_data();
-        self.resources.uniform_buffers[frame_idx]
+        self.resources.current_ub()
             .write()
             .map_err(|e| panic!("[Renderer] Failed to write uniform buffer: {:?}", e))
             .unwrap()
@@ -164,7 +163,7 @@ impl Renderer {
 
         let particle_data = scene.get_particle_data();
         {
-            let mut write_lock = self.resources.particle_buffers[frame_idx]
+            let mut write_lock = self.resources.current_pb()
                 .write()
                 .map_err(|e| panic!("[Renderer] Failed to write particle buffer: {:?}", e))
                 .unwrap();
@@ -220,8 +219,8 @@ impl Renderer {
                 self.common_layout.clone(),
                 0,
                 [
-                    self.resources.uniform_buffers[frame_idx].device_address().map_err(|e| panic!("[Renderer] Failed to get uniform_buffer: {:?}", e)).unwrap().get(),
-                    self.resources.particle_buffers[frame_idx].device_address().map_err(|e| panic!("[Renderer] Failed to get particle_buffer: {:?}", e)).unwrap().get(),
+                    self.resources.current_ub().device_address().map_err(|e| panic!("[Renderer] Failed to get uniform_buffer: {:?}", e)).unwrap().get(),
+                    self.resources.current_pb().device_address().map_err(|e| panic!("[Renderer] Failed to get particle_buffer: {:?}", e)).unwrap().get(),
                 ]
             ).map_err(|e| panic!("[Renderer] Failed to bind buffers: {:?}", e)).unwrap()
             .draw(scene.vertices.len() as u32, 1, 0, 0).map_err(|e| panic!("[Renderer] Failed to draw particles: {:?}", e)).unwrap()
