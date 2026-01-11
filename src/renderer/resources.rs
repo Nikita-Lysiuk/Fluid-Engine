@@ -1,44 +1,66 @@
 use std::sync::Arc;
-use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
+use log::info;
+use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
 use vulkano::device::Device;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::entities::camera::ShaderData;
+use crate::entities::particle::ParticleVertex;
+use crate::utils::constants::{MAX_FRAMES_IN_FLIGHT, MAX_PARTICLES};
 
-#[derive(BufferContents, Debug, Clone, Copy)]
-#[repr(C)]
-pub struct ShaderData {
-    pub view: [[f32; 4]; 4],
-    pub proj: [[f32; 4]; 4],
-    pub inv_view_proj: [[f32; 4]; 4],
-    pub camera_pos: [f32; 3],
-    _padding: f32,
-}
 
 pub struct FrameResources {
     pub command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
     pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
 
     pub uniform_buffers: Vec<Subbuffer<ShaderData>>,
+    pub particle_buffers: Vec<Subbuffer<[ParticleVertex]>>,
+
     pub current_frame_idx: usize
 }
 
 impl FrameResources {
     pub fn new(device: Arc<Device>, memory_allocator: Arc<StandardMemoryAllocator>) -> Self {
         let mut uniform_buffers = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
+        let mut particle_buffers = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
+
         for _ in 0..MAX_FRAMES_IN_FLIGHT {
-            let buffer = Buffer::new_sized::<ShaderData>(memory_allocator.clone(), BufferCreateInfo {
-                usage: BufferUsage::UNIFORM_BUFFER | BufferUsage::SHADER_DEVICE_ADDRESS,
+            let ub = Buffer::new_sized(
+                memory_allocator.clone(),
+                BufferCreateInfo {
+                usage: BufferUsage::UNIFORM_BUFFER
+                    | BufferUsage::SHADER_DEVICE_ADDRESS,
                 ..BufferCreateInfo::default()
             },AllocationCreateInfo {
                 memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..AllocationCreateInfo::default()
-            })
-                .expect("Failed to create uniform buffer");
+            }).map_err(|e| {
+                panic!("[Frame Resources] Failed to create uniform buffer:\n{:?}", e);
+            }).unwrap();
+            uniform_buffers.push(ub);
 
-            uniform_buffers.push(buffer);
+            let pb = Buffer::new_slice(
+                memory_allocator.clone(),
+                BufferCreateInfo {
+                    usage: BufferUsage::VERTEX_BUFFER
+                        | BufferUsage::SHADER_DEVICE_ADDRESS
+                        | BufferUsage::STORAGE_BUFFER
+                        | BufferUsage::TRANSFER_DST,
+                    ..BufferCreateInfo::default()
+                },
+                AllocationCreateInfo {
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    ..AllocationCreateInfo::default()
+                },
+                MAX_PARTICLES
+            ).map_err(|e| {
+                panic!("[Frame Resources] Failed to create particle buffer:\n{:?}", e);
+            }).unwrap();
+            particle_buffers.push(pb);
         }
+
+        info!("[Frame Resources] Created frame resources with {} uniform buffers and {} particle buffers.", uniform_buffers.len(), particle_buffers.len());
 
         Self {
             command_buffer_allocator: Arc::new(StandardCommandBufferAllocator::new(
@@ -50,7 +72,17 @@ impl FrameResources {
                 StandardDescriptorSetAllocatorCreateInfo::default(),
             )),
             uniform_buffers,
+            particle_buffers,
             current_frame_idx: 0,
         }
+    }
+    pub fn next_frame(&mut self) {
+        self.current_frame_idx = (self.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
+    }
+    pub fn current_ub(&self) -> &Subbuffer<ShaderData> {
+        &self.uniform_buffers[self.current_frame_idx]
+    }
+    pub fn current_pb(&self) -> &Subbuffer<[ParticleVertex]> {
+        &self.particle_buffers[self.current_frame_idx]
     }
 }

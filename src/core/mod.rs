@@ -1,4 +1,4 @@
 
 
 pub mod engine;
-mod scene;
+pub mod scene;

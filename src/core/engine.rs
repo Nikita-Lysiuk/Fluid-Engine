@@ -114,6 +114,9 @@ impl ApplicationHandler for Engine {
                     return;
                 }
 
+                self.renderer.as_mut().expect("[Engine] Renderer missing on redraw request.")
+                    .render(self.scene.as_ref().expect("[Engine] Scene missing on redraw request."));
+
                 if IS_PAINT_FPS_COUNTER {
                     if let Some(renderer) = self.renderer.as_ref() {
                         let title = format!("{} | FPS: {}", WINDOW_TITLE, self.fps_counter.fps());
