@@ -42,8 +42,4 @@ impl FpsCounter {
     pub fn fps(&self) -> u32 {
         self.current_fps
     }
-    
-    pub fn last_frame_time(&self) -> Instant {
-        self.last_frame_time
-    }
 }

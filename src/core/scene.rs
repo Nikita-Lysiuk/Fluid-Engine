@@ -1,25 +1,35 @@
 use glam::Vec3;
 use crate::entities::Actor;
-use crate::entities::camera::{Camera, ShaderData};
-use crate::entities::particle::{Particle, ParticleVertex};
+use crate::entities::camera::Camera;
+use crate::entities::collision::CollisionBox;
+use crate::entities::particle::{Particle};
 
 pub struct Scene {
     pub vertices: Vec<Particle>,
-    pub camera: Camera
+    pub camera: Camera,
+    pub boundary: CollisionBox
 }
 
 impl Scene {
     pub fn new() -> Self {
-        let camera = Camera::new(Vec3::new(0.0, 0.0, -5.0));
+        let vertices = vec![
+            Particle::new(
+                Vec3::new(0.0, 150.0, 0.0),
+                Vec3::new(0.2, 0.5, 1.0),
+                15.0,
+                2.0
+            ),
+        ];
+        let camera = Camera::new(Vec3::new(0.0, 0.0, -30.0));
+        let boundary = CollisionBox::new(
+            Vec3::new(-100.0, -100.0, -100.0),
+            Vec3::new(100.0, 100.0, 100.0)
+        );
+
         Self {
-            vertices: vec![
-                Particle::new(
-                    Vec3::new(0.0, 0.0, 0.0),
-                    0.3,
-                    Vec3::new(0.2, 0.5, 1.0),
-                ),
-            ],
-            camera
+            vertices,
+            camera,
+            boundary,
         }
     }
     pub fn update(&mut self, dt: f32) {
@@ -27,13 +37,5 @@ impl Scene {
             vertex.update(dt);
         }
         self.camera.update(dt);
-    }
-    pub fn get_particle_data(&self) -> Vec<ParticleVertex> {
-        self.vertices.iter()
-            .map(|p| p.build_shader_data())
-            .collect()
-    }
-    pub fn get_camera_data(&self) -> ShaderData {
-        self.camera.build_shader_data()
     }
 }

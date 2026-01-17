@@ -34,6 +34,23 @@ impl Command for MoveRightCameraCommand {
     }
 }
 
+pub struct MoveUpCameraCommand {
+    is_up: bool,
+}
+
+impl MoveUpCameraCommand {
+    pub fn new(is_up: bool) -> Self {
+        Self { is_up }
+    }
+}
+
+impl Command for MoveUpCameraCommand {
+    fn execute(&self, scene: &mut Scene, dt: f32) {
+        let up = scene.camera.up() * if self.is_up { 1.0 } else { -1.0 };
+        scene.camera.add_input_vector(up, CAMERA_MOVE_SPEED * dt);
+    }
+}
+
 pub struct RotateCameraCommand {
     dx: f32,
     dy: f32,

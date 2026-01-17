@@ -1,17 +1,19 @@
+use std::sync::Arc;
 use glam::{EulerRot, Mat4, Quat, Vec3};
-use vulkano::buffer::BufferContents;
+use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
+use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use crate::entities::Actor;
+use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
 #[derive(BufferContents, Debug, Clone, Copy)]
 #[repr(C)]
-pub struct ShaderData {
+struct CameraGPU {
     pub view: [[f32; 4]; 4],
     pub proj: [[f32; 4]; 4],
     pub inv_view_proj: [[f32; 4]; 4],
     pub camera_pos: [f32; 3],
     _padding: f32,
 }
-
 
 pub struct Camera {
     position: Vec3,
@@ -23,28 +25,16 @@ pub struct Camera {
 }
 
 impl Actor for Camera {
-    type ShaderDataType = ShaderData;
-    fn update(&mut self, dt: f32) {
+    #[warn(unused)]
+    fn update(&mut self, _dt: f32) {
         // Can be used for effects on every frame if needed
-    }
-    fn build_shader_data(&self) -> ShaderData {
-        let view = self.get_view_matrix();
-        let proj = self.get_projection_matrix();
-
-        ShaderData {
-            view: view.to_cols_array_2d(),
-            proj: proj.to_cols_array_2d(),
-            inv_view_proj: (proj * view).inverse().to_cols_array_2d(),
-            camera_pos: self.position.into(),
-            _padding: 0.0,
-        }
     }
     fn add_input_vector(&mut self, direction: Vec3, magnitude: f32) {
         self.position += direction * magnitude;
     }
     fn add_rotation(&mut self, dx: f32, dy: f32) {
         let yaw = Quat::from_rotation_y(dx.to_radians());
-        let pitch = Quat::from_rotation_x(-dy.to_radians());
+        let pitch = Quat::from_rotation_x(dy.to_radians());
         self.orientation = yaw * self.orientation * pitch;
         self.orientation = self.orientation.normalize();
     }
@@ -55,10 +45,10 @@ impl Camera {
         Self {
             position,
             orientation: Quat::IDENTITY,
-            fov: 60.0,
+            fov: 45.0,
             aspect_ratio: 16.0 / 9.0,
             near: 0.1,
-            far: 100.0,
+            far: 1000.0,
         }
     }
     pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Self {
@@ -107,3 +97,58 @@ impl Camera {
     }
 }
 
+pub struct CameraData {
+    uniform_buffers: Vec<Subbuffer<CameraGPU>>,
+}
+
+impl CameraData {
+    pub fn new(memory_allocator: Arc<StandardMemoryAllocator>) -> Self {
+        let mut uniform_buffers = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
+
+        for _ in 0..MAX_FRAMES_IN_FLIGHT {
+            let ub = Buffer::new_sized(
+                memory_allocator.clone(),
+                BufferCreateInfo {
+                    usage: BufferUsage::UNIFORM_BUFFER
+                        | BufferUsage::SHADER_DEVICE_ADDRESS,
+                    ..BufferCreateInfo::default()
+                },AllocationCreateInfo {
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    ..AllocationCreateInfo::default()
+                }).map_err(|e| {
+                panic!("[Camera Data] Failed to create uniform buffer:\n{:?}", e);
+            }).unwrap();
+            uniform_buffers.push(ub);
+        }
+
+        Self {
+            uniform_buffers,
+        }
+    }
+    pub fn write_to_buffer(&self, camera: &Camera, current_frame_idx: usize) {
+        let view = camera.get_view_matrix();
+        let proj = camera.get_projection_matrix();
+        let view_proj = proj * view;
+        let inv_view_proj = view_proj.inverse();
+
+        let camera_gpu = CameraGPU {
+            view: view.to_cols_array_2d(),
+            proj: proj.to_cols_array_2d(),
+            inv_view_proj: inv_view_proj.to_cols_array_2d(),
+            camera_pos: camera.position.to_array(),
+            _padding: 0.0,
+        };
+
+        self.uniform_buffers[current_frame_idx]
+            .write().map_err(|e| panic!("[Camera Data] Failed to write to uniform buffer:\n{:?}", e))
+            .unwrap()
+            .clone_from(&camera_gpu);
+    }
+    pub fn uniform_buffer_addr(&self, current_frame_idx: usize) -> u64 {
+        self.uniform_buffers[current_frame_idx]
+            .device_address()
+            .map_err(|e| panic!("[Camera Data] Failed to get uniform buffer device address:\n{:?}", e))
+            .unwrap()
+            .get()
+    }
+}

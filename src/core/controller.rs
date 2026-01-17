@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use winit::keyboard::KeyCode;
-use crate::commands::camera_commands::{MoveForwardCameraCommand, MoveRightCameraCommand};
+use crate::commands::camera_commands::{MoveForwardCameraCommand, MoveRightCameraCommand, MoveUpCameraCommand, RotateCameraCommand};
 use crate::commands::Command;
 
 pub struct Controller {
@@ -28,6 +28,18 @@ impl Controller {
         self.mouse_delta.0 += delta_x;
         self.mouse_delta.1 += delta_y;
     }
+    pub fn get_mouse_command(&mut self) -> Option<Box<dyn Command>> {
+        if self.mouse_delta.0 != 0.0 || self.mouse_delta.1 != 0.0 {
+            let command = Box::new(RotateCameraCommand::new(
+                self.mouse_delta.0,
+                self.mouse_delta.1,
+            ));
+            self.mouse_delta = (0.0, 0.0);
+            Some(command)
+        } else {
+            None
+        }
+    }
     pub fn get_active_commands(&self) -> Vec<Box<dyn Command>> {
         let mut commands: Vec<Box<dyn Command>> = Vec::new();
 
@@ -42,6 +54,12 @@ impl Controller {
         }
         if self.pressed_keys.contains(&KeyCode::KeyA) {
             commands.push(Box::new(MoveRightCameraCommand::new(false)));
+        }
+        if self.pressed_keys.contains(&KeyCode::KeyE) {
+            commands.push(Box::new(MoveUpCameraCommand::new(true)));
+        }
+        if self.pressed_keys.contains(&KeyCode::KeyQ) {
+            commands.push(Box::new(MoveUpCameraCommand::new(false)));
         }
 
         commands

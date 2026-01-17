@@ -7,7 +7,7 @@
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
 
-layout(buffer_reference, scalar) readonly buffer ShaderDataRef {
+layout(buffer_reference, scalar) readonly buffer CameraDataRef {
     mat4 view;
     mat4 proj;
     mat4 inv_view_proj;
@@ -32,7 +32,7 @@ layout(push_constant) uniform PushConstants {
 layout(location = 0) out vec3 out_color;
 
 void main() {
-    ShaderDataRef camera = ShaderDataRef(push.camera_addr);
+    CameraDataRef camera = CameraDataRef(push.camera_addr);
     ParticlesRef particles = ParticlesRef(push.particles_addr);
     
     Particle p = particles.data[gl_VertexIndex];

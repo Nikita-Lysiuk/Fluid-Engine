@@ -11,6 +11,7 @@ use vulkano::pipeline::graphics::rasterization::RasterizationState;
 use vulkano::pipeline::graphics::subpass::{PipelineRenderingCreateInfo, PipelineSubpassType};
 use vulkano::pipeline::graphics::vertex_input::VertexInputState;
 use vulkano::pipeline::graphics::viewport::ViewportState;
+use crate::utils::shader_loader::load_shader_entry_point;
 
 mod vs {
     use vulkano_shaders::shader;
@@ -35,9 +36,14 @@ pub struct PointPipeline {
 }
 
 impl PointPipeline {
-    pub fn new(device: Arc<Device>, layout: Arc<PipelineLayout>, color_format: Format, depth_format: Format) -> Self {
-        let vs = vs::load(device.clone()).expect("failed to create shader module").entry_point("main").expect("failed to load entry point");
-        let fs = fs::load(device.clone()).expect("failed to create shader module").entry_point("main").expect("failed to load entry point");
+    pub fn new(
+        device: Arc<Device>, 
+        layout: Arc<PipelineLayout>,
+        color_format: Format,
+        depth_format: Format
+    ) -> Self {
+        let vs = load_shader_entry_point(device.clone(), vs::load, "point vertex");
+        let fs = load_shader_entry_point(device.clone(), fs::load, "point fragment");
 
         let stages = [
             PipelineShaderStageCreateInfo::new(vs.clone()),

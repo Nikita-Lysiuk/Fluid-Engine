@@ -1,18 +1,18 @@
 use log::{info, debug, error};
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
-use winit::event::{DeviceEvent, DeviceId, ElementState, WindowEvent};
+use winit::dpi::PhysicalSize;
+use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{CursorGrabMode, Icon, WindowAttributes, WindowId};
-use crate::commands::camera_commands::RotateCameraCommand;
-use crate::commands::Command;
 use crate::core::controller::{Controller, KeyboardAction};
 use crate::core::scene::Scene;
 use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
+use crate::physics::PhysicsEngine;
 use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, TARGET_FRAME_DURATION, WINDOW_ICON_PATH, WINDOW_TITLE};
 use crate::utils::fps_counter::FpsCounter;
 
@@ -32,6 +32,7 @@ pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
     scene: Option<Scene>,
+    physics_engine: PhysicsEngine,
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
@@ -47,10 +48,13 @@ impl Engine {
 
         event_loop.set_control_flow(ControlFlow::Poll);
 
+        let physics_engine = PhysicsEngine::new();
+
         Ok(Self {
             renderer: None,
             event_loop: Some(event_loop),
             scene: Some(Scene::new()),
+            physics_engine,
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
             is_focused: true,
@@ -72,7 +76,7 @@ impl ApplicationHandler for Engine {
             info!("[Engine] System Resumed. Initializing Window and Graphics...");
 
             let window_attributes = WindowAttributes::default()
-                .with_inner_size(event_loop.primary_monitor().unwrap().size())
+                .with_inner_size(PhysicalSize::new(1280, 720))
                 .with_window_icon(load_icon(WINDOW_ICON_PATH).ok())
                 .with_taskbar_icon(load_icon(WINDOW_ICON_PATH).ok());
 
@@ -110,6 +114,24 @@ impl ApplicationHandler for Engine {
                     } else {
                         window.set_cursor_grab(CursorGrabMode::None).ok();
                         window.set_cursor_visible(true);
+                    }
+                }
+            }
+            WindowEvent::MouseInput {
+                state: ElementState::Pressed,
+                button: MouseButton::Left,
+                ..
+            } => {
+                if !self.is_focused {
+                    self.is_focused = true;
+                    info!("[Engine] Window clicked, restoring focus and cursor grab.");
+
+                    if let Some(renderer) = self.renderer.as_mut() {
+                        let window = renderer.window_renderer.window();
+                        window.set_cursor_grab(CursorGrabMode::Locked)
+                            .or_else(|_| window.set_cursor_grab(CursorGrabMode::Confined))
+                            .unwrap_or_else(|e| error!("Failed to grab cursor: {}", e));
+                        window.set_cursor_visible(false);
                     }
                 }
             }
@@ -156,6 +178,10 @@ impl ApplicationHandler for Engine {
                 for command in self.controller.get_active_commands() {
                     command.execute(scene, dt.as_secs_f32());
                 }
+                self.controller.get_mouse_command().map(|cmd| cmd.execute(scene, dt.as_secs_f32()));
+
+                self.physics_engine.update(scene);
+
                 scene.update(dt.as_secs_f32());
 
                 self.renderer.as_mut().expect("[Engine] Renderer missing on redraw request.")
@@ -186,10 +212,7 @@ impl ApplicationHandler for Engine {
                     let dx = delta.0 as f32 * sensitivity;
                     let dy = delta.1 as f32 * sensitivity;
 
-                    let command = RotateCameraCommand::new(dx, dy);
-                    if let Some(scene) = self.scene.as_mut() {
-                        command.execute(scene, 0.0);
-                    }
+                    self.controller.update_mouse_delta(dx, dy);
                 }
             }
             _ => {}
