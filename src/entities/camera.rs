@@ -38,6 +38,9 @@ impl Actor for Camera {
         self.orientation = yaw * self.orientation * pitch;
         self.orientation = self.orientation.normalize();
     }
+    fn location(&self) -> Vec3 {
+        self.position
+    }
 }
 
 impl Camera {
@@ -62,6 +65,19 @@ impl Camera {
             near: 0.1,
             far: 100.0,
         }
+    }
+    pub fn rotate(&mut self, pitch: f32, yaw: f32, roll: f32) {
+        let rotation = Quat::from_euler(EulerRot::YXZ, yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+        self.orientation = rotation * self.orientation;
+        self.orientation = self.orientation.normalize();
+    }
+    pub fn rotate_absolute(&mut self, pitch: f32, yaw: f32, roll: f32) {
+        self.orientation = Quat::from_euler(EulerRot::YXZ, yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+        self.orientation = self.orientation.normalize();
+    }
+    pub fn rotate_with_quat(&mut self, quat: Quat) {
+        self.orientation = quat * self.orientation;
+        self.orientation = self.orientation.normalize();
     }
     pub fn fov(&mut self, fov: f32) -> &mut Self {
         self.fov = fov;

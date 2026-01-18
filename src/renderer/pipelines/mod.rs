@@ -6,18 +6,20 @@ use vulkano::pipeline::layout::{PipelineLayoutCreateInfo, PushConstantRange};
 use vulkano::pipeline::PipelineLayout;
 use vulkano::shader::ShaderStages;
 use vulkano_util::context::VulkanoContext;
+use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
 use crate::renderer::pipelines::point_pipeline::PointPipeline;
 use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
-
+pub mod collision_pipeline;
 
 pub struct Pipelines {
     pub sky_layout: Arc<PipelineLayout>,
     pub sky_pipeline: Arc<SkyPipeline>,
     pub common_layout: Arc<PipelineLayout>,
     pub point_pipeline: Arc<PointPipeline>,
+    pub collision_pipeline: Arc<CollisionPipeline>
 }
 
 impl Pipelines {
@@ -35,12 +37,14 @@ impl Pipelines {
 
         let common_layout = Self::create_common_layout(device.clone(), push_constant_range);
         let point_pipeline = Arc::new(PointPipeline::new(device.clone(), common_layout.clone(), swapchain_format, depth_format));
+        let collision_pipeline = Arc::new(CollisionPipeline::new(device.clone(), common_layout.clone(), swapchain_format, depth_format));
 
         Self {
             sky_layout,
             sky_pipeline,
             common_layout,
             point_pipeline,
+            collision_pipeline
         }
     }
 

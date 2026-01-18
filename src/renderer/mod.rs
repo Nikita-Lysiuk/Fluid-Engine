@@ -89,6 +89,7 @@ impl Renderer {
                 buffer_device_address: true,
                 shader_int64: true,
                 large_points: true,
+                fill_mode_non_solid: true,
                 ..DeviceFeatures::empty()
             },
             ..VulkanoConfig::default()

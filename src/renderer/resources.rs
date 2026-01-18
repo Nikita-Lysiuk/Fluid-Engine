@@ -35,6 +35,7 @@ impl GpuSceneResources {
     }
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines) {
         self.particles_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx);
+        self.collision_box_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx);
     }
     pub fn prepare_next_frame(&mut self) {
         self.current_frame_idx = (self.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;

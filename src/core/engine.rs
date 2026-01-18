@@ -180,9 +180,7 @@ impl ApplicationHandler for Engine {
                 }
                 self.controller.get_mouse_command().map(|cmd| cmd.execute(scene, dt.as_secs_f32()));
 
-                self.physics_engine.update(scene);
-
-                scene.update(dt.as_secs_f32());
+                self.physics_engine.update(scene, dt.as_secs_f32());
 
                 self.renderer.as_mut().expect("[Engine] Renderer missing on redraw request.")
                     .render(self.scene.as_ref().expect("[Engine] Scene missing on redraw request."));

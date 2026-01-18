@@ -23,12 +23,12 @@ pub struct ParticleVertex {
 }
 
 pub struct Particle {
-    pub position: Vec3,
-    pub velocity: Vec3,
-    pub acceleration: Vec3,
-    pub color: Vec3,
-    pub radius: f32,
-    pub mass: f32,
+    position: Vec3,
+    velocity: Vec3,
+    acceleration: Vec3,
+    color: Vec3,
+    radius: f32,
+    mass: f32,
     _padding: f32,
 }
 
@@ -38,6 +38,18 @@ impl Actor for Particle {
         self.position += self.velocity * dt;
 
         self.acceleration = Vec3::ZERO;
+    }
+    fn location(&self) -> Vec3 {
+        self.position
+    }
+    fn velocity(&self) -> Vec3 {
+        self.velocity
+    }
+    fn set_position(&mut self, _position: Vec3) {
+        self.position = _position;
+    }
+    fn set_velocity(&mut self, _velocity: Vec3) {
+        self.velocity = _velocity;
     }
 }
 
@@ -53,9 +65,53 @@ impl Particle {
             _padding: 0.0,
         }
     }
+    pub fn new_with_count(count: usize, min: Vec3, max: Vec3) -> Vec<Self> {
+        let side = (count as f32).powf(1.0/3.0).ceil() as i32;
+        let spacing = 0.6;
+        let mut particles = Vec::with_capacity(count);
 
+        let offset = ((side - 1) as f32 * spacing) / 2.0;
+
+        let mut spawned = 0;
+        for z in 0..side {
+            for y in 0..side {
+                for x in 0..side {
+                    if spawned >= count {
+                        break;
+                    }
+
+                    let mut pos = Vec3::new(
+                        x as f32 * spacing - offset,
+                        y as f32 * spacing - offset,
+                        z as f32 * spacing - offset,
+                    );
+
+                    if pos.x < min.x || pos.y < min.y || pos.z < min.z {
+                        pos += min;
+                    }
+
+                    if pos.x > max.x || pos.y > max.y || pos.z > max.z {
+                        pos -= max;
+                    }
+
+                    particles.push(Particle::new(
+                        pos,
+                        Vec3::new(0.4, 0.7, 1.0),
+                        0.2,
+                        1.0,
+                    ));
+                    spawned += 1;
+                }
+            }
+        }
+
+        particles
+    }
     pub fn add_acceleration(&mut self, acceleration: Vec3) {
         self.acceleration += acceleration / self.mass;
+    }
+    pub fn radius(&self) -> f32 {
+        self.radius
     }
 }
 

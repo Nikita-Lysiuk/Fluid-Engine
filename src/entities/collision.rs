@@ -1,9 +1,10 @@
 use std::sync::Arc;
 use glam::Vec3;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
+use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::entities::ModelVertex;
-use crate::entities::particle::Particle;
+use crate::entities::{Actor, ModelVertex};
+use crate::renderer::pipelines::Pipelines;
 use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct CollisionBox {
@@ -16,10 +17,10 @@ impl CollisionBox {
         Self { min, max }
     }
 
-    pub fn contains(&self, point: Particle) -> bool {
-        point.position.x >= self.min.x && point.position.x <= self.max.x &&
-        point.position.y >= self.min.y && point.position.y <= self.max.y &&
-        point.position.z >= self.min.z && point.position.z <= self.max.z
+    pub fn contains(&self, actor: &impl Actor) -> bool {
+        actor.location().x >= self.min.x && actor.location().x <= self.max.x && 
+            actor.location().y >= self.min.y && actor.location().y <= self.max.y &&
+            actor.location().z >= self.min.z && actor.location().z <= self.max.z
     }
 }
 
@@ -101,8 +102,8 @@ impl CollisionBoxData {
             .unwrap()
             .copy_from_slice(&indices);
     }
-    pub fn index_len(&self) -> u32 {
-        self.index_buffer.len() as u32
+    pub fn index_len(&self, current_frame_idx: usize) -> u32 {
+        self.index_buffer[current_frame_idx].len() as u32
     }
     pub fn vertex_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.vertex_buffer[current_frame_idx]
@@ -111,11 +112,20 @@ impl CollisionBoxData {
             .unwrap()
             .get()
     }
-    pub fn index_buffer_addr(&self, current_frame_idx: usize) -> u64 {
-        self.index_buffer[current_frame_idx]
-            .device_address()
-            .map_err(|e| panic!("[CollisionBox] Failed to get index buffer device address:\n{:?}", e))
-            .unwrap()
-            .get()
+    pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
+        unsafe {
+            builder
+                .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone()).map_err(|e| panic!("[Renderer] Failed to bind collision pipeline: {:?}", e)).unwrap()
+                .push_constants(
+                    pipelines.common_layout.clone(),
+                    0,
+                    [
+                        camera_addr,
+                        self.vertex_buffer_addr(current_frame_idx),
+                    ]
+                ).map_err(|e| panic!("[Renderer] Failed to bind buffers: {:?}", e)).unwrap()
+                .bind_index_buffer(self.index_buffer[current_frame_idx].clone()).map_err(|e| panic!("[Renderer] Failed to bind index buffer: {:?}", e)).unwrap()
+                .draw_indexed(self.index_len(current_frame_idx), 1, 0, 0, 0).map_err(|e| panic!("[Renderer] Failed to draw collision box: {:?}", e)).unwrap();
+        }
     }
 }
