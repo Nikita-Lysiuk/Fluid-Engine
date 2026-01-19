@@ -29,6 +29,9 @@ impl Actor for Camera {
     fn update(&mut self, _dt: f32) {
         // Can be used for effects on every frame if needed
     }
+    fn location(&self) -> Vec3 {
+        self.position
+    }
     fn add_input_vector(&mut self, direction: Vec3, magnitude: f32) {
         self.position += direction * magnitude;
     }
@@ -37,9 +40,6 @@ impl Actor for Camera {
         let pitch = Quat::from_rotation_x(dy.to_radians());
         self.orientation = yaw * self.orientation * pitch;
         self.orientation = self.orientation.normalize();
-    }
-    fn location(&self) -> Vec3 {
-        self.position
     }
 }
 

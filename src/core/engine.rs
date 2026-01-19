@@ -13,12 +13,14 @@ use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
 use crate::physics::PhysicsEngine;
-use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, TARGET_FRAME_DURATION, WINDOW_ICON_PATH, WINDOW_TITLE};
+use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, TARGET_FRAME_DURATION, WINDOW_TITLE};
 use crate::utils::fps_counter::FpsCounter;
 
-fn load_icon(bytes: &[u8]) -> Result<Icon, ApplicationError> {
+fn load_icon(path: &str) -> Result<Icon, ApplicationError> {
     let (icon_rgba, icon_width, icon_height) = {
-        let image = image::load_from_memory(bytes).unwrap().into_rgba8();
+        let image = image::open(path)
+            .map_err(|e| ApplicationError::ResourceLoadError(format!("Failed to parse icon image: {}", e)))?
+            .into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();
         (rgba, width, height)
@@ -31,11 +33,12 @@ fn load_icon(bytes: &[u8]) -> Result<Icon, ApplicationError> {
 pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
-    scene: Option<Scene>,
+    scene: Scene,
     physics_engine: PhysicsEngine,
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
+    accumulator: f32,
 }
 
 impl Engine {
@@ -47,17 +50,18 @@ impl Engine {
             .map_err(|e| ApplicationError::EventLoopInitializationError(e))?;
 
         event_loop.set_control_flow(ControlFlow::Poll);
-
-        let physics_engine = PhysicsEngine::new();
+        let scene = Scene::new();
+        let physics_engine = PhysicsEngine::new(scene.smoothing_length);
 
         Ok(Self {
             renderer: None,
             event_loop: Some(event_loop),
-            scene: Some(Scene::new()),
+            scene,
             physics_engine,
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
             is_focused: true,
+            accumulator: 0.0,
         })
     }
 
@@ -77,8 +81,8 @@ impl ApplicationHandler for Engine {
 
             let window_attributes = WindowAttributes::default()
                 .with_inner_size(PhysicalSize::new(1280, 720))
-                .with_window_icon(load_icon(WINDOW_ICON_PATH).ok())
-                .with_taskbar_icon(load_icon(WINDOW_ICON_PATH).ok());
+                .with_window_icon(load_icon("assets/logo.png").ok())
+                .with_taskbar_icon(load_icon("assets/logo.png").ok());
 
 
             let window = match event_loop.create_window(window_attributes) {
@@ -90,7 +94,6 @@ impl ApplicationHandler for Engine {
                 }
             };
             self.renderer = Some(Renderer::new(window));
-            self.scene = Some(Scene::new());
             info!("[Engine] Systems initialized successfully.");
         }
     }
@@ -165,25 +168,26 @@ impl ApplicationHandler for Engine {
                 }
             }
             WindowEvent::RedrawRequested => {
-                if !self.is_focused {
-                    event_loop.set_control_flow(ControlFlow::WaitUntil(
-                        std::time::Instant::now() + TARGET_FRAME_DURATION
-                    ));
-                    return;
+                let dt = self.fps_counter.tick().as_secs_f32();
+                let fixed_dt = 0.002; // Стабільний крок 2мс
+
+                self.accumulator += dt;
+
+                while self.accumulator >= fixed_dt {
+                    for command in self.controller.get_active_commands() {
+                        command.execute(&mut self.scene, fixed_dt);
+                    }
+                    if let Some(cmd) = self.controller.get_mouse_command() {
+                        cmd.execute(&mut self.scene, fixed_dt);
+                    }
+
+                    self.physics_engine.update(&mut self.scene, fixed_dt);
+
+                    self.accumulator -= fixed_dt;
                 }
 
-                let dt = self.fps_counter.tick();
-                let scene = self.scene.as_mut().expect("[Engine] Scene missing on redraw request.");
-
-                for command in self.controller.get_active_commands() {
-                    command.execute(scene, dt.as_secs_f32());
-                }
-                self.controller.get_mouse_command().map(|cmd| cmd.execute(scene, dt.as_secs_f32()));
-
-                self.physics_engine.update(scene, dt.as_secs_f32());
-
-                self.renderer.as_mut().expect("[Engine] Renderer missing on redraw request.")
-                    .render(self.scene.as_ref().expect("[Engine] Scene missing on redraw request."));
+                self.renderer.as_mut().expect("[Engine] Renderer missing.")
+                    .render(&self.scene);
 
                 if IS_PAINT_FPS_COUNTER {
                     if let Some(renderer) = self.renderer.as_ref() {

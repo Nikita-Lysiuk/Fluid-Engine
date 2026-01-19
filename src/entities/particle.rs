@@ -1,6 +1,7 @@
 use std::cell::Cell;
 use std::sync::Arc;
 use glam::Vec3;
+use rayon::prelude::*;
 use vulkano::buffer::{BufferContents, Subbuffer, Buffer, BufferCreateInfo, BufferUsage};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
@@ -45,11 +46,11 @@ impl Actor for Particle {
     fn velocity(&self) -> Vec3 {
         self.velocity
     }
-    fn set_position(&mut self, _position: Vec3) {
-        self.position = _position;
-    }
     fn set_velocity(&mut self, _velocity: Vec3) {
         self.velocity = _velocity;
+    }
+    fn set_position(&mut self, _position: Vec3) {
+        self.position = _position;
     }
 }
 
@@ -65,34 +66,45 @@ impl Particle {
             _padding: 0.0,
         }
     }
-    pub fn new_with_count(count: usize, min: Vec3, max: Vec3) -> Vec<Self> {
-        let side = (count as f32).powf(1.0/3.0).ceil() as i32;
-        let spacing = 0.6;
+    pub fn new_with_count(count: usize, min: Vec3, max: Vec3) -> (Vec<Self>, f32) {
+        let size = max - min;
+
+        let volume = (size.x * size.y * size.z).max(0.000001);
+
+        let k = (count as f32 / volume).powf(1.0 / 3.0);
+
+        let n = Vec3::new(
+            (size.x * k).ceil(),
+            (size.y * k).ceil(),
+            (size.z * k).ceil(),
+        );
+
+        let spacing = Vec3::new(
+            size.x / n.x,
+            size.y / n.y,
+            size.z / n.z,
+        );
+
+        let avg_spacing = (spacing.x + spacing.y + spacing.z) / 3.0;
+
         let mut particles = Vec::with_capacity(count);
 
-        let offset = ((side - 1) as f32 * spacing) / 2.0;
+        let offset = spacing / 2.0;
 
         let mut spawned = 0;
-        for z in 0..side {
-            for y in 0..side {
-                for x in 0..side {
+
+        'outer: for z in 0..n.z as usize {
+            for y in 0..n.y as usize {
+                for x in 0..n.x as usize {
                     if spawned >= count {
-                        break;
+                        break 'outer;
                     }
 
-                    let mut pos = Vec3::new(
-                        x as f32 * spacing - offset,
-                        y as f32 * spacing - offset,
-                        z as f32 * spacing - offset,
+                    let pos = Vec3::new(
+                        min.x + x as f32 * spacing.x + offset.x,
+                        min.y + y as f32 * spacing.y + offset.y,
+                        min.z + z as f32 * spacing.z + offset.z,
                     );
-
-                    if pos.x < min.x || pos.y < min.y || pos.z < min.z {
-                        pos += min;
-                    }
-
-                    if pos.x > max.x || pos.y > max.y || pos.z > max.z {
-                        pos -= max;
-                    }
 
                     particles.push(Particle::new(
                         pos,
@@ -105,13 +117,16 @@ impl Particle {
             }
         }
 
-        particles
+        (particles, avg_spacing)
     }
     pub fn add_acceleration(&mut self, acceleration: Vec3) {
         self.acceleration += acceleration / self.mass;
     }
     pub fn radius(&self) -> f32 {
         self.radius
+    }
+    pub fn mass(&self) -> f32 {
+        self.mass
     }
 }
 
@@ -152,15 +167,7 @@ impl ParticleData {
         }
     }
     pub fn write_to_buffer(&self, particles: &[Particle], current_frame_idx: usize) {
-        let particle_vertices: Vec<ParticleVertex> = particles.iter().map(|p| {
-            ParticleVertex {
-                position: p.position.to_array(),
-                radius: p.radius,
-                color: p.color.to_array(),
-            }
-        }).collect();
-
-        let num_particles = particle_vertices.len();
+        let num_particles = particles.len();
         if num_particles == 0 { return; }
 
         let mut write_lock = self.vertex_buffer[current_frame_idx]
@@ -168,9 +175,15 @@ impl ParticleData {
             .map_err(|e| panic!("[Particle Data] Failed to write to vertex buffer:\n{:?}", e))
             .unwrap();
 
-        write_lock[..num_particles].copy_from_slice(&particle_vertices);
-
-        self.vertices_count[current_frame_idx].set(particle_vertices.len() as u32);
+        let dst_slice = &mut write_lock[0..num_particles];
+        dst_slice.par_iter_mut().zip(particles.par_iter()).for_each(|(v, p)| {
+            *v = ParticleVertex {
+                position: p.location().to_array(),
+                radius: p.radius(),
+                color: p.color.to_array(),
+            }
+        });
+        self.vertices_count[current_frame_idx].set(num_particles as u32);
     }
     fn vertex_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.vertex_buffer[current_frame_idx]
@@ -180,6 +193,7 @@ impl ParticleData {
             .get()
     }
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
+        let _span = tracy_client::span!("Bind Particle Data to Command Buffer");
         unsafe {
             builder.bind_pipeline_graphics(pipelines.point_pipeline.inner.clone()).map_err(|e| panic!("[Renderer] Failed to bind point pipeline: {:?}", e)).unwrap()
                 .push_constants(

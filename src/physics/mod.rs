@@ -1,30 +1,42 @@
+mod solver;
+mod neighbor_search;
+mod kernel;
+mod integration;
+
 use glam::Vec3;
 use crate::core::scene::Scene;
 use crate::entities::Actor;
 use crate::entities::particle::Particle;
+use rayon::prelude::*;
+use crate::physics::kernel::{ SmoothingKernel, WendlandKernel };
 
 pub struct PhysicsEngine {
     gravity: Vec3,
     damping: f32,
+    smoothing_kernel: Box<dyn SmoothingKernel + Send + Sync>,
 }
 
 impl PhysicsEngine {
-    pub fn new() -> Self {
+    pub fn new(h: f32) -> Self {
         Self {
             gravity: Vec3::new(0.0, -9.81, 0.0),
-            damping: 0.5,
+            smoothing_kernel: Box::new(WendlandKernel::new(h, 3)),
+            damping: 0.99,
         }
     }
 
     pub fn update(&self, scene: &mut Scene, dt: f32) {
         let b = &scene.boundary;
 
-        for p in &mut scene.vertices {
-            //p.add_acceleration(self.gravity);
+
+        scene.vertices.par_iter_mut().for_each(|p| {
+
+            p.add_acceleration(self.gravity);
+
             p.update(dt);
 
             self.check_collision(p, b.min, b.max);
-        }
+        });
     }
 
     pub fn check_collision(&self, p: &mut Particle, box_min: Vec3, box_max: Vec3) {
