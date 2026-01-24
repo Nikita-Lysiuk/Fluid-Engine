@@ -13,9 +13,9 @@ pub struct Scene {
 impl Scene {
     pub fn new() -> Self {
         let (vertices, avg_spacing) = Particle::new_with_count(
-            1000,
-            Vec3::new(-10.0, -5.0, -10.0),
-            Vec3::new(10.0, 5.0, 10.0)
+            10000,
+            Vec3::new(-4.0, -2.0, -4.0),
+            Vec3::new(4.0, 2.0, 4.0)
         );
 
         let smoothing_length = avg_spacing * 2.6;
@@ -23,8 +23,8 @@ impl Scene {
         let mut camera = Camera::new(Vec3::new(0.0, 5.0, -25.0));
         camera.rotate(30.0, 0.0, 0.0);
         let boundary = CollisionBox::new(
-            Vec3::new(-10.0, -5.0, -10.0),
-            Vec3::new(10.0, 5.0, 10.0)
+            Vec3::new(-5.0, -4.0, -5.0),
+            Vec3::new(5.0, 4.0, 5.0)
         );
 
         Self {

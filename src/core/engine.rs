@@ -13,7 +13,7 @@ use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
 use crate::physics::PhysicsEngine;
-use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, TARGET_FRAME_DURATION, WINDOW_TITLE};
+use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, WINDOW_TITLE};
 use crate::utils::fps_counter::FpsCounter;
 
 fn load_icon(path: &str) -> Result<Icon, ApplicationError> {
