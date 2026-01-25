@@ -68,7 +68,7 @@ impl Particle {
             _padding: [0.0; 3],
         }
     }
-    pub fn new_with_count(count: usize, min: Vec3, max: Vec3) -> (Vec<Self>, f32) {
+    pub fn new_with_count(count: usize, d: f32, min: Vec3, max: Vec3) -> (Vec<Self>, f32) {
         let size = max - min;
 
         let volume = (size.x * size.y * size.z).max(0.000001);
@@ -111,7 +111,7 @@ impl Particle {
                     particles.push(Particle::new(
                         pos,
                         Vec3::new(0.4, 0.7, 1.0),
-                        0.1,
+                        d * 0.5,
                         1.0,
                     ));
                     spawned += 1;

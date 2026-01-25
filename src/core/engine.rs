@@ -51,7 +51,7 @@ impl Engine {
 
         event_loop.set_control_flow(ControlFlow::Poll);
         let scene = Scene::new();
-        let physics_engine = PhysicsEngine::new(scene.smoothing_length);
+        let physics_engine = PhysicsEngine::new(scene.smoothing_length, scene.particle_diameter);
 
         Ok(Self {
             renderer: None,

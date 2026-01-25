@@ -9,12 +9,15 @@ pub struct Scene {
     pub camera: Camera,
     pub boundary: CollisionBox,
     pub smoothing_length: f32,
+    pub particle_diameter: f32,
 }
 
 impl Scene {
     pub fn new() -> Self {
+        let particle_diameter = 0.2;
         let (vertices, avg_spacing) = Particle::new_with_count(
             MAX_PARTICLES,
+            particle_diameter,
             Vec3::new(-1.5, -1.0, -1.5),
             Vec3::new(1.5, 1.0, 1.5)
         );
@@ -33,6 +36,7 @@ impl Scene {
             camera,
             boundary,
             smoothing_length,
+            particle_diameter,
         }
     }
 }
