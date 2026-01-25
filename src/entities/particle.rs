@@ -108,11 +108,16 @@ impl Particle {
                         min.z + z as f32 * spacing.z + offset.z,
                     );
 
+                    let particle_radius = d * 0.5;
+                    let volume = d.powi(3);
+                    let density_water = 1000.0;
+                    let mass = density_water * volume;
+
                     particles.push(Particle::new(
                         pos,
                         Vec3::new(0.4, 0.7, 1.0),
-                        d * 0.5,
-                        1.0,
+                        particle_radius,
+                        mass,
                     ));
                     spawned += 1;
                 }
