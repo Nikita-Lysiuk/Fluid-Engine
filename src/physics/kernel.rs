@@ -41,7 +41,9 @@ impl SmoothingKernel for WendlandKernel {
             let term = 2.0 - q;
             let dw_dq = -4.5 * term * term;
             let dw_dr = dw_dq * self.normal_factor / self.h;
-            (r_vec / r) * dw_dr
+            let inv_r = 1.0 / r;
+            let g_q = dw_dr * inv_r;
+            r_vec * g_q
         }
     }
 }

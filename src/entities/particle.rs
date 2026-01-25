@@ -23,22 +23,23 @@ pub struct ParticleVertex {
     pub color: [f32; 3],
 }
 
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+#[repr(align(16))]
 pub struct Particle {
     position: Vec3,
     velocity: Vec3,
-    acceleration: Vec3,
     color: Vec3,
-    radius: f32,
-    mass: f32,
-    _padding: f32,
+    pub radius: f32,
+    pub mass: f32,
+    pub density: f32,
+    pub alpha: f32,
+    _padding: [f32; 3]
 }
 
 impl Actor for Particle {
     fn update(&mut self, dt: f32) {
-        self.velocity += self.acceleration * dt;
         self.position += self.velocity * dt;
-
-        self.acceleration = Vec3::ZERO;
     }
     fn location(&self) -> Vec3 {
         self.position
@@ -59,11 +60,12 @@ impl Particle {
         Self {
             position,
             velocity: Vec3::ZERO,
-            acceleration: Vec3::ZERO,
             color,
             radius,
             mass,
-            _padding: 0.0,
+            density: 0.0,
+            alpha: 0.0,
+            _padding: [0.0; 3],
         }
     }
     pub fn new_with_count(count: usize, min: Vec3, max: Vec3) -> (Vec<Self>, f32) {
@@ -109,7 +111,7 @@ impl Particle {
                     particles.push(Particle::new(
                         pos,
                         Vec3::new(0.4, 0.7, 1.0),
-                        0.2,
+                        0.1,
                         1.0,
                     ));
                     spawned += 1;
@@ -118,15 +120,6 @@ impl Particle {
         }
 
         (particles, avg_spacing)
-    }
-    pub fn add_acceleration(&mut self, acceleration: Vec3) {
-        self.acceleration += acceleration / self.mass;
-    }
-    pub fn radius(&self) -> f32 {
-        self.radius
-    }
-    pub fn mass(&self) -> f32 {
-        self.mass
     }
 }
 
@@ -153,7 +146,7 @@ impl ParticleData {
                     memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
                 },
-                MAX_PARTICLES
+                MAX_PARTICLES as u64,
             ).map_err(|e| {
                 panic!("[Particle Data] Failed to create vertex buffer:\n{:?}", e);
             }).unwrap();
@@ -179,7 +172,7 @@ impl ParticleData {
         dst_slice.par_iter_mut().zip(particles.par_iter()).for_each(|(v, p)| {
             *v = ParticleVertex {
                 position: p.location().to_array(),
-                radius: p.radius(),
+                radius: p.radius,
                 color: p.color.to_array(),
             }
         });

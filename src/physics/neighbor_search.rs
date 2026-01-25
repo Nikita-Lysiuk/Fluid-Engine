@@ -1,95 +1,101 @@
 use glam::{IVec3, Vec3};
-use rayon::prelude::*;
 
 pub struct NeighborSearch {
-    cell_size: f32,
     inv_cell_size: f32,
-    hash_table_size: usize,
+    pub table_size: usize,
 
-    pub particle_indices: Vec<usize>,
-    cell_starts: Vec<usize>
+    cell_starts: Vec<usize>,
+    cell_counts: Vec<u16>,
 }
 
 impl NeighborSearch {
     pub fn new(h: f32, max_particles: usize) -> Self {
         let cell_size = h * 2.0;
-        let hash_table_size = max_particles + 1;
+        let table_size = next_prime(max_particles * 2);
 
         Self {
-            cell_size,
             inv_cell_size: 1.0 / cell_size,
-            hash_table_size,
-            particle_indices: vec![0; max_particles],
-            cell_starts: vec![0; hash_table_size + 1],
+            table_size,
+            cell_starts: vec![usize::MAX; table_size],
+            cell_counts: vec![0; table_size],
         }
     }
+    #[inline(always)]
     pub fn hash(&self, cell: IVec3) -> usize {
-        let p1 = 73856093i32;
-        let p2 = 19349663i32;
-        let p3 = 83492791i32;
-        let h = (cell.x.wrapping_mul(p1) ^ cell.y.wrapping_mul(p2) ^ cell.z.wrapping_mul(p3)) as usize;
-        h % self.hash_table_size
+        let h = (cell.x.wrapping_mul(73856093)
+            ^ cell.y.wrapping_mul(19349663)
+            ^ cell.z.wrapping_mul(83492791)) as usize;
+        h % self.table_size
     }
-    fn pos_to_cell(&self, pos: Vec3) -> IVec3 {
-        IVec3::new(
-            (pos.x * self.inv_cell_size).floor() as i32,
-            (pos.y * self.inv_cell_size).floor() as i32,
-            (pos.z * self.inv_cell_size).floor() as i32,
-        )
+    #[inline(always)]
+    pub fn pos_to_cell(&self, pos: Vec3) -> IVec3 {
+        let v = pos * self.inv_cell_size;
+        IVec3::new(v.x.floor() as i32, v.y.floor() as i32, v.z.floor() as i32)
     }
     pub fn build(&mut self, positions: &[Vec3]) {
-        let n = positions.len();
+        self.cell_starts.fill(usize::MAX);
+        self.cell_counts.fill(0);
 
-        let mut hashes: Vec<(usize, usize)> = positions
-            .par_iter()
-            .enumerate()
-            .map(|(idx, &pos)| {
-                let cell = self.pos_to_cell(pos);
-                (self.hash(cell), idx)
-            })
-            .collect();
+        if positions.is_empty() { return; }
 
-        hashes.par_sort_unstable_by_key(|h| h.0);
+        let mut current_hash = self.hash(self.pos_to_cell(positions[0]));
+        self.cell_starts[current_hash] = 0;
+        let mut count = 0;
 
-        self.cell_starts.fill(0);
+        for i in 0..positions.len() {
+            let h = self.hash(self.pos_to_cell(positions[i]));
 
-        self.particle_indices.clear();
-        self.particle_indices.extend(hashes.iter().map(|h| h.1));
+            if h != current_hash {
+                self.cell_counts[current_hash] = count;
 
-        let mut current_hash = 999999999;
-        for (i, &(h, _)) in hashes.iter().enumerate() {
-            while current_hash != h {
-                current_hash = if current_hash == 999999999 { h } else { current_hash + 1 };
-                if current_hash >= self.hash_table_size { break; }
+                current_hash = h;
                 self.cell_starts[current_hash] = i;
+                count = 0;
             }
+            count += 1;
         }
-
-        self.cell_starts[self.hash_table_size] = n;
+        self.cell_counts[current_hash] = count;
     }
-    pub fn find_neighbors(&self, pos: Vec3, positions: &[Vec3], radius: f32) -> Vec<usize> {
-        let center_cell = self.pos_to_cell(pos);
-        let mut neighbors = Vec::with_capacity(64);
-        let r_sq = radius * radius;
+    #[inline(always)]
+    pub fn for_each_neighbor<F>(&self, pos_i: Vec3, positions: &[Vec3], r_sq: f32, mut callback: F)
+    where F: FnMut(usize)
+    {
+        let center = self.pos_to_cell(pos_i);
 
-        for x in -1..=1 {
+        for z in -1..=1 {
             for y in -1..=1 {
-                for z in -1..=1 {
-                    let h = self.hash(center_cell + IVec3::new(x, y, z));
+                for x in -1..=1 {
+                    let cell_idx = center + IVec3::new(x, y, z);
+                    let h = self.hash(cell_idx);
+
                     let start = self.cell_starts[h];
-                    let end = self.cell_starts[h + 1];
+
+                    if start == usize::MAX { continue; }
+
+                    let count = self.cell_counts[h] as usize;
+                    let end = start + count;
 
                     for i in start..end {
-                        let idx = self.particle_indices[i];
-                        let dist_sq = (positions[idx] - pos).length_squared();
+                        let dist_sq = positions[i].distance_squared(pos_i);
                         if dist_sq <= r_sq {
-                            neighbors.push(idx);
+                            callback(i);
                         }
                     }
                 }
             }
         }
-
-        neighbors
     }
+}
+fn next_prime(mut n: usize) -> usize {
+    loop {
+        n += 1;
+        if is_prime(n) { return n; }
+    }
+}
+fn is_prime(n: usize) -> bool {
+    if n <= 1 { return false; }
+    for i in 2..=(n as f64).sqrt() as usize {
+        if n % i == 0 { return false; }
+    }
+    true
 }

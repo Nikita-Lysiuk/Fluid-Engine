@@ -169,11 +169,19 @@ impl ApplicationHandler for Engine {
             }
             WindowEvent::RedrawRequested => {
                 let dt = self.fps_counter.tick().as_secs_f32();
-                let fixed_dt = 0.002; // Стабільний крок 2мс
+
+                let fixed_dt = 0.0166;
+
+                let max_substeps = 5;
 
                 self.accumulator += dt;
 
-                while self.accumulator >= fixed_dt {
+                if self.accumulator > 0.1 {
+                    self.accumulator = 0.1;
+                }
+
+                let mut steps = 0;
+                while self.accumulator >= fixed_dt && steps < max_substeps {
                     for command in self.controller.get_active_commands() {
                         command.execute(&mut self.scene, fixed_dt);
                     }
@@ -184,10 +192,12 @@ impl ApplicationHandler for Engine {
                     self.physics_engine.update(&mut self.scene, fixed_dt);
 
                     self.accumulator -= fixed_dt;
+                    steps += 1;
                 }
 
-                self.renderer.as_mut().expect("[Engine] Renderer missing.")
-                    .render(&self.scene);
+                if let Some(renderer) = self.renderer.as_mut() {
+                    renderer.render(&self.scene);
+                }
 
                 if IS_PAINT_FPS_COUNTER {
                     if let Some(renderer) = self.renderer.as_ref() {
