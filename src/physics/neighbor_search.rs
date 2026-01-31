@@ -1,101 +1,131 @@
-use glam::{IVec3, Vec3};
+use glam::{UVec3, Vec3};
+use log::info;
+use rayon::prelude::*;
+use crate::entities::particle::ParticleVertex;
 
 pub struct NeighborSearch {
-    inv_cell_size: f32,
-    pub table_size: usize,
-
-    cell_starts: Vec<usize>,
-    cell_counts: Vec<u16>,
+    cell_size: f32,
+    grid_min: Vec3,
+    grid_size: UVec3,
+    particle_hash: Vec<(u32, u32)>,
+    cell_start: Vec<u32>,
+    cell_end: Vec<u32>,
 }
 
 impl NeighborSearch {
-    pub fn new(h: f32, max_particles: usize) -> Self {
-        let cell_size = h * 2.0;
-        let table_size = next_prime(max_particles * 2);
+    pub fn new(h: f32, min: Vec3, max: Vec3) -> Self {
+        let cell_size = h;
+
+        let grid_size = UVec3::new(
+            ((max.x - min.x) / cell_size).ceil() as u32,
+            ((max.y - min.y) / cell_size).ceil() as u32,
+            ((max.z - min.z) / cell_size).ceil() as u32,
+        ) + UVec3::splat(2);
+
+
+        let total_cells = (grid_size.x * grid_size.y * grid_size.z) as usize;
+
+        info!("Grid created: {} cells (Memory: ~{} KB)", total_cells, total_cells * 24 / 1024);
 
         Self {
-            inv_cell_size: 1.0 / cell_size,
-            table_size,
-            cell_starts: vec![usize::MAX; table_size],
-            cell_counts: vec![0; table_size],
+            cell_size,
+            grid_min: min,
+            grid_size,
+            particle_hash: Vec::new(),
+            cell_start: vec![u32::MAX; total_cells],
+            cell_end: vec![u32::MAX; total_cells],
         }
     }
-    #[inline(always)]
-    pub fn hash(&self, cell: IVec3) -> usize {
-        let h = (cell.x.wrapping_mul(73856093)
-            ^ cell.y.wrapping_mul(19349663)
-            ^ cell.z.wrapping_mul(83492791)) as usize;
-        h % self.table_size
-    }
-    #[inline(always)]
-    pub fn pos_to_cell(&self, pos: Vec3) -> IVec3 {
-        let v = pos * self.inv_cell_size;
-        IVec3::new(v.x.floor() as i32, v.y.floor() as i32, v.z.floor() as i32)
-    }
-    pub fn build(&mut self, positions: &[Vec3]) {
-        self.cell_starts.fill(usize::MAX);
-        self.cell_counts.fill(0);
+    pub fn build_grid(&mut self, vertices: &Vec<ParticleVertex>) {
+        let num_particles = vertices.len();
 
-        if positions.is_empty() { return; }
+        if self.particle_hash.len() != num_particles {
+            self.particle_hash.resize(num_particles, (0, 0));
+        }
 
-        let mut current_hash = self.hash(self.pos_to_cell(positions[0]));
-        self.cell_starts[current_hash] = 0;
-        let mut count = 0;
+        let cell_size = self.cell_size;
+        let grid_min = self.grid_min;
+        let grid_size = self.grid_size;
 
-        for i in 0..positions.len() {
-            let h = self.hash(self.pos_to_cell(positions[i]));
+        self.particle_hash.par_iter_mut()
+            .enumerate()
+            .zip(vertices.par_iter())
+            .for_each(|((i, entry), &vert)| {
+                let pos = Vec3::from_array(vert.position);
+                let rel_pos = (pos - grid_min).max(Vec3::ZERO);
 
-            if h != current_hash {
-                self.cell_counts[current_hash] = count;
+                let x = (rel_pos.x / cell_size) as u32;
+                let y = (rel_pos.y / cell_size) as u32;
+                let z = (rel_pos.z / cell_size) as u32;
 
-                current_hash = h;
-                self.cell_starts[current_hash] = i;
-                count = 0;
+                let cell_idx = x + y * grid_size.x + z * grid_size.x * grid_size.y;
+                *entry = (cell_idx, i as u32);
+            });
+
+        self.particle_hash.par_sort_unstable_by_key(|entry| entry.0);
+        self.cell_start.par_iter_mut().for_each(|x| *x = u32::MAX);
+        self.cell_end.par_iter_mut().for_each(|x| *x = u32::MAX);
+
+        let mut prev_cell = u32::MAX;
+
+        for (i, &(cell_idx, _)) in self.particle_hash.iter().enumerate() {
+            if cell_idx != prev_cell {
+                if (cell_idx as usize) < self.cell_start.len() {
+                    self.cell_start[cell_idx as usize] = i as u32;
+
+                    if prev_cell != u32::MAX && (prev_cell as usize) < self.cell_end.len() {
+                        self.cell_end[prev_cell as usize] = i as u32;
+                    }
+                }
+                prev_cell = cell_idx;
             }
-            count += 1;
         }
-        self.cell_counts[current_hash] = count;
+
+        if prev_cell != u32::MAX && (prev_cell as usize) < self.cell_end.len() {
+            self.cell_end[prev_cell as usize] = num_particles as u32;
+        }
     }
     #[inline(always)]
-    pub fn for_each_neighbor<F>(&self, pos_i: Vec3, positions: &[Vec3], r_sq: f32, mut callback: F)
-    where F: FnMut(usize)
+    pub fn for_each_neighbor<F>(&self, pos: &Vec3, mut callback: F)
+    where
+        F: FnMut(usize),
     {
-        let center = self.pos_to_cell(pos_i);
+        let rel_pos = (pos - self.grid_min).max(Vec3::ZERO);
+        let cx = (rel_pos.x / self.cell_size) as i32;
+        let cy = (rel_pos.y / self.cell_size) as i32;
+        let cz = (rel_pos.z / self.cell_size) as i32;
 
-        for z in -1..=1 {
-            for y in -1..=1 {
-                for x in -1..=1 {
-                    let cell_idx = center + IVec3::new(x, y, z);
-                    let h = self.hash(cell_idx);
+        let dim_x = self.grid_size.x as i32;
+        let dim_y = self.grid_size.y as i32;
+        let dim_z = self.grid_size.z as i32;
+        
+        for z in (cz - 1)..=(cz + 1) {
+            if z < 0 || z >= dim_z { continue; }
+            let z_offset = z * dim_y;
 
-                    let start = self.cell_starts[h];
+            for y in (cy - 1)..=(cy + 1) {
+                if y < 0 || y >= dim_y { continue; }
+                let yz_offset = (y + z_offset) * dim_x;
 
-                    if start == usize::MAX { continue; }
+                for x in (cx - 1)..=(cx + 1) {
+                    if x < 0 || x >= dim_x { continue; }
+                    
+                    let cell_idx = (x + yz_offset) as usize;
 
-                    let count = self.cell_counts[h] as usize;
-                    let end = start + count;
+                    let start = self.cell_start[cell_idx];
 
-                    for i in start..end {
-                        let dist_sq = positions[i].distance_squared(pos_i);
-                        if dist_sq <= r_sq {
-                            callback(i);
+                    if start != u32::MAX {
+                        let end = self.cell_end[cell_idx];
+
+                        for k in start..end {
+                            callback(k as usize);
                         }
                     }
                 }
             }
         }
     }
-}
-fn next_prime(mut n: usize) -> usize {
-    loop {
-        n += 1;
-        if is_prime(n) { return n; }
+    pub fn get_sorted_indices(&self) -> &Vec<(u32, u32)> {
+        &self.particle_hash
     }
-}
-fn is_prime(n: usize) -> bool {
-    if n <= 1 { return false; }
-    for i in 2..=(n as f64).sqrt() as usize {
-        if n % i == 0 { return false; }
-    }
-    true
 }

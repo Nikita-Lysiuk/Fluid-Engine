@@ -21,18 +21,10 @@ pub struct ParticleVertex {
     pub color: [f32; 3],
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct ParticleState {
-    pub velocity: Vec3,
-    pub mass: f32,
-    pub density: f32,
-    pub alpha: f32,
-}
-
 pub struct ParticleGenerator;
 
 impl ParticleGenerator {
-    pub fn generate(count: usize, d: f32, min: Vec3, max: Vec3) -> (Vec<ParticleVertex>, Vec<ParticleState>, f32) {
+    pub fn generate(count: usize, r: f32, min: Vec3, max: Vec3) -> (Vec<ParticleVertex>, f32, f32) {
         let size = max - min;
         let volume = (size.x * size.y * size.z).max(0.000001);
         let k = (count as f32 / volume).powf(1.0 / 3.0);
@@ -53,9 +45,13 @@ impl ParticleGenerator {
         let offset = spacing / 2.0;
 
         let mut vertices = Vec::with_capacity(count);
-        let mut states = Vec::with_capacity(count);
 
         let mut spawned = 0;
+
+        let volume_per_particle = spacing.x * spacing.y * spacing.z;
+        let density_water = 1000.0;
+
+        let mass_of_particle = density_water * volume_per_particle;
 
         'outer: for z in 0..n.z as usize {
             for y in 0..n.y as usize {
@@ -70,30 +66,20 @@ impl ParticleGenerator {
                         min.z + z as f32 * spacing.z + offset.z,
                     );
 
-                    let particle_radius = d * 0.5;
-                    let volume = d.powi(3);
-                    let density_water = 1000.0;
-                    let mass = density_water * volume * 0.8;
 
                     vertices.push(ParticleVertex {
                         position: pos.to_array(),
-                        radius: particle_radius,
+                        radius: r,
                         color: [0.4, 0.7, 1.0],
                     });
 
-                    states.push(ParticleState {
-                        velocity: Vec3::ZERO,
-                        mass,
-                        density: 0.0,
-                        alpha: 0.0,
-                    });
-
                     spawned += 1;
+
                 }
             }
         }
 
-        (vertices, states, avg_spacing)
+        (vertices, avg_spacing, mass_of_particle)
     }
 }
 

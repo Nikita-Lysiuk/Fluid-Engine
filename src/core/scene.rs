@@ -1,23 +1,26 @@
 use glam::Vec3;
 use crate::entities::camera::Camera;
 use crate::entities::collision::CollisionBox;
-use crate::entities::particle::{ParticleGenerator, ParticleState, ParticleVertex};
+use crate::entities::particle::ParticleGenerator;
+use crate::physics::fluid_data::FluidData;
 use crate::utils::constants::MAX_PARTICLES;
 
 pub struct Scene {
-    pub rendering_data: Vec<ParticleVertex>,
-    pub physics_data: Vec<ParticleState>,
+ 
+    pub fluid_data: FluidData,
     pub camera: Camera,
     pub boundary: CollisionBox,
+    pub spacing: f32,
     pub particle_radius: f32,
+    pub particle_mass: f32,
 }
 
 impl Scene {
     pub fn new() -> Self {
         let particle_radius = 0.05;
-        let (rendering_data, physics_data, spacing) = ParticleGenerator::generate(
+        let (rendering_data,  spacing, mass) = ParticleGenerator::generate(
             MAX_PARTICLES,
-            particle_radius * 2.0,
+            particle_radius,
             Vec3::new(-1.0, 0.0, -1.0),
             Vec3::new(1.0, 5.0, 1.0)
         );
@@ -27,11 +30,12 @@ impl Scene {
         let boundary = CollisionBox::new(Vec3::new(-2.0, -1.0, -2.0), Vec3::new(2.0, 5.0, 2.0));
 
         Self {
-            rendering_data,
-            physics_data,
+            fluid_data: FluidData::new(rendering_data),
             camera,
             boundary,
+            spacing,
             particle_radius,
+            particle_mass: mass,
         }
     }
 }
