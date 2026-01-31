@@ -1,42 +1,37 @@
 use glam::Vec3;
 use crate::entities::camera::Camera;
 use crate::entities::collision::CollisionBox;
-use crate::entities::particle::{Particle};
+use crate::entities::particle::{ParticleGenerator, ParticleState, ParticleVertex};
 use crate::utils::constants::MAX_PARTICLES;
 
 pub struct Scene {
-    pub vertices: Vec<Particle>,
+    pub rendering_data: Vec<ParticleVertex>,
+    pub physics_data: Vec<ParticleState>,
     pub camera: Camera,
     pub boundary: CollisionBox,
-    pub smoothing_length: f32,
-    pub particle_diameter: f32,
+    pub particle_radius: f32,
 }
 
 impl Scene {
     pub fn new() -> Self {
-        let particle_diameter = 0.2;
-        let (vertices, avg_spacing) = Particle::new_with_count(
+        let particle_radius = 0.05;
+        let (rendering_data, physics_data, spacing) = ParticleGenerator::generate(
             MAX_PARTICLES,
-            particle_diameter,
-            Vec3::new(-1.5, -1.0, -1.5),
-            Vec3::new(1.5, 1.0, 1.5)
+            particle_radius * 2.0,
+            Vec3::new(-1.0, 0.0, -1.0),
+            Vec3::new(1.0, 5.0, 1.0)
         );
 
-        let smoothing_length = avg_spacing * 1.3;
-
-        let mut camera = Camera::new(Vec3::new(0.0, 5.0, -25.0));
+        let mut camera = Camera::new(Vec3::new(0.0, 5.0, -10.0));
         camera.rotate(30.0, 0.0, 0.0);
-        let boundary = CollisionBox::new(
-            Vec3::new(-5.0, -4.0, -5.0),
-            Vec3::new(5.0, 4.0, 5.0)
-        );
+        let boundary = CollisionBox::new(Vec3::new(-2.0, -1.0, -2.0), Vec3::new(2.0, 5.0, 2.0));
 
         Self {
-            vertices,
+            rendering_data,
+            physics_data,
             camera,
             boundary,
-            smoothing_length,
-            particle_diameter,
+            particle_radius,
         }
     }
 }

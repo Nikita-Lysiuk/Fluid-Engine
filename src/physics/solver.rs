@@ -113,7 +113,7 @@ impl DFSPHSolver {
                 .enumerate()
                 .for_each(|(i, kappa_out)| {
                     let mut delta_rho = 0.0;
-                    let vel_i = velocities_buf[i]; // Читаємо з буфера
+                    let vel_i = velocities_buf[i];
 
                     search.for_each_neighbor(positions[i], positions, self.radius_sq, |j_idx| {
                         let r_vec = positions[i] - positions[j_idx];

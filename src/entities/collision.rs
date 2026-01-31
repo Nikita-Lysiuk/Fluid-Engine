@@ -18,7 +18,7 @@ impl CollisionBox {
     }
 
     pub fn contains(&self, actor: &impl Actor) -> bool {
-        actor.location().x >= self.min.x && actor.location().x <= self.max.x && 
+        actor.location().x >= self.min.x && actor.location().x <= self.max.x &&
             actor.location().y >= self.min.y && actor.location().y <= self.max.y &&
             actor.location().z >= self.min.z && actor.location().z <= self.max.z
     }
@@ -34,6 +34,12 @@ impl CollisionBoxData {
         let mut vertex_buffer = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
         let mut index_buffer = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
 
+        let indices: Vec<u16> = vec![
+            0, 1, 1, 2, 2, 3, 3, 0,
+            4, 5, 5, 6, 6, 7, 7, 4,
+            0, 4, 1, 5, 2, 6, 3, 7,
+        ];
+
         for _ in 0..MAX_FRAMES_IN_FLIGHT {
             let vb = Buffer::new_slice(
                 memory_allocator.clone(),
@@ -45,10 +51,10 @@ impl CollisionBoxData {
                     memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
                 },
-                8
+                8 // 8 вершин у куба
             ).map_err(|e| panic!("[CollisionBox] Failed to create vertex buffer:\n{:?}", e)).unwrap();
 
-            let ib = Buffer::new_slice(
+            let ib = Buffer::from_iter(
                 memory_allocator.clone(),
                 BufferCreateInfo {
                     usage: BufferUsage::INDEX_BUFFER,
@@ -58,7 +64,7 @@ impl CollisionBoxData {
                     memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
                 },
-                24
+                indices.iter().cloned()
             ).map_err(|e| panic!("[CollisionBox] Failed to create index buffer:\n{:?}", e)).unwrap();
 
             vertex_buffer.push(vb);
@@ -70,8 +76,8 @@ impl CollisionBoxData {
             index_buffer,
         }
     }
-    pub fn write_to_buffer(&self, collision_box: &CollisionBox, current_frame_idx: usize) {
 
+    pub fn write_to_buffer(&self, collision_box: &CollisionBox, current_frame_idx: usize) {
         let min = collision_box.min;
         let max = collision_box.max;
 
@@ -86,25 +92,18 @@ impl CollisionBoxData {
             ModelVertex { position: [min.x, max.y, max.z] },
         ];
 
-        let indices: Vec<u16> = vec![
-            0, 1, 1, 2, 2, 3, 3, 0,
-            4, 5, 5, 6, 6, 7, 7, 4,
-            0, 4, 1, 5, 2, 6, 3, 7,
-        ];
-
         self.vertex_buffer[current_frame_idx]
-            .write().map_err(|e| panic!("[CollisionBox] Failed to write to vertex buffer:\n{:?}", e))
+            .write()
+            .map_err(|e| panic!("[CollisionBox] Failed to write to vertex buffer:\n{:?}", e))
             .unwrap()
             .copy_from_slice(&vertices);
 
-        self.index_buffer[current_frame_idx]
-            .write().map_err(|e| panic!("[CollisionBox] Failed to write to index buffer:\n{:?}", e))
-            .unwrap()
-            .copy_from_slice(&indices);
     }
+
     pub fn index_len(&self, current_frame_idx: usize) -> u32 {
         self.index_buffer[current_frame_idx].len() as u32
     }
+
     pub fn vertex_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.vertex_buffer[current_frame_idx]
             .device_address()
@@ -112,10 +111,11 @@ impl CollisionBoxData {
             .unwrap()
             .get()
     }
+
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
         unsafe {
             builder
-                .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone()).map_err(|e| panic!("[Renderer] Failed to bind collision pipeline: {:?}", e)).unwrap()
+                .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone()).unwrap()
                 .push_constants(
                     pipelines.common_layout.clone(),
                     0,
@@ -123,9 +123,9 @@ impl CollisionBoxData {
                         camera_addr,
                         self.vertex_buffer_addr(current_frame_idx),
                     ]
-                ).map_err(|e| panic!("[Renderer] Failed to bind buffers: {:?}", e)).unwrap()
-                .bind_index_buffer(self.index_buffer[current_frame_idx].clone()).map_err(|e| panic!("[Renderer] Failed to bind index buffer: {:?}", e)).unwrap()
-                .draw_indexed(self.index_len(current_frame_idx), 1, 0, 0, 0).map_err(|e| panic!("[Renderer] Failed to draw collision box: {:?}", e)).unwrap();
+                ).unwrap()
+                .bind_index_buffer(self.index_buffer[current_frame_idx].clone()).unwrap()
+                .draw_indexed(self.index_len(current_frame_idx), 1, 0, 0, 0).unwrap();
         }
     }
 }

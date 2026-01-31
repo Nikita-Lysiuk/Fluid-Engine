@@ -12,7 +12,6 @@ use crate::core::scene::Scene;
 use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
-use crate::physics::PhysicsEngine;
 use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, WINDOW_TITLE};
 use crate::utils::fps_counter::FpsCounter;
 
@@ -34,7 +33,7 @@ pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
     scene: Scene,
-    physics_engine: PhysicsEngine,
+    // physics_engine: PhysicsEngine,
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
@@ -51,13 +50,13 @@ impl Engine {
 
         event_loop.set_control_flow(ControlFlow::Poll);
         let scene = Scene::new();
-        let physics_engine = PhysicsEngine::new(scene.smoothing_length, scene.particle_diameter);
+        //let physics_engine = PhysicsEngine::new(scene.smoothing_length, scene.particle_diameter);
 
         Ok(Self {
             renderer: None,
             event_loop: Some(event_loop),
             scene,
-            physics_engine,
+            //physics_engine,
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
             is_focused: true,
@@ -189,7 +188,7 @@ impl ApplicationHandler for Engine {
                         cmd.execute(&mut self.scene, fixed_dt);
                     }
 
-                    self.physics_engine.update(&mut self.scene, fixed_dt);
+                    //self.physics_engine.update(&mut self.scene, fixed_dt);
 
                     self.accumulator -= fixed_dt;
                     steps += 1;

@@ -29,7 +29,7 @@ impl GpuSceneResources {
         self.camera_data.uniform_buffer_addr(self.current_frame_idx)
     }
     pub fn sync_with_scene(&self, scene: &Scene) {
-        self.particles_data.write_to_buffer(&scene.vertices, self.current_frame_idx);
+        self.particles_data.write_to_buffer(&scene.rendering_data, self.current_frame_idx);
         self.camera_data.write_to_buffer(&scene.camera, self.current_frame_idx);
         self.collision_box_data.write_to_buffer(&scene.boundary, self.current_frame_idx);
     }
