@@ -10,7 +10,6 @@ pub struct DFSPHSolver {
     h: f32,
     h_sq: f32,
 
-    kappa: Vec<f32>,
     delta_v: Vec<Vec3>,
 }
 
@@ -20,8 +19,6 @@ impl DFSPHSolver {
             h,
             h_sq: h * h,
             smoothing_kernel,
-
-            kappa: vec![0.0; MAX_PARTICLES],
             delta_v: vec![Vec3::ZERO; MAX_PARTICLES],
         }
     }
@@ -147,7 +144,7 @@ impl DFSPHSolver {
         let densities = &scene.fluid_data.densities;
         let alphas = &scene.fluid_data.alphas;
 
-        let kappas = &mut self.kappa;
+        let kappas = &mut scene.fluid_data.kappa;
         let delta_vs = &mut self.delta_v;
 
         let velocities = &mut scene.fluid_data.velocities;
@@ -179,9 +176,7 @@ impl DFSPHSolver {
                     let density_error = (rho_star - target_density).max(0.0);
 
                     if density_error > 0.0 {
-                        *kappa = (density_error / dt_sq) * alphas[i];
-                    } else {
-                        *kappa = 0.0;
+                        *kappa += (density_error / dt_sq) * alphas[i];
                     }
                 });
 
@@ -232,7 +227,7 @@ impl DFSPHSolver {
         let alphas = &scene.fluid_data.alphas;
         let velocities = &mut scene.fluid_data.velocities;
 
-        let kappas = &mut self.kappa;
+        let kappas = &mut scene.fluid_data.kappa_v;
         let delta_vs = &mut self.delta_v;
 
         for _ in 0..iter_count {

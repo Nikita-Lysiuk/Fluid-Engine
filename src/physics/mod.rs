@@ -30,24 +30,18 @@ impl PhysicsEngine {
     }
     pub fn update(&mut self, scene: &mut Scene, total_dt: f32) {
         self.neighbor_search.build_grid(&scene.fluid_data.vertices);
-
-        scene.fluid_data.reorder_data(&self.neighbor_search.get_sorted_indices());
-
+        scene.fluid_data.reorder_data(self.neighbor_search.get_sorted_indices());
         self.solver.update_densities_and_factors(scene, &self.neighbor_search);
 
-        self.solver.apply_gravity(scene, total_dt);
-        self.solver.apply_viscosity(scene, &self.neighbor_search);
-
         let mut t = 0.0;
-        let mut step = 0;
-        let max_steps = 5;
-
-        while t < total_dt && step < max_steps {
+        while t < total_dt {
             let dt = self.calculate_adaptive_dt(scene, total_dt - t);
+            self.solver.solve_divergence(scene, &self.neighbor_search, dt);
+            self.solver.apply_gravity(scene, dt);
+            self.solver.apply_viscosity(scene, &self.neighbor_search);
             self.solver.solve_density(scene, &self.neighbor_search, dt);
             self.integrate_particles(scene, dt);
-            self.solver.solve_divergence(scene, &self.neighbor_search, dt);
-            step += 1;
+
             t += dt;
         }
     }
@@ -68,8 +62,8 @@ impl PhysicsEngine {
             0.01
         };
 
-        let min_dt = 0.01;
-        let max_dt = 0.2;
+        let min_dt = 0.005;
+        let max_dt = 0.15;
 
         cfl_dt.clamp(min_dt, max_dt).min(time_left)
     }
