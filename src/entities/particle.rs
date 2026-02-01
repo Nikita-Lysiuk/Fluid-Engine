@@ -24,7 +24,7 @@ pub struct ParticleVertex {
 pub struct ParticleGenerator;
 
 impl ParticleGenerator {
-    pub fn generate(count: usize, r: f32, min: Vec3, max: Vec3) -> (Vec<ParticleVertex>, f32, f32) {
+    pub fn generate(count: usize, r: f32, density: f32, min: Vec3, max: Vec3) -> (Vec<ParticleVertex>, f32, f32) {
         let size = max - min;
         let volume = (size.x * size.y * size.z).max(0.000001);
         let k = (count as f32 / volume).powf(1.0 / 3.0);
@@ -49,9 +49,8 @@ impl ParticleGenerator {
         let mut spawned = 0;
 
         let volume_per_particle = spacing.x * spacing.y * spacing.z;
-        let density_water = 1000.0;
 
-        let mass_of_particle = density_water * volume_per_particle;
+        let mass_of_particle = density * volume_per_particle;
 
         'outer: for z in 0..n.z as usize {
             for y in 0..n.y as usize {

@@ -38,7 +38,6 @@ pub struct Engine {
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
-    accumulator: f32,
 }
 
 impl Engine {
@@ -61,7 +60,6 @@ impl Engine {
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
             is_focused: true,
-            accumulator: 0.0,
         })
     }
 
@@ -169,31 +167,18 @@ impl ApplicationHandler for Engine {
             }
             WindowEvent::RedrawRequested => {
                 let dt = self.fps_counter.tick().as_secs_f32();
+                let safe_dt = dt.min(0.1);
 
-                let fixed_dt = 0.0166;
 
-                let max_substeps = 5;
-
-                self.accumulator += dt;
-
-                if self.accumulator > 0.1 {
-                    self.accumulator = 0.1;
+                for command in self.controller.get_active_commands() {
+                    command.execute(&mut self.scene, safe_dt);
+                }
+                if let Some(cmd) = self.controller.get_mouse_command() {
+                    cmd.execute(&mut self.scene, safe_dt);
                 }
 
-                let mut steps = 0;
-                while self.accumulator >= fixed_dt && steps < max_substeps {
-                    for command in self.controller.get_active_commands() {
-                        command.execute(&mut self.scene, fixed_dt);
-                    }
-                    if let Some(cmd) = self.controller.get_mouse_command() {
-                        cmd.execute(&mut self.scene, fixed_dt);
-                    }
+                self.physics_engine.update(&mut self.scene, safe_dt);
 
-                    self.physics_engine.update(&mut self.scene, fixed_dt);
-
-                    self.accumulator -= fixed_dt;
-                    steps += 1;
-                }
 
                 if let Some(renderer) = self.renderer.as_mut() {
                     renderer.render(&self.scene);
