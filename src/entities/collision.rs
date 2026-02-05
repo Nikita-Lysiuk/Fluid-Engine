@@ -51,7 +51,7 @@ impl CollisionBoxData {
                     memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
                 },
-                8 // 8 вершин у куба
+                8
             ).map_err(|e| panic!("[CollisionBox] Failed to create vertex buffer:\n{:?}", e)).unwrap();
 
             let ib = Buffer::from_iter(
@@ -81,7 +81,7 @@ impl CollisionBoxData {
         let min = collision_box.min;
         let max = collision_box.max;
 
-        let vertices = vec![
+        let vertices = [
             ModelVertex { position: [min.x, min.y, min.z] },
             ModelVertex { position: [max.x, min.y, min.z] },
             ModelVertex { position: [max.x, max.y, min.z] },

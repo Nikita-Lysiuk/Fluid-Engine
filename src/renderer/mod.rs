@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use log::{debug, error, info, warn};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, RenderingAttachmentInfo, RenderingInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferInfo, RenderingAttachmentInfo, RenderingInfo};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
 use vulkano::device::DeviceFeatures;
@@ -19,9 +19,9 @@ use vulkano_util::window::WindowDescriptor;
 use winit::window::Window;
 use crate::core::scene::Scene;
 use crate::entities::sky::SkyData;
-use crate::renderer::pipelines::Pipelines;
+use crate::renderer::pipelines::{ComputePipelines, ComputeStep, Pipelines};
 use crate::renderer::resources::GpuSceneResources;
-use crate::utils::constants::WINDOW_TITLE;
+use crate::utils::constants::{MAX_FRAMES_IN_FLIGHT, WINDOW_TITLE};
 
 pub mod pipelines;
 mod resources;
@@ -30,14 +30,17 @@ pub struct Renderer {
     pub window_renderer: VulkanoWindowRenderer,
     context: Arc<VulkanoContext>,
     command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
+    descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
     pipelines: Pipelines,
+    physics_steps: ComputePipelines,
+    sky_data: SkyData,
 
     resources: GpuSceneResources,
-    sky_data: SkyData,
+ 
 }
 
 impl Renderer {
-    pub fn new(window: Window) -> Self {
+    pub fn new(window: Window, scene: &Scene) -> Self {
         let callback = unsafe {
             DebugUtilsMessengerCallback::new(|severity: DebugUtilsMessageSeverity, ty: DebugUtilsMessageType, data: DebugUtilsMessengerCallbackData| {
                 let type_str = format!("{:?}", ty);
@@ -137,7 +140,7 @@ impl Renderer {
             depth_format
         );
 
-        let resources = GpuSceneResources::new(context.memory_allocator().clone());
+        let resources = GpuSceneResources::new(context.memory_allocator().clone(), scene);
 
         let sky_data = SkyData::new(
             500.0,
@@ -151,20 +154,60 @@ impl Renderer {
             "assets/hdri/citrus_orchard_road_puresky_4k.exr"
         );
 
+        let gpu_physics = ComputePipelines::new(context.device().clone());
+
         Self {
             context,
             window_renderer,
             command_buffer_allocator,
+            descriptor_set_allocator,
             pipelines,
             resources,
             sky_data,
+            physics_steps: gpu_physics,
         }
     }
-    pub fn render(&mut self, scene: &Scene) {
-
+    pub fn step(&mut self, scene: &Scene, max_dt: f32) -> Box<dyn GpuFuture> {
         self.resources.sync_with_scene(scene);
 
-        let future = self.window_renderer
+        let mut builder = AutoCommandBufferBuilder::primary(
+            self.command_buffer_allocator.clone(),
+            self.context.graphics_queue().queue_family_index(),
+            CommandBufferUsage::OneTimeSubmit,
+        ).unwrap();
+        
+        self.physics_steps.test_color_step.execute(
+            &mut builder,
+            self.descriptor_set_allocator.clone(),
+            &self.resources.physics_data,
+            &self.resources.sim_params_buffer,
+            max_dt,
+        );
+        
+        
+        let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
+
+
+        builder.copy_buffer(CopyBufferInfo::buffers(
+            self.resources.physics_data.positions.clone(),
+            self.resources.render_data.position_buffers[next_frame].clone()
+        )).unwrap();
+
+        builder.copy_buffer(CopyBufferInfo::buffers(
+            self.resources.physics_data.colors.clone(),
+            self.resources.render_data.color_buffers[next_frame].clone()
+        )).unwrap();
+
+
+        let command_buffer = builder.build().unwrap();
+
+        vulkano::sync::now(self.context.device().clone())
+            .then_execute(self.context.graphics_queue().clone(), command_buffer)
+            .unwrap()
+            .boxed()
+    }
+    pub fn render(&mut self) {
+        let acquire_future = self.window_renderer
             .acquire(None, |_img_view|{})
             .map_err(|e| panic!("[Renderer] Failed to acquire next image for rendering: {:?}", e))
             .unwrap();
@@ -174,7 +217,8 @@ impl Renderer {
             self.context.graphics_queue().queue_family_index(),
             CommandBufferUsage::OneTimeSubmit
         ).map_err(|e| panic!("[Renderer] Failed to create command buffer builder: {:?}", e))
-        .unwrap();
+            .unwrap();
+
 
         let extent = self.window_renderer.window_size();
 
@@ -212,16 +256,13 @@ impl Renderer {
         self.resources.bind_to_command_buffer(&mut builder, &self.pipelines);
 
         builder.end_rendering().map_err(|e| panic!("[Renderer] Failed to end rendering: {:?}", e)).unwrap();
+        let render_command_buffer = builder.build().unwrap();
 
-        let command_buffer = builder.build().map_err(|e| panic!("[Renderer] Failed to build command buffer builder: {:?}", e)).unwrap();
-
-        let joined_future = future
-            .then_execute(self.context.graphics_queue().clone(), command_buffer)
-            .map_err(|e| panic!("[Renderer] Failed to execute command buffer: {:?}", e))
+        let combined_future = acquire_future
+            .then_execute(self.context.graphics_queue().clone(), render_command_buffer)
             .unwrap();
 
-        self.window_renderer.present(joined_future.boxed(), false);
-
+        self.window_renderer.present(combined_future.boxed(), false);
         self.resources.prepare_next_frame();
     }
 }

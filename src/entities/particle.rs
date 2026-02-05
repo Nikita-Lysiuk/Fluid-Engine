@@ -1,159 +1,328 @@
-use std::cell::Cell;
 use std::sync::Arc;
 use glam::Vec3;
-use vulkano::buffer::{BufferContents, Subbuffer, Buffer, BufferCreateInfo, BufferUsage};
+use rand::Rng;
+use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::graphics::vertex_input::Vertex;
+use vulkano::pipeline::Pipeline;
 use crate::renderer::pipelines::Pipelines;
-use crate::utils::constants::{MAX_FRAMES_IN_FLIGHT, MAX_PARTICLES};
+use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
-#[derive(BufferContents, Vertex, Debug, Clone, Copy)]
 #[repr(C)]
-pub struct ParticleVertex {
-    #[format(R32G32B32_SFLOAT)]
-    pub position: [f32; 3],
+#[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
+pub struct PositionVertex {
+    #[format(R32G32B32A32_SFLOAT)]
+    pub position: [f32; 4],
+}
 
+#[repr(C)]
+#[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
+pub struct ColorVertex {
+    #[format(R32G32B32A32_SFLOAT)]
+    pub color: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
+pub struct AttributeVertex {
     #[format(R32_SFLOAT)]
     pub radius: f32,
+}
 
-    #[format(R32G32B32_SFLOAT)]
-    pub color: [f32; 3],
+pub struct GpuRenderData {
+    pub position_buffers: Vec<Subbuffer<[PositionVertex]>>,
+    pub color_buffers: Vec<Subbuffer<[ColorVertex]>>,
+    pub attribute_buffer: Subbuffer<[AttributeVertex]>,
+}
+
+impl GpuRenderData {
+    pub fn new(
+        allocator: Arc<StandardMemoryAllocator>,
+        initial_positions: &[[f32; 3]],
+        radius: f32,
+    ) -> Self {
+        let particle_count = initial_positions.len();
+
+        let mut position_buffers = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
+        let mut color_buffers = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
+
+        for _ in 0..MAX_FRAMES_IN_FLIGHT {
+            let buffer = Buffer::from_iter(
+                allocator.clone(),
+                BufferCreateInfo {
+                    usage: BufferUsage::VERTEX_BUFFER | BufferUsage::TRANSFER_DST,
+                    ..Default::default()
+                },
+                AllocationCreateInfo {
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    ..Default::default()
+                },
+                initial_positions.iter().map(|p| PositionVertex {
+                    position: [p[0], p[1], p[2], 1.0]
+                }),
+            ).expect("Failed to create render position buffer");
+            position_buffers.push(buffer);
+
+            let color_buffer = Buffer::from_iter(
+                allocator.clone(),
+                BufferCreateInfo {
+                    usage: BufferUsage::VERTEX_BUFFER | BufferUsage::TRANSFER_DST,
+                    ..Default::default()
+                },
+                AllocationCreateInfo {
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    ..Default::default()
+                },
+                (0..particle_count).map(|_| ColorVertex {
+                    color: [0.0, 0.5, 1.0, 1.0]
+                }),
+            ).expect("Failed to create render color buffer");
+            color_buffers.push(color_buffer);
+        }
+
+        let attribute_buffer = Buffer::from_iter(
+            allocator.clone(),
+            BufferCreateInfo {
+                usage: BufferUsage::VERTEX_BUFFER,
+                ..Default::default()
+            },
+            AllocationCreateInfo {
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                ..Default::default()
+            },
+            (0..particle_count).map(|_| AttributeVertex {
+                radius,
+            }),
+        ).expect("Failed to create attribute buffer");
+
+        Self { position_buffers, attribute_buffer, color_buffers }
+    }
+    pub fn bind_to_command_buffer<Cb>(
+        &self,
+        builder: &mut AutoCommandBufferBuilder<Cb>,
+        pipelines: &Pipelines,
+        camera_addr: u64,
+        frame_idx: usize,
+        count: u32,
+    ) {
+
+        unsafe {
+            builder
+                .bind_pipeline_graphics(pipelines.point_pipeline.inner.clone()).unwrap()
+                .bind_vertex_buffers(0, (
+                    self.position_buffers[frame_idx].clone(),
+                    self.color_buffers[frame_idx].clone(),
+                    self.attribute_buffer.clone()
+                ))
+                .unwrap()
+                .push_constants(
+                    pipelines.point_pipeline.inner.layout().clone(),
+                    0,
+                    camera_addr,
+                ).unwrap()
+                .draw(count, 1, 0, 0)
+                .expect("Failed to bind particle vertex buffers");
+        }
+    }
+}
+
+pub struct GpuPhysicsData {
+    pub count: u32,
+
+    pub positions: Subbuffer<[[f32; 4]]>,
+    pub colors: Subbuffer<[[f32; 4]]>,
+    pub velocities: Subbuffer<[[f32; 4]]>,
+    pub predicted_velocities: Subbuffer<[[f32; 4]]>,
+
+    pub densities: Subbuffer<[f32]>,
+    pub factors: Subbuffer<[f32]>,
+    pub kappas: Subbuffer<[f32]>,
+    pub kappas_v: Subbuffer<[f32]>,
+}
+
+impl GpuPhysicsData {
+    pub fn new(
+        allocator: Arc<StandardMemoryAllocator>,
+        initial_positions: Vec<[f32; 3]>,
+    ) -> Self {
+        let count = initial_positions.len() as u32;
+
+        let positions_vec4: Vec<[f32; 4]> = initial_positions.iter()
+            .map(|p| [p[0], p[1], p[2], 1.0])
+            .collect();
+
+        let positions = Buffer::from_iter(
+            allocator.clone(),
+            BufferCreateInfo {
+                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+                ..Default::default()
+            },
+            AllocationCreateInfo {
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                ..Default::default()
+            },
+            positions_vec4.into_iter(),
+        ).expect("Failed to create position buffer");
+
+        let velocities = Buffer::from_iter(
+            allocator.clone(),
+            BufferCreateInfo {
+                usage: BufferUsage::STORAGE_BUFFER,
+                ..Default::default()
+            },
+            AllocationCreateInfo {
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                ..Default::default()
+            },
+            (0..count).map(|_| [0.0, 0.0, 0.0, 0.0]),
+        ).expect("Failed to create velocity buffer");
+
+        let colors = Buffer::from_iter(
+            allocator.clone(),
+            BufferCreateInfo {
+                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
+                ..Default::default()
+            },
+            AllocationCreateInfo {
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                ..Default::default()
+            },
+            (0..count).map(|_| [1.0, 1.0, 1.0, 1.0]),
+        ).expect("Failed to create physics color buffer");
+
+        let predicted_velocities = Self::create_buffer::<[f32; 4]>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64
+        );
+
+        let densities = Self::create_buffer::<f32>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64
+        );
+
+        let factors = Self::create_buffer::<f32>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64
+        );
+
+        let kappas = Self::create_buffer::<f32>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64
+        );
+
+        let kappas_v = Self::create_buffer::<f32>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64
+        );
+
+        Self {
+            count,
+            positions,
+            velocities,
+            predicted_velocities,
+            densities,
+            factors,
+            kappas,
+            kappas_v,
+            colors,
+        }
+    }
+    fn create_buffer<T>(usage: BufferUsage, allocator: Arc<StandardMemoryAllocator>, count: u64) -> Subbuffer<[T]> where T: BufferContents {
+        Buffer::new_slice::<T>(
+            allocator.clone(),
+            BufferCreateInfo { usage, ..Default::default() },
+            AllocationCreateInfo { memory_type_filter: MemoryTypeFilter::PREFER_DEVICE, ..Default::default() },
+            count
+        ).unwrap()
+    }
+}
+
+#[repr(C, align(16))]
+#[derive(BufferContents, Copy, Clone)]
+pub struct SimulationParams {
+    pub particle_radius: f32,
+    pub particle_mass: f32,
+    pub smoothing_radius: f32,
+    pub target_density: f32,
+    pub gravity: [f32; 4],
+    pub box_min: [f32; 4],
+    pub box_max: [f32; 4],
+    pub _padding: [f32; 3],
+}
+
+impl SimulationParams {
+    pub fn new(
+        particle_radius: f32,
+        particle_mass: f32,
+        smoothing_radius: f32,
+        target_density: f32,
+        gravity: Vec3,
+        box_min: Vec3,
+        box_max: Vec3,
+    ) -> Self {
+        Self {
+            particle_radius,
+            particle_mass,
+            smoothing_radius,
+            target_density,
+
+            gravity: [gravity.x, gravity.y, gravity.z, 0.0],
+            box_min: [box_min.x, box_min.y, box_min.z, 0.0],
+            box_max: [box_max.x, box_max.y, box_max.z, 0.0],
+
+            _padding: [0.0; 3],
+        }
+    }
 }
 
 pub struct ParticleGenerator;
 
 impl ParticleGenerator {
-    pub fn generate(count: usize, r: f32, density: f32, min: Vec3, max: Vec3) -> (Vec<ParticleVertex>, f32, f32) {
-        let size = max - min;
-        let volume = (size.x * size.y * size.z).max(0.000001);
-        let k = (count as f32 / volume).powf(1.0 / 3.0);
+    pub fn generate_cube(
+        num_per_axis: usize,
+        centre: Vec3,
+        size: f32,
+        jitter_strength: f32,
+        target_density: f32,
+    ) -> ( Vec<[f32; 3]>, f32, f32 ) {
+        let count = num_per_axis * num_per_axis * num_per_axis;
+        let mut positions = Vec::with_capacity(count);
+        let mut rng = rand::rng();
 
-        let n = Vec3::new(
-            (size.x * k).ceil(),
-            (size.y * k).ceil(),
-            (size.z * k).ceil(),
-        );
+        let spacing = size / (num_per_axis as f32).max(1.0);
+        let volume_per_particle = spacing.powi(3);
+        let mass = target_density * volume_per_particle;
 
-        let spacing = Vec3::new(
-            size.x / n.x,
-            size.y / n.y,
-            size.z / n.z,
-        );
+        for x in 0..num_per_axis {
+            for y in 0..num_per_axis {
+                for z in 0..num_per_axis {
+                    let tx = x as f32 / (num_per_axis as f32 - 1.0).max(1.0);
+                    let ty = y as f32 / (num_per_axis as f32 - 1.0).max(1.0);
+                    let tz = z as f32 / (num_per_axis as f32 - 1.0).max(1.0);
 
-        let avg_spacing = (spacing.x + spacing.y + spacing.z) / 3.0;
-        let offset = spacing / 2.0;
+                    let px = (tx - 0.5) * size + centre.x;
+                    let py = (ty - 0.5) * size + centre.y;
+                    let pz = (tz - 0.5) * size + centre.z;
 
-        let mut vertices = Vec::with_capacity(count);
+                    let jitter = Vec3::new(
+                        rng.random_range(-1.0..1.0),
+                        rng.random_range(-1.0..1.0),
+                        rng.random_range(-1.0..1.0),
+                    ) * jitter_strength;
 
-        let mut spawned = 0;
+                    let pos = Vec3::new(px, py, pz) + jitter;
 
-        let volume_per_particle = spacing.x * spacing.y * spacing.z;
-
-        let mass_of_particle = density * volume_per_particle;
-
-        'outer: for z in 0..n.z as usize {
-            for y in 0..n.y as usize {
-                for x in 0..n.x as usize {
-                    if spawned >= count {
-                        break 'outer;
-                    }
-
-                    let pos = Vec3::new(
-                        min.x + x as f32 * spacing.x + offset.x,
-                        min.y + y as f32 * spacing.y + offset.y,
-                        min.z + z as f32 * spacing.z + offset.z,
-                    );
-
-
-                    vertices.push(ParticleVertex {
-                        position: pos.to_array(),
-                        radius: r,
-                        color: [0.4, 0.7, 1.0],
-                    });
-
-                    spawned += 1;
-
+                    positions.push(pos.to_array());
                 }
             }
         }
 
-        (vertices, avg_spacing, mass_of_particle)
-    }
-}
-
-pub struct ParticleData {
-    pub vertex_buffer: Vec<Subbuffer<[ParticleVertex]>>,
-    pub vertices_count: [Cell<u32>; MAX_FRAMES_IN_FLIGHT],
-}
-
-impl ParticleData {
-    pub fn new(memory_allocator: Arc<StandardMemoryAllocator>) -> Self {
-        let mut vertex_buffer = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
-
-        for _ in 0..MAX_FRAMES_IN_FLIGHT {
-            let vb = Buffer::new_slice(
-                memory_allocator.clone(),
-                BufferCreateInfo {
-                    usage: BufferUsage::VERTEX_BUFFER
-                        | BufferUsage::SHADER_DEVICE_ADDRESS
-                        | BufferUsage::STORAGE_BUFFER
-                        | BufferUsage::TRANSFER_DST,
-                    ..BufferCreateInfo::default()
-                },
-                AllocationCreateInfo {
-                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
-                    ..AllocationCreateInfo::default()
-                },
-                MAX_PARTICLES as u64,
-            ).map_err(|e| {
-                panic!("[Particle Data] Failed to create vertex buffer:\n{:?}", e);
-            }).unwrap();
-
-            vertex_buffer.push(vb);
-        }
-
-        Self {
-            vertex_buffer,
-            vertices_count: [const { Cell::new(0) }; MAX_FRAMES_IN_FLIGHT],
-        }
-    }
-
-    pub fn write_to_buffer(&self, particles: &[ParticleVertex], current_frame_idx: usize) {
-        let num_particles = particles.len();
-        if num_particles == 0 { return; }
-
-        let mut write_lock = self.vertex_buffer[current_frame_idx]
-            .write()
-            .map_err(|e| panic!("[Particle Data] Failed to write to vertex buffer:\n{:?}", e))
-            .unwrap();
-
-        write_lock[0..num_particles].copy_from_slice(particles);
-
-        self.vertices_count[current_frame_idx].set(num_particles as u32);
-    }
-
-    fn vertex_buffer_addr(&self, current_frame_idx: usize) -> u64 {
-        self.vertex_buffer[current_frame_idx]
-            .device_address()
-            .map_err(|e| panic!("[Particle Data] Failed to get vertex buffer device address:\n{:?}", e))
-            .unwrap()
-            .get()
-    }
-
-    pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
-        let _span = tracy_client::span!("Bind Particle Data to Command Buffer");
-        unsafe {
-            builder.bind_pipeline_graphics(pipelines.point_pipeline.inner.clone()).map_err(|e| panic!("[Renderer] Failed to bind point pipeline: {:?}", e)).unwrap()
-                .push_constants(
-                    pipelines.common_layout.clone(),
-                    0,
-                    [
-                        camera_addr,
-                        self.vertex_buffer_addr(current_frame_idx),
-                    ]
-                ).map_err(|e| panic!("[Renderer] Failed to bind buffers: {:?}", e)).unwrap()
-                .draw(self.vertices_count[current_frame_idx].get(), 1, 0, 0).map_err(|e| panic!("[Renderer] Failed to draw particles: {:?}", e)).unwrap();
-        }
+        ( positions, mass, spacing )
     }
 }

@@ -1,4 +1,7 @@
 use std::sync::Arc;
+use vulkano::buffer::Subbuffer;
+use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType};
 use vulkano::device::Device;
 use vulkano::format::Format;
@@ -6,13 +9,42 @@ use vulkano::pipeline::layout::{PipelineLayoutCreateInfo, PushConstantRange};
 use vulkano::pipeline::PipelineLayout;
 use vulkano::shader::ShaderStages;
 use vulkano_util::context::VulkanoContext;
+use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
 use crate::renderer::pipelines::point_pipeline::PointPipeline;
 use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
+use crate::renderer::pipelines::test_color_step::TestColorStep;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
 pub mod collision_pipeline;
+pub mod test_color_step;
+
+pub trait ComputeStep {
+    fn execute<Cb>(
+        &self,
+        builder: &mut AutoCommandBufferBuilder<Cb>,
+        allocator: Arc<StandardDescriptorSetAllocator>,
+        physics_data: &GpuPhysicsData,
+        sim_params: &Subbuffer<SimulationParams>,
+        dt: f32,
+    );
+}
+
+pub struct ComputePipelines {
+    pub test_color_step: Arc<TestColorStep>,
+}
+
+impl ComputePipelines {
+    pub fn new(device: Arc<Device>) -> Self {
+        let test_color_step = Arc::new(TestColorStep::new(device.clone()));
+
+        Self {
+            test_color_step
+        }
+    }
+}
+
 
 pub struct Pipelines {
     pub sky_layout: Arc<PipelineLayout>,
@@ -36,7 +68,7 @@ impl Pipelines {
         let sky_pipeline = Arc::new(SkyPipeline::new(device.clone(), sky_layout.clone(), swapchain_format, depth_format));
 
         let common_layout = Self::create_common_layout(device.clone(), push_constant_range);
-        let point_pipeline = Arc::new(PointPipeline::new(device.clone(), common_layout.clone(), swapchain_format, depth_format));
+        let point_pipeline = Arc::new(PointPipeline::new(device.clone(), swapchain_format, depth_format));
         let collision_pipeline = Arc::new(CollisionPipeline::new(device.clone(), common_layout.clone(), swapchain_format, depth_format));
 
         Self {

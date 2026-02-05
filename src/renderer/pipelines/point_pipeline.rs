@@ -9,8 +9,9 @@ use vulkano::pipeline::graphics::input_assembly::{InputAssemblyState, PrimitiveT
 use vulkano::pipeline::graphics::multisample::MultisampleState;
 use vulkano::pipeline::graphics::rasterization::RasterizationState;
 use vulkano::pipeline::graphics::subpass::{PipelineRenderingCreateInfo, PipelineSubpassType};
-use vulkano::pipeline::graphics::vertex_input::VertexInputState;
+use vulkano::pipeline::graphics::vertex_input::{VertexInputAttributeDescription, VertexInputBindingDescription, VertexInputRate, VertexInputState};
 use vulkano::pipeline::graphics::viewport::ViewportState;
+use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod vs {
@@ -18,7 +19,7 @@ mod vs {
 
     shader!(
         ty: "vertex",
-        path: "shaders/simple_shader.vert"
+        path: "shaders\\simple_shader.vert"
     );
 }
 
@@ -27,7 +28,7 @@ mod fs {
 
     shader!(
         ty: "fragment",
-        path: "shaders/simple_shader.frag"
+        path: "shaders\\simple_shader.frag"
     );
 }
 
@@ -37,8 +38,7 @@ pub struct PointPipeline {
 
 impl PointPipeline {
     pub fn new(
-        device: Arc<Device>, 
-        layout: Arc<PipelineLayout>,
+        device: Arc<Device>,
         color_format: Format,
         depth_format: Format
     ) -> Self {
@@ -50,13 +50,57 @@ impl PointPipeline {
             PipelineShaderStageCreateInfo::new(fs.clone())
         ];
 
+        let layout = PipelineLayout::new(
+            device.clone(),
+            PipelineDescriptorSetLayoutCreateInfo::from_stages(&stages)
+                .into_pipeline_layout_create_info(device.clone())
+                .expect("[Point Pipeline] Failed to create layout info from shaders")
+        ).expect("[Point Pipeline] Failed to create PipelineLayout");
+
         let pipeline = GraphicsPipeline::new(
             device.clone(),
             None,
             GraphicsPipelineCreateInfo {
                 stages: stages.into_iter().collect(),
 
-                vertex_input_state: Some(VertexInputState::new()),
+                vertex_input_state: Some(
+                    VertexInputState::new()
+                        .binding(0, VertexInputBindingDescription {
+                            stride: 16,
+                            input_rate: VertexInputRate::Vertex,
+                            ..VertexInputBindingDescription::default()
+                        })
+                        .attribute(0, VertexInputAttributeDescription {
+                            binding: 0,
+                            format: Format::R32G32B32A32_SFLOAT,
+                            offset: 0,
+                            ..VertexInputAttributeDescription::default()
+                        })
+
+                        .binding(1, VertexInputBindingDescription {
+                            stride: 16,
+                            input_rate: VertexInputRate::Vertex,
+                            ..VertexInputBindingDescription::default()
+                        })
+                        .attribute(1, VertexInputAttributeDescription {
+                            binding: 1,
+                            format: Format::R32G32B32A32_SFLOAT,
+                            offset: 0,
+                            ..VertexInputAttributeDescription::default()
+                        })
+
+                        .binding(2, VertexInputBindingDescription {
+                            stride: 4,
+                            input_rate: VertexInputRate::Vertex,
+                            ..VertexInputBindingDescription::default()
+                        })
+                        .attribute(2, VertexInputAttributeDescription {
+                            binding: 2,
+                            format: Format::R32_SFLOAT,
+                            offset: 0,
+                            ..VertexInputAttributeDescription::default()
+                        })
+                ),
                 input_assembly_state: Some(InputAssemblyState {
                     topology: PrimitiveTopology::PointList,
                     ..InputAssemblyState::default()

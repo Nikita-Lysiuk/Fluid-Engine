@@ -1,5 +1,6 @@
 use log::{info, debug, error};
 use simple_logger::SimpleLogger;
+use vulkano::sync::GpuFuture;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, WindowEvent};
@@ -12,7 +13,6 @@ use crate::core::scene::Scene;
 use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
-use crate::physics::PhysicsEngine;
 use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, WINDOW_TITLE};
 use crate::utils::fps_counter::FpsCounter;
 
@@ -34,7 +34,6 @@ pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
     scene: Scene,
-    physics_engine: PhysicsEngine,
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
@@ -50,13 +49,11 @@ impl Engine {
 
         event_loop.set_control_flow(ControlFlow::Poll);
         let scene = Scene::new();
-        let physics_engine = PhysicsEngine::new(&scene);
 
         Ok(Self {
             renderer: None,
             event_loop: Some(event_loop),
             scene,
-            physics_engine,
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
             is_focused: true,
@@ -91,7 +88,7 @@ impl ApplicationHandler for Engine {
                     return;
                 }
             };
-            self.renderer = Some(Renderer::new(window));
+            self.renderer = Some(Renderer::new(window, &self.scene));
             info!("[Engine] Systems initialized successfully.");
         }
     }
@@ -177,11 +174,10 @@ impl ApplicationHandler for Engine {
                     cmd.execute(&mut self.scene, safe_dt);
                 }
 
-                self.physics_engine.update(&mut self.scene, safe_dt);
-
-
                 if let Some(renderer) = self.renderer.as_mut() {
-                    renderer.render(&self.scene);
+                    let physics_future = renderer.step(&mut self.scene, safe_dt);
+                    physics_future.flush().expect("Failed to flush GPU commands");
+                    renderer.render();
                 }
 
                 if IS_PAINT_FPS_COUNTER {
