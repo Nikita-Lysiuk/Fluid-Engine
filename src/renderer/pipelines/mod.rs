@@ -5,44 +5,73 @@ use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType};
 use vulkano::device::Device;
 use vulkano::format::Format;
-use vulkano::pipeline::layout::{PipelineLayoutCreateInfo, PushConstantRange};
-use vulkano::pipeline::PipelineLayout;
-use vulkano::shader::ShaderStages;
+use vulkano::pipeline::layout::{PipelineDescriptorSetLayoutCreateInfo, PipelineLayoutCreateInfo, PushConstantRange};
+use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
+use vulkano::pipeline::compute::ComputePipelineCreateInfo;
+use vulkano::shader::{EntryPoint, ShaderStages};
 use vulkano_util::context::VulkanoContext;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
+use crate::renderer::pipelines::density_alpha::DensityAlphaPipeline;
 use crate::renderer::pipelines::neighbor_search::NeighborSearch;
 use crate::renderer::pipelines::point_pipeline::PointPipeline;
 use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
+use crate::renderer::pipelines::viscosity::ViscosityPipeline;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
 pub mod collision_pipeline;
-pub mod test_color_step;
 pub mod neighbor_search;
 pub mod sorter;
+pub mod density_alpha;
+pub mod viscosity;
 
-pub trait ComputeStep {
+pub trait ComputeStep: Sized {
+    fn load_shader_module(device: Arc<Device>) -> EntryPoint;
+    fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self;
+    fn new(device: Arc<Device>) -> Self {
+        let entry_point = Self::load_shader_module(device.clone());
+
+        let stage = PipelineShaderStageCreateInfo::new(entry_point);
+        let layout = PipelineLayout::new(
+            device.clone(),
+            PipelineDescriptorSetLayoutCreateInfo::from_stages([&stage])
+                .into_pipeline_layout_create_info(device.clone()).unwrap()
+        ).unwrap();
+
+        let pipeline = ComputePipeline::new(
+            device.clone(),
+            None,
+            ComputePipelineCreateInfo::stage_layout(stage, layout)
+        ).unwrap();
+
+        Self::from_pipeline(pipeline)
+    }
     fn execute<Cb>(
         &self,
         builder: &mut AutoCommandBufferBuilder<Cb>,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &GpuPhysicsData,
         sim_params: &Subbuffer<SimulationParams>,
-        dt: f32,
     );
 }
 
 pub struct ComputePipelines {
-    pub neighbor_search: NeighborSearch
+    pub neighbor_search: NeighborSearch,
+    pub density_alpha: DensityAlphaPipeline,
+    pub viscosity: ViscosityPipeline,
 }
 
 impl ComputePipelines {
     pub fn new(device: Arc<Device>) -> Self {
         let neighbor_search = NeighborSearch::new(device.clone());
+        let density_alpha = DensityAlphaPipeline::new(device.clone());
+        let viscosity = ViscosityPipeline::new(device.clone());
 
         Self {
             neighbor_search,
+            density_alpha,
+            viscosity
         }
     }
 }

@@ -294,10 +294,14 @@ pub struct SimulationParams {
     pub particle_mass: f32,
     pub smoothing_radius: f32,
     pub target_density: f32,
+
+    pub viscosity: f32,
+    pub dt: f32,
+    pub _padding: [f32; 2],
+
     pub gravity: [f32; 4],
     pub box_min: [f32; 4],
     pub box_max: [f32; 4],
-    pub _padding: [f32; 3],
 }
 
 impl SimulationParams {
@@ -306,6 +310,8 @@ impl SimulationParams {
         particle_mass: f32,
         smoothing_radius: f32,
         target_density: f32,
+        viscosity: f32,
+        dt: f32,
         gravity: Vec3,
         box_min: Vec3,
         box_max: Vec3,
@@ -315,12 +321,12 @@ impl SimulationParams {
             particle_mass,
             smoothing_radius,
             target_density,
-
+            viscosity,
+            dt,
+            _padding: [0.0; 2],
             gravity: [gravity.x, gravity.y, gravity.z, 0.0],
             box_min: [box_min.x, box_min.y, box_min.z, 0.0],
             box_max: [box_max.x, box_max.y, box_max.z, 0.0],
-
-            _padding: [0.0; 3],
         }
     }
 }

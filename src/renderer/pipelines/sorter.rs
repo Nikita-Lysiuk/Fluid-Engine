@@ -4,9 +4,9 @@ use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::Device;
-use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
-use vulkano::pipeline::compute::ComputePipelineCreateInfo;
-use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
+use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
+
+use vulkano::shader::EntryPoint;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
@@ -20,36 +20,19 @@ pub struct GpuSorter {
     pipeline: Arc<ComputePipeline>,
 }
 
-impl GpuSorter {
-    pub fn new(device: Arc<Device>) -> Self {
-        let shader = load_shader_entry_point(device.clone(), cs::load, "main");
-
-        let stage = PipelineShaderStageCreateInfo::new(shader);
-        let layout = PipelineLayout::new(
-            device.clone(),
-            PipelineDescriptorSetLayoutCreateInfo::from_stages([&stage])
-                .into_pipeline_layout_create_info(device.clone())
-                .unwrap()
-        ).unwrap();
-
-        let pipeline = ComputePipeline::new(
-            device.clone(),
-            None,
-            ComputePipelineCreateInfo::stage_layout(stage, layout)
-        ).unwrap();
-
+impl ComputeStep for GpuSorter {
+    fn load_shader_module(device: Arc<Device>) -> EntryPoint {
+        load_shader_entry_point(device, cs::load, "main")
+    }
+    fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
         Self { pipeline }
     }
-}
-
-impl ComputeStep for GpuSorter {
     fn execute<Cb>(
         &self,
         builder: &mut AutoCommandBufferBuilder<Cb>,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &GpuPhysicsData,
         _sim_params: &Subbuffer<SimulationParams>,
-        _dt: f32
     ) {
         let grid_entries = &physics_data.grid_entries;
         let num_elements = grid_entries.len() as u32;

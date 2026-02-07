@@ -181,7 +181,20 @@ impl Renderer {
             self.descriptor_set_allocator.clone(),
             &self.resources.physics_data,
             &self.resources.sim_params_buffer,
-            max_dt,
+        );
+
+        self.physics_steps.density_alpha.execute(
+            &mut builder,
+            self.descriptor_set_allocator.clone(),
+            &self.resources.physics_data,
+            &self.resources.sim_params_buffer,
+        );
+        
+        self.physics_steps.viscosity.execute(
+            &mut builder,
+            self.descriptor_set_allocator.clone(),
+            &self.resources.physics_data,
+            &self.resources.sim_params_buffer,
         );
         
         

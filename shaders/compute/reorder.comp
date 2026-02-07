@@ -45,9 +45,5 @@ void main() {
 
     pos_b.p[i] = pos_a.p[source_idx];
     vel_b.v[i] = vel_a.v[source_idx];
-
-    vec3 cell_color = hash_to_color(hash);
-
-    cell_color = normalize(cell_color + vec3(0.2));
-    col_b.c[i] = vec4(cell_color, 1.0);
+    col_b.c[i] = col_a.c[source_idx];
 }

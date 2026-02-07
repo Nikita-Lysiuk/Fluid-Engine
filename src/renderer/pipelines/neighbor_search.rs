@@ -7,6 +7,7 @@ use vulkano::device::Device;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
+use vulkano::shader::EntryPoint;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
 use crate::renderer::pipelines::sorter::GpuSorter;
@@ -33,10 +34,16 @@ pub struct NeighborSearch {
     sorter: GpuSorter,
 }
 
-impl NeighborSearch {
-    pub fn new(device: Arc<Device>) -> Self {
+impl ComputeStep for NeighborSearch {
+    fn load_shader_module(_device: Arc<Device>) -> EntryPoint {
+        unimplemented!("NeighborSearch uses multiple shaders, so load_shader_module is not implemented")
+    }
+    fn from_pipeline(_pipeline: Arc<ComputePipeline>) -> Self {
+        unimplemented!("NeighborSearch uses multiple pipelines, so from_pipeline is not implemented")
+    }
+    fn new(device: Arc<Device>) -> Self {
         let sorter = GpuSorter::new(device.clone());
-        
+
         let hash_shader = load_shader_entry_point(device.clone(), cs_hash::load, "main");
         let hash_stage = PipelineShaderStageCreateInfo::new(hash_shader);
         let hash_layout = PipelineLayout::new(
@@ -47,7 +54,7 @@ impl NeighborSearch {
         let spatial_hash_pipeline = ComputePipeline::new(
             device.clone(), None, ComputePipelineCreateInfo::stage_layout(hash_stage, hash_layout)
         ).unwrap();
-        
+
         let offsets_shader = load_shader_entry_point(device.clone(), cs_offsets::load, "main");
         let offsets_stage = PipelineShaderStageCreateInfo::new(offsets_shader);
         let offsets_layout = PipelineLayout::new(
@@ -58,7 +65,7 @@ impl NeighborSearch {
         let offsets_pipeline = ComputePipeline::new(
             device.clone(), None, ComputePipelineCreateInfo::stage_layout(offsets_stage, offsets_layout)
         ).unwrap();
-        
+
         let reorder_shader = load_shader_entry_point(device.clone(), cs_reorder::load, "main");
         let reorder_stage = PipelineShaderStageCreateInfo::new(reorder_shader);
         let reorder_layout = PipelineLayout::new(
@@ -77,15 +84,11 @@ impl NeighborSearch {
             sorter,
         }
     }
-}
-
-impl ComputeStep for NeighborSearch {
     fn execute<Cb>(
         &self, builder: &mut AutoCommandBufferBuilder<Cb>, 
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &GpuPhysicsData, 
-        sim_params: &Subbuffer<SimulationParams>, 
-        dt: f32
+        sim_params: &Subbuffer<SimulationParams>,
     ) { 
         let num_particles = physics_data.count;
         let sort_buffer_len = physics_data.grid_entries.len() as u32;
@@ -120,7 +123,7 @@ impl ComputeStep for NeighborSearch {
         }
 
        
-        self.sorter.execute(builder, allocator.clone(), physics_data, sim_params, dt);
+        self.sorter.execute(builder, allocator.clone(), physics_data, sim_params);
         
         builder.fill_buffer(physics_data.grid_start.clone(), 0xFFFFFFFF).unwrap();
 
@@ -160,7 +163,7 @@ impl ComputeStep for NeighborSearch {
                     WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
                     WriteDescriptorSet::buffer(1, physics_data.position_a.clone()),
                     WriteDescriptorSet::buffer(2, physics_data.velocity_a.clone()),
-                    //WriteDescriptorSet::buffer(3, physics_data.color_a.clone()),
+                    WriteDescriptorSet::buffer(3, physics_data.color_a.clone()),
                     WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),
                     WriteDescriptorSet::buffer(5, physics_data.velocity_b.clone()),
                     WriteDescriptorSet::buffer(6, physics_data.color_b.clone()),

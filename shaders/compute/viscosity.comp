@@ -1,0 +1,66 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+
+layout(std430, set = 0, binding = 0) buffer VelocityA { vec4 velocities[];};
+layout(std430, set = 0, binding = 1) buffer PosBuffer { vec4 positions[]; };
+layout(std430, set = 0, binding = 3) buffer Entries { Entry entries[]; };
+layout(std430, set = 0, binding = 4) buffer Offsets { uint grid_start[]; };
+layout(std430, set = 0, binding = 5) buffer Densities { float densities[]; };
+
+layout(std430, set = 0, binding = 6) buffer VelocityB { vec4 new_velocities[]; };
+
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint num_particles = uint(positions.length());
+
+    if (i >= num_particles) return;
+
+    vec3 pos_i = positions[i].xyz;
+    float h = sim_params.smoothing_radius;
+    float mass = sim_params.particle_mass;
+
+    ivec3 cell_coords = ivec3(floor(pos_i / h));
+    uint table_size = uint(grid_start.length());
+
+    vec3 sum_viscosity = vec3(0.0);
+
+    for (int z = -1; z <= 1; z++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
+                uint hash = get_cell_hash(neighbor_cell, table_size);
+                uint start_idx = grid_start[hash];
+
+                if (start_idx == 0xFFFFFFFF) continue;
+
+                for (uint j = start_idx; j < num_particles; j++) {
+                    if (entries[j].hash != hash) break;
+
+                    vec3 pos_j = positions[j].xyz;
+                    vec3 r_vec = pos_i - pos_j;
+                    float r2 = dot(r_vec, r_vec);
+
+                    if (r2 > h * h) continue;
+
+                    float r = sqrt(r2);
+                    float w = kernel_w(r, h);
+
+                    if (r > 1e-6) {
+                        vec3 vel_diff = velocities[j].xyz - velocities[i].xyz;
+                        sum_viscosity += mass / densities[j] * vel_diff * w;
+                    }
+                }
+            }
+        }
+    }
+
+    vec3 current_vel = velocities[i].xyz;
+    vec3 vel_visco = current_vel + sim_params.viscosity * sum_viscosity;
+    vec3 vel_final = vel_visco + sim_params.gravity.xyz * sim_params.dt;
+    new_velocities[i] = vec4(vel_final, 0.0);
+}
