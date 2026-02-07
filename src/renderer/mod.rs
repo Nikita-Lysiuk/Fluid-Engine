@@ -175,8 +175,8 @@ impl Renderer {
             self.context.graphics_queue().queue_family_index(),
             CommandBufferUsage::OneTimeSubmit,
         ).unwrap();
-        
-        self.physics_steps.test_color_step.execute(
+
+        self.physics_steps.neighbor_search.execute(
             &mut builder,
             self.descriptor_set_allocator.clone(),
             &self.resources.physics_data,
@@ -189,13 +189,27 @@ impl Renderer {
 
 
         builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.positions.clone(),
+            self.resources.physics_data.position_b.clone(),
             self.resources.render_data.position_buffers[next_frame].clone()
         )).unwrap();
 
         builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.colors.clone(),
+            self.resources.physics_data.color_b.clone(),
             self.resources.render_data.color_buffers[next_frame].clone()
+        )).unwrap();
+
+        builder.copy_buffer(CopyBufferInfo::buffers(
+            self.resources.physics_data.position_b.clone(),
+            self.resources.physics_data.position_a.clone()
+        )).unwrap();
+
+        builder.copy_buffer(CopyBufferInfo::buffers(
+            self.resources.physics_data.velocity_b.clone(),
+            self.resources.physics_data.velocity_a.clone()
+        )).unwrap();
+        builder.copy_buffer(CopyBufferInfo::buffers(
+            self.resources.physics_data.color_b.clone(),
+            self.resources.physics_data.color_a.clone()
         )).unwrap();
 
 

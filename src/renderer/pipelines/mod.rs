@@ -11,14 +11,16 @@ use vulkano::shader::ShaderStages;
 use vulkano_util::context::VulkanoContext;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
+use crate::renderer::pipelines::neighbor_search::NeighborSearch;
 use crate::renderer::pipelines::point_pipeline::PointPipeline;
 use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
-use crate::renderer::pipelines::test_color_step::TestColorStep;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
 pub mod collision_pipeline;
 pub mod test_color_step;
+pub mod neighbor_search;
+pub mod sorter;
 
 pub trait ComputeStep {
     fn execute<Cb>(
@@ -32,15 +34,15 @@ pub trait ComputeStep {
 }
 
 pub struct ComputePipelines {
-    pub test_color_step: Arc<TestColorStep>,
+    pub neighbor_search: NeighborSearch
 }
 
 impl ComputePipelines {
     pub fn new(device: Arc<Device>) -> Self {
-        let test_color_step = Arc::new(TestColorStep::new(device.clone()));
+        let neighbor_search = NeighborSearch::new(device.clone());
 
         Self {
-            test_color_step
+            neighbor_search,
         }
     }
 }

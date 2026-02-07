@@ -127,18 +127,32 @@ impl GpuRenderData {
     }
 }
 
+#[derive(BufferContents, Copy, Clone)]
+#[repr(C)]
+pub struct Entry {
+    pub hash: u32,
+    pub index: u32,
+}
+
 pub struct GpuPhysicsData {
     pub count: u32,
 
-    pub positions: Subbuffer<[[f32; 4]]>,
-    pub colors: Subbuffer<[[f32; 4]]>,
-    pub velocities: Subbuffer<[[f32; 4]]>,
-    pub predicted_velocities: Subbuffer<[[f32; 4]]>,
+    pub position_a: Subbuffer<[[f32; 4]]>,
+    pub position_b: Subbuffer<[[f32; 4]]>,
+
+    pub velocity_a: Subbuffer<[[f32; 4]]>,
+    pub velocity_b: Subbuffer<[[f32; 4]]>,
+
+    pub color_a: Subbuffer<[[f32; 4]]>,
+    pub color_b: Subbuffer<[[f32; 4]]>,
 
     pub densities: Subbuffer<[f32]>,
     pub factors: Subbuffer<[f32]>,
     pub kappas: Subbuffer<[f32]>,
     pub kappas_v: Subbuffer<[f32]>,
+
+    pub grid_entries: Subbuffer<[Entry]>,
+    pub grid_start: Subbuffer<[u32]>,
 }
 
 impl GpuPhysicsData {
@@ -152,7 +166,7 @@ impl GpuPhysicsData {
             .map(|p| [p[0], p[1], p[2], 1.0])
             .collect();
 
-        let positions = Buffer::from_iter(
+        let position_a = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
                 usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
@@ -165,10 +179,16 @@ impl GpuPhysicsData {
             positions_vec4.into_iter(),
         ).expect("Failed to create position buffer");
 
-        let velocities = Buffer::from_iter(
+        let position_b = Self::create_buffer(
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+            allocator.clone(),
+            count as u64
+        );
+
+        let velocity_a = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER,
+                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
                 ..Default::default()
             },
             AllocationCreateInfo {
@@ -178,10 +198,16 @@ impl GpuPhysicsData {
             (0..count).map(|_| [0.0, 0.0, 0.0, 0.0]),
         ).expect("Failed to create velocity buffer");
 
-        let colors = Buffer::from_iter(
+        let velocity_b = Self::create_buffer(
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+            allocator.clone(),
+            count as u64
+        );
+
+        let color_a = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
+                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
                 ..Default::default()
             },
             AllocationCreateInfo {
@@ -191,8 +217,8 @@ impl GpuPhysicsData {
             (0..count).map(|_| [1.0, 1.0, 1.0, 1.0]),
         ).expect("Failed to create physics color buffer");
 
-        let predicted_velocities = Self::create_buffer::<[f32; 4]>(
-            BufferUsage::STORAGE_BUFFER,
+        let color_b = Self::create_buffer(
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
             allocator.clone(),
             count as u64
         );
@@ -221,16 +247,34 @@ impl GpuPhysicsData {
             count as u64
         );
 
+        let sort_buffer_size = count.next_power_of_two();
+
+        let grid_entries = Self::create_buffer::<Entry>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            sort_buffer_size as u64
+        );
+
+        let grid_start = Self::create_buffer::<u32>(
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_DST,
+            allocator.clone(),
+            sort_buffer_size as u64
+        );
+
         Self {
             count,
-            positions,
-            velocities,
-            predicted_velocities,
+            position_a,
+            position_b,
+            velocity_a,
+            velocity_b,
+            color_a,
+            color_b,
             densities,
             factors,
             kappas,
             kappas_v,
-            colors,
+            grid_entries,
+            grid_start,
         }
     }
     fn create_buffer<T>(usage: BufferUsage, allocator: Arc<StandardMemoryAllocator>, count: u64) -> Subbuffer<[T]> where T: BufferContents {

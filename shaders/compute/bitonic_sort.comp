@@ -1,0 +1,44 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+
+layout(set = 0, binding = 0, std430) buffer EntriesBuffer {
+    Entry entries[];
+};
+
+layout(push_constant) uniform SortConstants {
+    uint num_entries;
+    uint block_height;
+    uint block_step;
+} pc;
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+
+    if (i >= pc.num_entries / 2) return;
+
+    uint step = pc.block_step;
+
+
+    uint left_idx = (i / step) * step * 2 + (i % step);
+    uint right_idx = left_idx + step;
+
+    uint key_left = entries[left_idx].hash;
+    uint key_right = entries[right_idx].hash;
+
+    uint h = pc.block_height;
+    bool ascending = ((left_idx & h) == 0u);
+
+    if (
+        (ascending && key_left > key_right) ||
+        (!ascending && key_left < key_right)
+    ) {
+        Entry temp = entries[left_idx];
+        entries[left_idx] = entries[right_idx];
+        entries[right_idx] = temp;
+    }
+}

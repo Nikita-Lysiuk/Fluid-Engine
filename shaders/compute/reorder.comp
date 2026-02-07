@@ -1,0 +1,53 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+layout(set = 0, binding = 0, std430) buffer EntriesBuffer {
+    Entry entries[];
+};
+
+layout(set = 0, binding = 1, std430) readonly buffer PosIn { vec4 p[]; } pos_a;
+layout(set = 0, binding = 2, std430) readonly buffer VelIn { vec4 v[]; } vel_a;
+layout(set = 0, binding = 3, std430) readonly buffer ColIn { vec4 c[]; } col_a;
+
+layout(set = 0, binding = 4, std430) buffer PosOut { vec4 p[]; } pos_b;
+layout(set = 0, binding = 5, std430) buffer VelOut { vec4 v[]; } vel_b;
+layout(set = 0, binding = 6, std430) buffer ColOut { vec4 c[]; } col_b;
+
+layout(push_constant) uniform PushConstants {
+    uint num_particles;
+} pc;
+
+vec3 hash_to_color(uint h) {
+    h ^= 2747636419u;
+    h *= 2654435769u;
+    h ^= h >> 16;
+    h *= 2654435769u;
+    h ^= h >> 16;
+    h *= 2654435769u;
+
+    float r = float(h & 0xFFu) / 255.0;
+    float g = float((h >> 8) & 0xFFu) / 255.0;
+    float b = float((h >> 16) & 0xFFu) / 255.0;
+
+    return vec3(r, g, b);
+}
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= pc.num_particles) return;
+
+    uint source_idx = entries[i].index;
+    uint hash = entries[i].hash;
+
+    pos_b.p[i] = pos_a.p[source_idx];
+    vel_b.v[i] = vel_a.v[source_idx];
+
+    vec3 cell_color = hash_to_color(hash);
+
+    cell_color = normalize(cell_color + vec3(0.2));
+    col_b.c[i] = vec4(cell_color, 1.0);
+}

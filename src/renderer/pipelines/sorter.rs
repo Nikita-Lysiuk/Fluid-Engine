@@ -2,10 +2,10 @@ use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
-use vulkano::device::Device;
-use vulkano::pipeline::compute::ComputePipelineCreateInfo;
-use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
+use vulkano::device::Device;
+use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
+use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
@@ -13,18 +13,14 @@ use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs {
     use vulkano_shaders::shader;
-
-    shader!(
-        ty: "compute",
-        path: "shaders\\compute\\test_color_step.comp"
-    );
+    shader!(ty: "compute", path: "shaders\\compute\\bitonic_sort.comp");
 }
 
-pub struct TestColorStep {
+pub struct GpuSorter {
     pipeline: Arc<ComputePipeline>,
 }
 
-impl TestColorStep {
+impl GpuSorter {
     pub fn new(device: Arc<Device>) -> Self {
         let shader = load_shader_entry_point(device.clone(), cs::load, "main");
 
@@ -46,50 +42,78 @@ impl TestColorStep {
     }
 }
 
-impl ComputeStep for TestColorStep {
+impl ComputeStep for GpuSorter {
     fn execute<Cb>(
         &self,
         builder: &mut AutoCommandBufferBuilder<Cb>,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &GpuPhysicsData,
-        sim_params: &Subbuffer<SimulationParams>,
-        dt: f32,
+        _sim_params: &Subbuffer<SimulationParams>,
+        _dt: f32
     ) {
+        let grid_entries = &physics_data.grid_entries;
+        let num_elements = grid_entries.len() as u32;
+
+        assert!(num_elements.is_power_of_two(), "GpuSorter: Buffer len must be power of 2");
+
         let pipeline_layout = self.pipeline.layout().set_layouts().get(0).unwrap();
-        
-        let pc = cs::PushConstants {
-            dt,
-            particle_count: physics_data.count,
-        };
-        
-        let descriptor_set = DescriptorSet::new(
+
+        let set = DescriptorSet::new(
             allocator.clone(),
             pipeline_layout.clone(),
-            [
-                WriteDescriptorSet::buffer(0, physics_data.position_a.clone()),
-                WriteDescriptorSet::buffer(1, physics_data.velocity_a.clone()),
-                WriteDescriptorSet::buffer(2, physics_data.color_a.clone()),
-                WriteDescriptorSet::buffer(3, sim_params.clone()),
-            ],
+            [WriteDescriptorSet::buffer(0, grid_entries.clone())],
             []
         ).unwrap();
-        
-        builder
-            .bind_pipeline_compute(self.pipeline.clone()).unwrap()
-            .bind_descriptor_sets(
-                PipelineBindPoint::Compute,
-                self.pipeline.layout().clone(),
-                0,
-                descriptor_set
-            )
-            .unwrap().push_constants(
-                self.pipeline.layout().clone(),
-                0,
-                pc
-            )
-            .unwrap();
 
-        let group_count = (physics_data.count + 63) / 64;
-        unsafe { builder.dispatch([group_count, 1, 1]).unwrap(); }
+        let mut h = 2;
+        while h <= num_elements {
+            let mut step = h / 2;
+            while step > 0 {
+                let pc = cs::SortConstants {
+                    num_entries: num_elements,
+                    block_height: h,
+                    block_step: step,
+                };
+
+                builder
+                    .bind_pipeline_compute(self.pipeline.clone()).unwrap()
+                    .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set.clone()).unwrap()
+                    .push_constants(self.pipeline.layout().clone(), 0, pc).unwrap();
+
+                let threads_needed = num_elements / 2;
+                let group_size = 256;
+                let dispatch_count = (threads_needed + group_size - 1) / group_size;
+
+                unsafe {
+                    builder.dispatch([dispatch_count, 1, 1]).unwrap();
+                }
+
+                step /= 2;
+            }
+
+            h *= 2;
+        }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -23,7 +23,7 @@ impl Scene {
         let spawn_pos = Vec3::new(0.0, 4.0, 0.0);
 
         let (initial_positions, particle_mass, spacing) = ParticleGenerator::generate_cube(
-            40,
+            50,
             spawn_pos,
             water_size,
             0.01,
@@ -33,7 +33,7 @@ impl Scene {
         let mut camera = Camera::new(Vec3::new(0.0, 3.0, -8.0));
         camera.rotate(0.0, 0.0, 0.0);
 
-        let smoothing_radius = particle_radius * 4.0;
+        let smoothing_radius = spacing * 2.0;
 
         let sim_params = SimulationParams::new(
             particle_radius,
