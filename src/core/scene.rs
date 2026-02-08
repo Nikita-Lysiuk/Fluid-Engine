@@ -12,34 +12,47 @@ pub struct Scene {
 
 impl Scene {
     pub fn new() -> Self {
-        let particle_radius = 0.05;
+        let particle_radius = 0.025;
         let target_density = 1000.0;
 
-        let box_min = Vec3::new(-2.0, 0.0, -2.0);
-        let box_max = Vec3::new(2.0, 8.0, 2.0);
+        let box_min = Vec3::new(-1.5, 0.0, -1.0);
+        let box_max = Vec3::new(1.5, 4.0, 1.0);
         let boundary = CollisionBox::new(box_min, box_max);
 
-        let water_size = 2.0;
-        let spawn_pos = Vec3::new(1.0, 2.0, 0.0);
 
-        let (initial_positions, particle_mass, spacing) = ParticleGenerator::generate_cube(
-            20,
+        let spawn_pos = Vec3::new(-1.0, 0.1, -0.8);
+
+        let water_width = 1.0;
+        let water_height = 2.0;
+        let water_depth = 0.8;
+
+        let spacing = particle_radius * 2.0;
+
+        let (initial_positions, particle_mass) = ParticleGenerator::generate_volume(
             spawn_pos,
-            water_size,
-            0.01,
+            water_width,
+            water_height,
+            water_depth,
+            particle_radius,
             target_density,
+            spacing,
+            0.01
         );
 
-        let mut camera = Camera::new(Vec3::new(0.0, 3.0, -8.0));
+        let mut camera = Camera::new(Vec3::new(0.0, 1.5, -3.5));
         camera.rotate(0.0, 0.0, 0.0);
 
-        let smoothing_radius = spacing * 2.5;
 
-        let dt = 1.0 / 90.0;
-        let viscosity = 0.05;
+        let smoothing_radius = particle_radius * 4.0;
+
+
+        let dt = 1.0 / 120.0;
+
+        let viscosity = 0.01;
         let relax_factor = 0.5;
-        let density_iterations = 10;
-        let divergence_iterations = 5;
+
+        let density_iterations = 8;
+        let divergence_iterations = 4;
 
         let sim_params = SimulationParams::new(
             particle_radius,

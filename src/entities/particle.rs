@@ -346,6 +346,43 @@ impl SimulationParams {
 pub struct ParticleGenerator;
 
 impl ParticleGenerator {
+    pub fn generate_volume(
+        origin: Vec3,
+        width: f32,
+        height: f32,
+        depth: f32,
+        radius: f32,
+        density: f32,
+        spacing: f32,
+        jitter: f32,
+    ) -> (Vec<[f32; 3]>, f32) {
+        let count_x = (width / spacing).floor() as usize;
+        let count_y = (height / spacing).floor() as usize;
+        let count_z = (depth / spacing).floor() as usize;
+
+        let mut positions = Vec::with_capacity(count_x * count_y * count_z);
+        
+        let offset = origin + Vec3::splat(radius);
+
+        for x in 0..count_x {
+            for y in 0..count_y {
+                for z in 0..count_z {
+                    let jitter = (rand::random::<f32>() - 0.5) * jitter;
+
+                    let px = offset.x + (x as f32 * spacing) + jitter;
+                    let py = offset.y + (y as f32 * spacing) + jitter;
+                    let pz = offset.z + (z as f32 * spacing) + jitter;
+
+                    positions.push([px, py, pz]); 
+                }
+            }
+        }
+        
+        let particle_volume = spacing.powi(3);
+        let mass = density * particle_volume;
+
+        (positions, mass)
+    }
     pub fn generate_cube(
         num_per_axis: usize,
         centre: Vec3,
