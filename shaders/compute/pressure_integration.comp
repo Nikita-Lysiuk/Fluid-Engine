@@ -1,0 +1,77 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+
+
+layout(std430, set = 0, binding = 0) readonly buffer Positions { vec4 positions[]; };
+layout(std430, set = 0, binding = 1) readonly buffer PressureForces { vec4 pressure_forces[]; };
+
+layout(std430, set = 0, binding = 3) buffer Velosities { vec4 velocities[]; };
+layout(std430, set = 0, binding = 4) buffer NewPosBuffer { vec4 new_positions[]; };
+
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint num_particles = uint(positions.length());
+
+    if (i >= num_particles) return;
+
+    float dt = sim_params.dt;
+
+    vec3 pos = positions[i].xyz;
+    vec3 vel = velocities[i].xyz;
+
+    vec3 ap = pressure_forces[i].xyz;
+
+    vec3 new_vel = vel + ap * dt;
+    vec3 new_pos = pos + new_vel * dt;
+
+    vec3 min_b = sim_params.box_min.xyz;
+    vec3 max_b = sim_params.box_max.xyz;
+    float r = sim_params.particle_radius;
+
+    float restitution = 0.5;
+    float friction = 0.95;
+
+
+    float eps = 0.001;
+
+    if (new_pos.y < min_b.y + r) {
+        new_pos.y = min_b.y + r + eps;
+        new_vel.y *= -restitution;
+        new_vel.xz *= friction;
+    }
+    else if (new_pos.y > max_b.y - r) {
+        new_pos.y = max_b.y - r - eps;
+        new_vel.y *= -restitution;
+        new_vel.xz *= friction;
+    }
+
+    if (new_pos.x < min_b.x + r) {
+        new_pos.x = min_b.x + r + eps;
+        new_vel.x *= -restitution;
+        new_vel.yz *= friction;
+    }
+    else if (new_pos.x > max_b.x - r) {
+        new_pos.x = max_b.x - r - eps;
+        new_vel.x *= -restitution;
+        new_vel.yz *= friction;
+    }
+
+    if (new_pos.z < min_b.z + r) {
+        new_pos.z = min_b.z + r + eps;
+        new_vel.z *= -restitution;
+        new_vel.xy *= friction;
+    }
+    else if (new_pos.z > max_b.z - r) {
+        new_pos.z = max_b.z - r - eps;
+        new_vel.z *= -restitution;
+        new_vel.xy *= friction;
+    }
+
+    new_positions[i] = vec4(new_pos, 1.0);
+    velocities[i] = vec4(new_vel, 0.0);
+}

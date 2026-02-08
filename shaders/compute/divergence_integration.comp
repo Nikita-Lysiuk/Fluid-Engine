@@ -1,0 +1,93 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+
+
+layout(std430, set = 0, binding = 0) buffer Velosities { vec4 velocities[]; };
+layout(std430, set = 0, binding = 1) readonly buffer PressureForces { vec4 pressure_forces[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Positions { vec4 positions[]; };
+
+layout(std430, set = 0, binding = 4) writeonly buffer ColorBuffer { vec4 colors[]; };
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint num_particles = uint(velocities.length());
+
+    if (i >= num_particles) return;
+
+    float dt = sim_params.dt;
+    vec3 vel = velocities[i].xyz;
+    vec3 pos = positions[i].xyz;
+    vec3 ap = pressure_forces[i].xyz;
+
+    vec3 new_vel = vel + ap * dt;
+    vec3 predicted_pos = pos + new_vel * dt;
+
+    vec3 min_b = sim_params.box_min.xyz;
+    vec3 max_b = sim_params.box_max.xyz;
+    float r = sim_params.particle_radius;
+
+    float restitution = 0.5;
+    float friction = 0.95;
+    float eps = 0.0001;
+
+    if (predicted_pos.y < min_b.y + r) {
+        if (new_vel.y < 0.0) {
+                               new_vel.y *= -restitution;
+                               new_vel.xz *= friction;
+        }
+    }
+    else if (predicted_pos.y > max_b.y - r) {
+        if (new_vel.y > 0.0) {
+            new_vel.y *= -restitution;
+            new_vel.xz *= friction;
+        }
+    }
+
+    if (predicted_pos.x < min_b.x + r) {
+        if (new_vel.x < 0.0) {
+            new_vel.x *= -restitution;
+            new_vel.yz *= friction;
+        }
+    }
+    else if (predicted_pos.x > max_b.x - r) {
+        if (new_vel.x > 0.0) {
+            new_vel.x *= -restitution;
+            new_vel.yz *= friction;
+        }
+    }
+
+    if (predicted_pos.z < min_b.z + r) {
+        if (new_vel.z < 0.0) {
+            new_vel.z *= -restitution;
+            new_vel.xy *= friction;
+        }
+    }
+    else if (predicted_pos.z > max_b.z - r) {
+        if (new_vel.z > 0.0) {
+            new_vel.z *= -restitution;
+            new_vel.xy *= friction;
+        }
+    }
+
+    float speed = length(new_vel);
+    vec3 deep_color = vec3(0.05, 0.1, 0.5);
+    vec3 water_color = vec3(0.2, 0.5, 1.0);
+    vec3 foam_color = vec3(1.0, 1.0, 1.0);
+
+    float max_speed = 4.0;
+    float t = clamp(speed / max_speed, 0.0, 1.0);
+
+    vec3 final_color;
+    if (t < 0.5) {
+        final_color = mix(deep_color, water_color, t * 2.0);
+    } else {
+        final_color = mix(water_color, foam_color, (t - 0.5) * 2.0);
+    }
+
+    velocities[i] = vec4(new_vel, 0.0);
+    colors[i] = vec4(final_color, 1.0);
+}

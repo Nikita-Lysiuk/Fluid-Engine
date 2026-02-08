@@ -12,14 +12,17 @@ use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs {
     use vulkano_shaders::shader;
-    shader!(ty: "compute", path: "shaders\\compute\\density_and_alpha.comp");
+    shader! {
+        ty: "compute",
+        path: "shaders\\compute\\pressure_integration.comp"
+    }
 }
 
-pub struct DensityAlphaPipeline {
-    pipeline: Arc<ComputePipeline>,
+pub struct PressureIntegrationPipeline {
+    pub pipeline: Arc<ComputePipeline>,
 }
 
-impl ComputeStep for DensityAlphaPipeline {
+impl ComputeStep for PressureIntegrationPipeline {
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, cs::load, "main")
     }
@@ -27,10 +30,10 @@ impl ComputeStep for DensityAlphaPipeline {
         Self { pipeline }
     }
     fn execute<Cb>(
-        &self, 
-        builder: &mut AutoCommandBufferBuilder<Cb>, 
-        allocator: Arc<StandardDescriptorSetAllocator>, 
-        physics_data: &GpuPhysicsData, 
+        &self,
+        builder: &mut AutoCommandBufferBuilder<Cb>,
+        allocator: Arc<StandardDescriptorSetAllocator>,
+        physics_data: &GpuPhysicsData,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
         let num_particles = physics_data.count;
@@ -43,14 +46,14 @@ impl ComputeStep for DensityAlphaPipeline {
             allocator.clone(),
             layout.clone(),
             [
-                WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
-                WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
+                WriteDescriptorSet::buffer(0, physics_data.position_b.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.pressure_accelerations.clone()),
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
-                WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
-                WriteDescriptorSet::buffer(4, physics_data.densities.clone()),
-                WriteDescriptorSet::buffer(5, physics_data.factors.clone()),
+           
+                WriteDescriptorSet::buffer(3, physics_data.velocity_a.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.position_a.clone()),
             ],
-            [],
+            []
         ).unwrap();
 
         builder
@@ -58,6 +61,8 @@ impl ComputeStep for DensityAlphaPipeline {
             .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set)
             .unwrap();
 
-        unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
+        unsafe {
+            builder.dispatch([dispatch_count, 1, 1]).unwrap();
+        }
     }
 }

@@ -4,15 +4,13 @@
 
 layout(local_size_x = 256) in;
 
-
 layout(std430, set = 0, binding = 0) readonly buffer Entries { Entry entries[]; };
 layout(std430, set = 0, binding = 1) readonly buffer Offsets { uint grid_start[]; };
-layout(std430, set = 0, binding = 3) readonly buffer Velocities { vec4 velocities[];};
-layout(std430, set = 0, binding = 4) readonly buffer Positions { vec4 positions[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Positions { vec4 positions[]; };
+layout(std430, set = 0, binding = 4) readonly buffer Pressures { float pressures[]; };
 layout(std430, set = 0, binding = 5) readonly buffer Densities { float densities[]; };
 
-layout(std430, set = 0, binding = 6) buffer NewVelocities { vec4 new_velocities[]; };
-
+layout (std430, set = 0, binding = 6) buffer PressureForces { vec4 pressure_forces[]; };
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -23,11 +21,21 @@ void main() {
     vec3 pos_i = positions[i].xyz;
     float h = sim_params.smoothing_radius;
     float mass = sim_params.particle_mass;
+    float dt = sim_params.dt;
+
+    float rho_i = densities[i];
+    float p_i = pressures[i];
+    
+    float p_rho_i = 0.0;
+    if (rho_i > 1e-6) {
+        p_rho_i = p_i / (rho_i * rho_i);
+    }
 
     ivec3 cell_coords = ivec3(floor(pos_i / h));
     uint table_size = uint(grid_start.length());
 
-    vec3 sum_viscosity = vec3(0.0);
+
+    vec3 accel_sum = vec3(0.0);
 
     for (int z = -1; z <= 1; z++) {
         for (int y = -1; y <= 1; y++) {
@@ -48,19 +56,23 @@ void main() {
                     if (r2 > h * h) continue;
 
                     float r = sqrt(r2);
-                    float w = kernel_w(r, h);
 
                     if (r > 1e-6) {
-                        vec3 vel_diff = velocities[j].xyz - velocities[i].xyz;
-                        sum_viscosity += mass / densities[j] * vel_diff * w;
+                        float rho_j = densities[j];
+                        float p_j = pressures[j];
+
+                        if (rho_j > 1e-6) {
+                            vec3 grad = kernel_grad(r_vec, r, h);
+                            float p_rho_j = p_j / (rho_j * rho_j);
+
+                            float pressure_term = p_rho_i + p_rho_j;
+                            accel_sum += mass * pressure_term * grad;
+                        }
                     }
                 }
             }
         }
     }
 
-    vec3 current_vel = velocities[i].xyz;
-    vec3 vel_visco = current_vel + sim_params.viscosity * sum_viscosity;
-    vec3 vel_final = vel_visco + sim_params.gravity.xyz * sim_params.dt;
-    new_velocities[i] = vec4(vel_final, 0.0);
+    pressure_forces[i] = vec4(-accel_sum, 0.0);
 }

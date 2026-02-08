@@ -143,13 +143,15 @@ pub struct GpuPhysicsData {
     pub velocity_a: Subbuffer<[[f32; 4]]>,
     pub velocity_b: Subbuffer<[[f32; 4]]>,
 
-    pub color_a: Subbuffer<[[f32; 4]]>,
-    pub color_b: Subbuffer<[[f32; 4]]>,
+    pub colors: Subbuffer<[[f32; 4]]>,
 
     pub densities: Subbuffer<[f32]>,
     pub factors: Subbuffer<[f32]>,
-    pub kappas: Subbuffer<[f32]>,
-    pub kappas_v: Subbuffer<[f32]>,
+
+    pub source_terms: Subbuffer<[f32]>,
+    pub pressures: Subbuffer<[f32]>,
+    pub pressure_accelerations: Subbuffer<[[f32; 4]]>,
+
 
     pub grid_entries: Subbuffer<[Entry]>,
     pub grid_start: Subbuffer<[u32]>,
@@ -204,20 +206,26 @@ impl GpuPhysicsData {
             count as u64
         );
 
-        let color_a = Buffer::from_iter(
+        let pressures = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+                usage: BufferUsage::STORAGE_BUFFER,
                 ..Default::default()
             },
             AllocationCreateInfo {
                 memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
-            (0..count).map(|_| [1.0, 1.0, 1.0, 1.0]),
-        ).expect("Failed to create physics color buffer");
+            (0..count).map(|_| 0.0f32),
+        ).expect("Failed to create pressure buffer");
 
-        let color_b = Self::create_buffer(
+        let pressure_accelerations = Self::create_buffer::<[f32; 4]>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64
+        );
+
+        let colors = Self::create_buffer(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
             allocator.clone(),
             count as u64
@@ -235,13 +243,7 @@ impl GpuPhysicsData {
             count as u64
         );
 
-        let kappas = Self::create_buffer::<f32>(
-            BufferUsage::STORAGE_BUFFER,
-            allocator.clone(),
-            count as u64
-        );
-
-        let kappas_v = Self::create_buffer::<f32>(
+        let source_terms = Self::create_buffer::<f32>(
             BufferUsage::STORAGE_BUFFER,
             allocator.clone(),
             count as u64
@@ -267,12 +269,12 @@ impl GpuPhysicsData {
             position_b,
             velocity_a,
             velocity_b,
-            color_a,
-            color_b,
+            colors,
             densities,
             factors,
-            kappas,
-            kappas_v,
+            source_terms,
+            pressures,
+            pressure_accelerations,
             grid_entries,
             grid_start,
         }
@@ -296,8 +298,12 @@ pub struct SimulationParams {
     pub target_density: f32,
 
     pub viscosity: f32,
+    pub relax_factor: f32,
     pub dt: f32,
-    pub _padding: [f32; 2],
+    pub density_solver_iterations: u32,
+    pub divergence_solver_iterations: u32,
+    
+    _padding: [f32; 3],
 
     pub gravity: [f32; 4],
     pub box_min: [f32; 4],
@@ -311,7 +317,10 @@ impl SimulationParams {
         smoothing_radius: f32,
         target_density: f32,
         viscosity: f32,
+        relax_factor: f32,
         dt: f32,
+        density_solver_iterations: u32,
+        divergence_solver_iterations: u32,
         gravity: Vec3,
         box_min: Vec3,
         box_max: Vec3,
@@ -322,8 +331,11 @@ impl SimulationParams {
             smoothing_radius,
             target_density,
             viscosity,
+            relax_factor,
             dt,
-            _padding: [0.0; 2],
+            density_solver_iterations,
+            divergence_solver_iterations,
+            _padding: [0.0; 3],
             gravity: [gravity.x, gravity.y, gravity.z, 0.0],
             box_min: [box_min.x, box_min.y, box_min.z, 0.0],
             box_max: [box_max.x, box_max.y, box_max.z, 0.0],

@@ -20,10 +20,10 @@ impl Scene {
         let boundary = CollisionBox::new(box_min, box_max);
 
         let water_size = 2.0;
-        let spawn_pos = Vec3::new(0.0, 4.0, 0.0);
+        let spawn_pos = Vec3::new(1.0, 2.0, 0.0);
 
         let (initial_positions, particle_mass, spacing) = ParticleGenerator::generate_cube(
-            40,
+            20,
             spawn_pos,
             water_size,
             0.01,
@@ -35,13 +35,22 @@ impl Scene {
 
         let smoothing_radius = spacing * 2.5;
 
+        let dt = 1.0 / 90.0;
+        let viscosity = 0.05;
+        let relax_factor = 0.5;
+        let density_iterations = 10;
+        let divergence_iterations = 5;
+
         let sim_params = SimulationParams::new(
             particle_radius,
             particle_mass,
             smoothing_radius,
             target_density,
-            0.05,
-            0.0025,
+            viscosity,
+            relax_factor,
+            dt,
+            density_iterations,
+            divergence_iterations,
             Vec3::new(0.0, -9.81, 0.0),
             box_min,
             box_max,

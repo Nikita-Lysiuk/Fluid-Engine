@@ -11,11 +11,9 @@ layout(set = 0, binding = 0, std430) buffer EntriesBuffer {
 
 layout(set = 0, binding = 1, std430) readonly buffer PosIn { vec4 p[]; } pos_a;
 layout(set = 0, binding = 2, std430) readonly buffer VelIn { vec4 v[]; } vel_a;
-layout(set = 0, binding = 3, std430) readonly buffer ColIn { vec4 c[]; } col_a;
 
 layout(set = 0, binding = 4, std430) buffer PosOut { vec4 p[]; } pos_b;
 layout(set = 0, binding = 5, std430) buffer VelOut { vec4 v[]; } vel_b;
-layout(set = 0, binding = 6, std430) buffer ColOut { vec4 c[]; } col_b;
 
 layout(push_constant) uniform PushConstants {
     uint num_particles;
@@ -45,5 +43,4 @@ void main() {
 
     pos_b.p[i] = pos_a.p[source_idx];
     vel_b.v[i] = vel_a.v[source_idx];
-    col_b.c[i] = col_a.c[source_idx];
 }

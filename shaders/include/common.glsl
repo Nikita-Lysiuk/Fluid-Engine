@@ -14,8 +14,13 @@ layout(std140, set = 0, binding = 2) uniform SimulationParams {
     float smoothing_radius;
     float target_density;
     float viscosity;
+    float relax_factor;
     float dt;
-    vec2 _padding;
+    uint density_iterations;
+    uint divergence_iterations;
+    float _pad0;
+    float _pad1;
+    float _pad2;
     vec4 gravity;
     vec4 box_min;
     vec4 box_max;

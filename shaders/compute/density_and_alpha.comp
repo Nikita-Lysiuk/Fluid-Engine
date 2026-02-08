@@ -6,11 +6,10 @@ layout(local_size_x = 256) in;
 
 layout(set = 0, binding = 0, std430) readonly buffer Entries { Entry entries[]; };
 layout(set = 0, binding = 1, std430) readonly buffer Offsets { uint grid_start[]; };
-layout(set = 0, binding = 3, std430) readonly buffer PosBuffer { vec4 positions[]; };
+layout(set = 0, binding = 3, std430) readonly buffer Positions { vec4 positions[]; };
 
-layout(set = 0, binding = 4, std430) writeonly buffer DensityBuffer { float densities[]; };
-layout(set = 0, binding = 5, std430) writeonly buffer AlphaBuffer { float factors[]; };
-layout(set = 0, binding = 6, std430) writeonly buffer ColorBuffer { vec4 colors[]; };
+layout(set = 0, binding = 4, std430) writeonly buffer Densities { float densities[]; };
+layout(set = 0, binding = 5, std430) writeonly buffer Alphas { float factors[]; };
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -66,21 +65,8 @@ void main() {
     densities[i] = density;
     float alpha = sum_grad_sq + dot(grad_sum, grad_sum);
     if (alpha > 1e-6) {
-        factors[i] = 1.0 / alpha;
+        factors[i] = alpha;
     } else {
         factors[i] = 0.0;
     }
-
-    float target = sim_params.target_density;
-    vec3 col = vec3(0.0, 0.0, 1.0);
-
-    if (density > target) {
-        float factor = (density - target) / target;
-        col = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), clamp(factor, 0.0, 1.0));
-    } else {
-        float factor = (target - density) / target;
-        col = mix(vec3(0.0, 0.0, 1.0), vec3(0.0, 1.0, 0.0), clamp(factor, 0.0, 1.0));
-    }
-
-    colors[i] = vec4(col, 1.0);
 }

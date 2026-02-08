@@ -189,42 +189,98 @@ impl Renderer {
             &self.resources.physics_data,
             &self.resources.sim_params_buffer,
         );
-        
-        self.physics_steps.viscosity.execute(
-            &mut builder,
-            self.descriptor_set_allocator.clone(),
-            &self.resources.physics_data,
-            &self.resources.sim_params_buffer,
-        );
-        
+
+        let mut step = 0.0;
+        while step < max_dt {
+            self.physics_steps.viscosity.execute(
+                &mut builder,
+                self.descriptor_set_allocator.clone(),
+                &self.resources.physics_data,
+                &self.resources.sim_params_buffer,
+            );
+
+            self.physics_steps.density_source_term.execute(
+                &mut builder,
+                self.descriptor_set_allocator.clone(),
+                &self.resources.physics_data,
+                &self.resources.sim_params_buffer,
+            );
+
+            for _ in 0..scene.sim_params.density_solver_iterations {
+                self.physics_steps.pressure_force.execute(
+                    &mut builder,
+                    self.descriptor_set_allocator.clone(),
+                    &self.resources.physics_data,
+                    &self.resources.sim_params_buffer,
+                );
+
+                self.physics_steps.pressure_update.execute(
+                    &mut builder,
+                    self.descriptor_set_allocator.clone(),
+                    &self.resources.physics_data,
+                    &self.resources.sim_params_buffer,
+                );
+            }
+
+            self.physics_steps.pressure_integration.execute(
+                &mut builder,
+                self.descriptor_set_allocator.clone(),
+                &self.resources.physics_data,
+                &self.resources.sim_params_buffer,
+            );
+
+            step += scene.sim_params.dt;
+
+            self.physics_steps.density_alpha.execute(
+                &mut builder,
+                self.descriptor_set_allocator.clone(),
+                &self.resources.physics_data,
+                &self.resources.sim_params_buffer,
+            );
+
+            self.physics_steps.divergence_source_term.execute(
+                &mut builder,
+                self.descriptor_set_allocator.clone(),
+                &self.resources.physics_data,
+                &self.resources.sim_params_buffer,
+            );
+
+            for _ in 0..scene.sim_params.divergence_solver_iterations {
+                self.physics_steps.pressure_force.execute(
+                    &mut builder,
+                    self.descriptor_set_allocator.clone(),
+                    &self.resources.physics_data,
+                    &self.resources.sim_params_buffer,
+                );
+
+                self.physics_steps.pressure_update.execute(
+                    &mut builder,
+                    self.descriptor_set_allocator.clone(),
+                    &self.resources.physics_data,
+                    &self.resources.sim_params_buffer,
+                );
+            }
+
+            self.physics_steps.divergence_integration.execute(
+                &mut builder,
+                self.descriptor_set_allocator.clone(),
+                &self.resources.physics_data,
+                &self.resources.sim_params_buffer,
+            );
+        }
         
         let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
 
 
         builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.position_b.clone(),
+            self.resources.physics_data.position_a.clone(),
             self.resources.render_data.position_buffers[next_frame].clone()
         )).unwrap();
 
         builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.color_b.clone(),
+            self.resources.physics_data.colors.clone(),
             self.resources.render_data.color_buffers[next_frame].clone()
         )).unwrap();
-
-        builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.position_b.clone(),
-            self.resources.physics_data.position_a.clone()
-        )).unwrap();
-
-        builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.velocity_b.clone(),
-            self.resources.physics_data.velocity_a.clone()
-        )).unwrap();
-        builder.copy_buffer(CopyBufferInfo::buffers(
-            self.resources.physics_data.color_b.clone(),
-            self.resources.physics_data.color_a.clone()
-        )).unwrap();
-
 
         let command_buffer = builder.build().unwrap();
 

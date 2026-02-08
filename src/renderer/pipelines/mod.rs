@@ -13,18 +13,30 @@ use vulkano_util::context::VulkanoContext;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
 use crate::renderer::pipelines::density_alpha::DensityAlphaPipeline;
+use crate::renderer::pipelines::density_source_term::DensitySourceTermPipeline;
+use crate::renderer::pipelines::divergence_integration::DivergenceIntegrationPipeline;
+use crate::renderer::pipelines::divergence_source_term::DivergenceSourceTermPipeline;
 use crate::renderer::pipelines::neighbor_search::NeighborSearch;
 use crate::renderer::pipelines::point_pipeline::PointPipeline;
+use crate::renderer::pipelines::pressure_force_pipeline::PressureForcePipeline;
+use crate::renderer::pipelines::pressure_integration_pipeline::PressureIntegrationPipeline;
+use crate::renderer::pipelines::pressure_update_pipeline::PressureUpdatePipeline;
 use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
 use crate::renderer::pipelines::viscosity::ViscosityPipeline;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
 pub mod collision_pipeline;
-pub mod neighbor_search;
-pub mod sorter;
-pub mod density_alpha;
-pub mod viscosity;
+mod neighbor_search;
+mod sorter;
+mod density_alpha;
+mod viscosity;
+mod density_source_term;
+mod pressure_force_pipeline;
+mod pressure_update_pipeline;
+mod pressure_integration_pipeline;
+mod divergence_source_term;
+mod divergence_integration;
 
 pub trait ComputeStep: Sized {
     fn load_shader_module(device: Arc<Device>) -> EntryPoint;
@@ -60,6 +72,12 @@ pub struct ComputePipelines {
     pub neighbor_search: NeighborSearch,
     pub density_alpha: DensityAlphaPipeline,
     pub viscosity: ViscosityPipeline,
+    pub density_source_term: DensitySourceTermPipeline,
+    pub pressure_force: PressureForcePipeline,
+    pub pressure_update: PressureUpdatePipeline,
+    pub pressure_integration: PressureIntegrationPipeline,
+    pub divergence_source_term: DivergenceSourceTermPipeline,
+    pub divergence_integration: DivergenceIntegrationPipeline,
 }
 
 impl ComputePipelines {
@@ -67,11 +85,23 @@ impl ComputePipelines {
         let neighbor_search = NeighborSearch::new(device.clone());
         let density_alpha = DensityAlphaPipeline::new(device.clone());
         let viscosity = ViscosityPipeline::new(device.clone());
+        let density_source_term = DensitySourceTermPipeline::new(device.clone());
+        let pressure_force = PressureForcePipeline::new(device.clone());
+        let pressure_update = PressureUpdatePipeline::new(device.clone());
+        let pressure_integration = PressureIntegrationPipeline::new(device.clone());
+        let divergence_source_term = DivergenceSourceTermPipeline::new(device.clone());
+        let divergence_integration = DivergenceIntegrationPipeline::new(device.clone());
 
         Self {
             neighbor_search,
             density_alpha,
-            viscosity
+            viscosity,
+            density_source_term,
+            pressure_force,
+            pressure_update,
+            pressure_integration,
+            divergence_source_term,
+            divergence_integration
         }
     }
 }

@@ -163,10 +163,8 @@ impl ComputeStep for NeighborSearch {
                     WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
                     WriteDescriptorSet::buffer(1, physics_data.position_a.clone()),
                     WriteDescriptorSet::buffer(2, physics_data.velocity_a.clone()),
-                    WriteDescriptorSet::buffer(3, physics_data.color_a.clone()),
                     WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),
                     WriteDescriptorSet::buffer(5, physics_data.velocity_b.clone()),
-                    WriteDescriptorSet::buffer(6, physics_data.color_b.clone()),
                 ],
                 [],
             ).unwrap();
