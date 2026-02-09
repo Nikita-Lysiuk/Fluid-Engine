@@ -1,4 +1,5 @@
 use glam::Vec3;
+use log::info;
 use crate::entities::camera::Camera;
 use crate::entities::collision::CollisionBox;
 use crate::entities::particle::{ParticleGenerator, SimulationParams};
@@ -12,7 +13,7 @@ pub struct Scene {
 
 impl Scene {
     pub fn new() -> Self {
-        let particle_radius = 0.025;
+        let particle_radius = 0.015;
         let target_density = 1000.0;
 
         let box_min = Vec3::new(-1.5, 0.0, -1.0);
@@ -20,7 +21,7 @@ impl Scene {
         let boundary = CollisionBox::new(box_min, box_max);
 
 
-        let spawn_pos = Vec3::new(-1.0, 0.1, -0.8);
+        let spawn_pos = Vec3::new(-1.0, 1.0, -0.8);
 
         let water_width = 1.0;
         let water_height = 2.0;
@@ -46,13 +47,13 @@ impl Scene {
         let smoothing_radius = particle_radius * 4.0;
 
 
-        let dt = 1.0 / 120.0;
+        let dt = 0.005;
 
-        let viscosity = 0.01;
+        let viscosity = 0.15;
         let relax_factor = 0.5;
 
-        let density_iterations = 8;
-        let divergence_iterations = 4;
+        let density_iterations = 4;
+        let divergence_iterations = 1;
 
         let sim_params = SimulationParams::new(
             particle_radius,
@@ -68,6 +69,8 @@ impl Scene {
             box_min,
             box_max,
         );
+
+        info!("[Scene] Created new scene with {} particles.", initial_positions.len());
 
         Self {
             initial_positions,

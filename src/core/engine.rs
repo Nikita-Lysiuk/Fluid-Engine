@@ -1,6 +1,5 @@
 use log::{info, debug, error};
 use simple_logger::SimpleLogger;
-use vulkano::sync::GpuFuture;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, WindowEvent};
@@ -75,7 +74,7 @@ impl ApplicationHandler for Engine {
             info!("[Engine] System Resumed. Initializing Window and Graphics...");
 
             let window_attributes = WindowAttributes::default()
-                .with_inner_size(PhysicalSize::new(1280, 720))
+                .with_inner_size(PhysicalSize::new(1920, 1080))
                 .with_window_icon(load_icon("assets/logo.png").ok())
                 .with_taskbar_icon(load_icon("assets/logo.png").ok());
 
@@ -175,9 +174,7 @@ impl ApplicationHandler for Engine {
                 }
 
                 if let Some(renderer) = self.renderer.as_mut() {
-                    let physics_future = renderer.step(&mut self.scene, safe_dt);
-                    physics_future.flush().expect("Failed to flush GPU commands");
-                    renderer.render();
+                    renderer.update_and_render(&mut self.scene, safe_dt);
                 }
 
                 if IS_PAINT_FPS_COUNTER {

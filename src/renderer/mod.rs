@@ -36,7 +36,6 @@ pub struct Renderer {
     sky_data: SkyData,
 
     resources: GpuSceneResources,
- 
 }
 
 impl Renderer {
@@ -107,7 +106,7 @@ impl Renderer {
                 title: WINDOW_TITLE.into(),
                 width: 1280.,
                 height: 720.,
-                present_mode: PresentMode::Mailbox,
+                present_mode: PresentMode::Immediate,
                 ..Default::default()
             },
             |create_info| {
@@ -167,7 +166,7 @@ impl Renderer {
             physics_steps: gpu_physics,
         }
     }
-    pub fn step(&mut self, scene: &Scene, max_dt: f32) -> Box<dyn GpuFuture> {
+    pub fn step(&mut self, scene: &Scene, max_dt: f32, previous_future: Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
         self.resources.sync_with_scene(scene);
 
         let mut builder = AutoCommandBufferBuilder::primary(
@@ -284,16 +283,20 @@ impl Renderer {
 
         let command_buffer = builder.build().unwrap();
 
-        vulkano::sync::now(self.context.device().clone())
+        previous_future
             .then_execute(self.context.graphics_queue().clone(), command_buffer)
             .unwrap()
+            .then_signal_semaphore()
             .boxed()
     }
-    pub fn render(&mut self) {
+    pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32) {
+
         let acquire_future = self.window_renderer
-            .acquire(None, |_img_view|{})
-            .map_err(|e| panic!("[Renderer] Failed to acquire next image for rendering: {:?}", e))
+            .acquire(None, |_| {})
+            .map_err(|e| panic!("[Renderer] Failed to acquire swapchain image: {:?}", e))
             .unwrap();
+
+        let physics_semaphore = self.step(scene, safe_dt, acquire_future.boxed());
 
         let mut builder = AutoCommandBufferBuilder::primary(
             self.command_buffer_allocator.clone(),
@@ -341,11 +344,11 @@ impl Renderer {
         builder.end_rendering().map_err(|e| panic!("[Renderer] Failed to end rendering: {:?}", e)).unwrap();
         let render_command_buffer = builder.build().unwrap();
 
-        let combined_future = acquire_future
-            .then_execute(self.context.graphics_queue().clone(), render_command_buffer)
+        let render_future = physics_semaphore
+            .then_execute(self.window_renderer.graphics_queue().clone(), render_command_buffer)
             .unwrap();
 
-        self.window_renderer.present(combined_future.boxed(), false);
+        self.window_renderer.present(render_future.boxed(), true);
         self.resources.prepare_next_frame();
     }
 }
