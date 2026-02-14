@@ -55,14 +55,16 @@ impl GpuSceneResources {
             current_frame_idx: 0,
         }
     }
-
     pub fn camera_addr(&self) -> u64 {
         self.camera_data.uniform_buffer_addr(self.current_frame_idx)
     }
-
     pub fn sync_with_scene(&self, scene: &Scene) {
         self.camera_data.write_to_buffer(&scene.camera, self.current_frame_idx);
         self.collision_box_data.write_to_buffer(&scene.boundary, self.current_frame_idx);
+
+        if let Ok(mut params) = self.sim_params_buffer.write() {
+            *params = scene.sim_params;
+        }
     }
 
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines) {

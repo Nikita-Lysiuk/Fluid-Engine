@@ -1,12 +1,11 @@
 use std::sync::Arc;
-use log::{debug, error, info, warn};
+use egui_winit_vulkano::{Gui, GuiConfig};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferInfo, RenderingAttachmentInfo, RenderingInfo};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
 use vulkano::device::DeviceFeatures;
 use vulkano::format::Format;
 use vulkano::image::ImageUsage;
-use vulkano::instance::debug::{DebugUtilsMessageSeverity, DebugUtilsMessageType, DebugUtilsMessengerCallback, DebugUtilsMessengerCallbackData, DebugUtilsMessengerCreateInfo};
 use vulkano::instance::{InstanceCreateInfo, InstanceExtensions};
 use vulkano::pipeline::graphics::viewport::{Scissor, Viewport};
 use vulkano::render_pass::{AttachmentLoadOp, AttachmentStoreOp};
@@ -16,15 +15,18 @@ use vulkano::Version;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 use vulkano_util::renderer::VulkanoWindowRenderer;
 use vulkano_util::window::WindowDescriptor;
+use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 use crate::core::scene::Scene;
 use crate::entities::sky::SkyData;
 use crate::renderer::pipelines::{ComputePipelines, ComputeStep, Pipelines};
 use crate::renderer::resources::GpuSceneResources;
+use crate::renderer::ui::AppUI;
 use crate::utils::constants::{MAX_FRAMES_IN_FLIGHT, WINDOW_TITLE};
 
 pub mod pipelines;
 mod resources;
+mod ui;
 
 pub struct Renderer {
     pub window_renderer: VulkanoWindowRenderer,
@@ -36,44 +38,15 @@ pub struct Renderer {
     sky_data: SkyData,
 
     resources: GpuSceneResources,
+
+    pub gui: Gui,
+    pub app_ui: AppUI,
 }
 
 impl Renderer {
-    pub fn new(window: Window, scene: &Scene) -> Self {
-        let callback = unsafe {
-            DebugUtilsMessengerCallback::new(|severity: DebugUtilsMessageSeverity, ty: DebugUtilsMessageType, data: DebugUtilsMessengerCallbackData| {
-                let type_str = format!("{:?}", ty);
-                let description = data.message;
-
-                if severity.intersects(DebugUtilsMessageSeverity::ERROR) {
-                    error!("[Vulkan: {}] {}", type_str, description);
-                } else if severity.intersects(DebugUtilsMessageSeverity::WARNING) {
-                    warn!("[Vulkan: {}] {}", type_str, description);
-                } else if severity.intersects(DebugUtilsMessageSeverity::INFO) {
-                    info!("[Vulkan: {}] {}", type_str, description);
-                } else {
-                    debug!("[Vulkan: {}] {}", type_str, description);
-                }
-            })
-        };
-
-        let mut debug_create_info = DebugUtilsMessengerCreateInfo::user_callback(callback);
-
-        debug_create_info.message_severity = DebugUtilsMessageSeverity::ERROR
-            | DebugUtilsMessageSeverity::WARNING
-            | DebugUtilsMessageSeverity::INFO;
-        debug_create_info.message_type = DebugUtilsMessageType::GENERAL
-            | DebugUtilsMessageType::VALIDATION
-            | DebugUtilsMessageType::PERFORMANCE;
-
-        let mut layers = Vec::new();
-        if cfg!(debug_assertions) {
-            layers.push("VK_LAYER_KHRONOS_validation".into());
-        }
-
+    pub fn new(window: Window, scene: &Scene, event_loop: &ActiveEventLoop) -> Self {
         let config = VulkanoConfig {
             instance_create_info: InstanceCreateInfo {
-                enabled_layers: layers,
                 enabled_extensions: InstanceExtensions {
                     ext_debug_utils: true,
                     ..InstanceExtensions::default()
@@ -82,7 +55,6 @@ impl Renderer {
                 application_version: Version::V1_3,
                 ..Default::default()
             },
-            debug_create_info: Some(debug_create_info),
             device_features: DeviceFeatures {
                 sampler_anisotropy: true,
                 dynamic_rendering: true,
@@ -155,6 +127,17 @@ impl Renderer {
 
         let gpu_physics = ComputePipelines::new(context.device().clone());
 
+        let gui = Gui::new(
+            event_loop,
+            window_renderer.surface(),
+            context.graphics_queue().clone(),
+            window_renderer.swapchain_format(),
+            GuiConfig {
+                is_overlay: true,
+                 ..Default::default()
+            }
+        );
+
         Self {
             context,
             window_renderer,
@@ -164,6 +147,8 @@ impl Renderer {
             resources,
             sky_data,
             physics_steps: gpu_physics,
+            gui,
+            app_ui: AppUI::new(),
         }
     }
     pub fn step(&mut self, scene: &Scene, max_dt: f32, previous_future: Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
@@ -289,13 +274,18 @@ impl Renderer {
             .then_signal_semaphore()
             .boxed()
     }
-    pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32) {
+    pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32, fps: u32) {
+
+        self.gui.immediate_ui(|gui| {
+            let ctx = gui.context();
+            self.app_ui.render(&ctx, scene, fps);
+        });
 
         let acquire_future = self.window_renderer
             .acquire(None, |_| {})
             .map_err(|e| panic!("[Renderer] Failed to acquire swapchain image: {:?}", e))
             .unwrap();
-
+        
         let physics_semaphore = self.step(scene, safe_dt, acquire_future.boxed());
 
         let mut builder = AutoCommandBufferBuilder::primary(
@@ -348,7 +338,12 @@ impl Renderer {
             .then_execute(self.window_renderer.graphics_queue().clone(), render_command_buffer)
             .unwrap();
 
-        self.window_renderer.present(render_future.boxed(), true);
+        let gui_future = self.gui.draw_on_image(
+            render_future,
+            self.window_renderer.swapchain_image_view()
+        );
+
+        self.window_renderer.present(gui_future, true);
         self.resources.prepare_next_frame();
     }
 }

@@ -13,7 +13,7 @@ pub struct Scene {
 
 impl Scene {
     pub fn new() -> Self {
-        let particle_radius = 0.015;
+        let particle_radius = 0.020;
         let target_density = 1000.0;
 
         let box_min = Vec3::new(-1.5, 0.0, -1.0);
@@ -47,7 +47,7 @@ impl Scene {
         let smoothing_radius = particle_radius * 4.0;
 
 
-        let dt = 0.005;
+        let dt = 0.008;
 
         let viscosity = 0.15;
         let relax_factor = 0.5;

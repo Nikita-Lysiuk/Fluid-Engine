@@ -33,18 +33,23 @@ uint get_cell_hash(ivec3 grid_pos, uint table_size) {
     return (uint(grid_pos.x) * p1 ^ uint(grid_pos.y) * p2 ^ uint(grid_pos.z) * p3) % table_size;
 }
 
-// --- WENDLAND QUINTIC C2 KERNEL ---
+// --- CUBIC SPLINE ---
 float kernel_w(float r, float h) {
     float q = r / h;
     if (q >= 1.0) return 0.0;
 
     float h3 = h * h * h;
-    float k = 21.0 / (2.0 * PI * h3);
+    float k = 8.0 / (PI * h3);
 
-    float one_minus_q = 1.0 - q;
-    float one_minus_q_4 = one_minus_q * one_minus_q * one_minus_q * one_minus_q;
-
-    return k * one_minus_q_4 * (4.0 * q + 1.0);
+    if (q <= 0.5) {
+        float q2 = q * q;
+        float q3 = q2 * q;
+        return k * (6.0 * q3 - 6.0 * q2 + 1.0);
+    } else {
+        float one_minus_q = 1.0 - q;
+        float one_minus_q_3 = one_minus_q * one_minus_q * one_minus_q;
+        return k * 2.0 * one_minus_q_3;
+    }
 }
 
 vec3 kernel_grad(vec3 r_vec, float r, float h) {
@@ -52,14 +57,18 @@ vec3 kernel_grad(vec3 r_vec, float r, float h) {
     if (q >= 1.0 || r < 1e-6) return vec3(0.0);
 
     float h3 = h * h * h;
-    float l = -210.0 / (PI * h3);
+    float k = 8.0 / (PI * h3);
 
-    float one_minus_q = 1.0 - q;
-    float one_minus_q_3 = one_minus_q * one_minus_q * one_minus_q;
+    float grad_factor;
 
-    vec3 grad_q = r_vec / (r * h);
+    if (q <= 0.5) {
+        grad_factor = k * (18.0 * q * q - 12.0 * q);
+    } else {
+        float one_minus_q = 1.0 - q;
+        grad_factor = k * -6.0 * one_minus_q * one_minus_q;
+    }
 
-    return l * q * one_minus_q_3 * grad_q;
+    return (grad_factor / (h * r)) * r_vec;
 }
 
 #endif
