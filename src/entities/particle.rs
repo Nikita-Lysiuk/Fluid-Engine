@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use glam::Vec3;
+use glam::{IVec3, Vec3};
 use rand::Rng;
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
@@ -155,6 +155,7 @@ pub struct GpuPhysicsData {
 
     pub grid_entries: Subbuffer<[Entry]>,
     pub grid_start: Subbuffer<[u32]>,
+
 }
 
 impl GpuPhysicsData {
@@ -308,6 +309,8 @@ pub struct SimulationParams {
     pub gravity: [f32; 4],
     pub box_min: [f32; 4],
     pub box_max: [f32; 4],
+
+    pub grid_res: [i32; 4],
 }
 
 impl SimulationParams {
@@ -324,6 +327,7 @@ impl SimulationParams {
         gravity: Vec3,
         box_min: Vec3,
         box_max: Vec3,
+        grid_res: IVec3,
     ) -> Self {
         Self {
             particle_radius,
@@ -339,6 +343,7 @@ impl SimulationParams {
             gravity: [gravity.x, gravity.y, gravity.z, 0.0],
             box_min: [box_min.x, box_min.y, box_min.z, 0.0],
             box_max: [box_max.x, box_max.y, box_max.z, 0.0],
+            grid_res: [grid_res.x, grid_res.y, grid_res.z, 0],
         }
     }
 }

@@ -23,6 +23,8 @@ use crate::renderer::pipelines::pressure_integration_pipeline::PressureIntegrati
 use crate::renderer::pipelines::pressure_update_pipeline::PressureUpdatePipeline;
 use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
 use crate::renderer::pipelines::viscosity::ViscosityPipeline;
+use crate::renderer::pipelines::density_texture::DensityTexturePipeline;
+use crate::renderer::pipelines::water_pipeline::WaterRenderPipeline;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
@@ -37,6 +39,8 @@ mod pressure_update_pipeline;
 mod pressure_integration_pipeline;
 mod divergence_source_term;
 mod divergence_integration;
+mod density_texture;
+mod water_pipeline;
 
 pub trait ComputeStep: Sized {
     fn load_shader_module(device: Arc<Device>) -> EntryPoint;
@@ -78,6 +82,7 @@ pub struct ComputePipelines {
     pub pressure_integration: PressureIntegrationPipeline,
     pub divergence_source_term: DivergenceSourceTermPipeline,
     pub divergence_integration: DivergenceIntegrationPipeline,
+    pub density_texture: DensityTexturePipeline,
 }
 
 impl ComputePipelines {
@@ -91,6 +96,7 @@ impl ComputePipelines {
         let pressure_integration = PressureIntegrationPipeline::new(device.clone());
         let divergence_source_term = DivergenceSourceTermPipeline::new(device.clone());
         let divergence_integration = DivergenceIntegrationPipeline::new(device.clone());
+        let density_texture = DensityTexturePipeline::new(device.clone());
 
         Self {
             neighbor_search,
@@ -101,7 +107,8 @@ impl ComputePipelines {
             pressure_update,
             pressure_integration,
             divergence_source_term,
-            divergence_integration
+            divergence_integration,
+            density_texture,
         }
     }
 }
@@ -112,7 +119,8 @@ pub struct Pipelines {
     pub sky_pipeline: Arc<SkyPipeline>,
     pub common_layout: Arc<PipelineLayout>,
     pub point_pipeline: Arc<PointPipeline>,
-    pub collision_pipeline: Arc<CollisionPipeline>
+    pub collision_pipeline: Arc<CollisionPipeline>,
+    pub water_renderer_pipeline: Arc<WaterRenderPipeline>,
 }
 
 impl Pipelines {
@@ -132,12 +140,15 @@ impl Pipelines {
         let point_pipeline = Arc::new(PointPipeline::new(device.clone(), swapchain_format, depth_format));
         let collision_pipeline = Arc::new(CollisionPipeline::new(device.clone(), common_layout.clone(), swapchain_format, depth_format));
 
+        let water_renderer_pipeline = Arc::new(WaterRenderPipeline::new(device.clone(), swapchain_format, depth_format));
+
         Self {
             sky_layout,
             sky_pipeline,
             common_layout,
             point_pipeline,
-            collision_pipeline
+            collision_pipeline,
+            water_renderer_pipeline,
         }
     }
 

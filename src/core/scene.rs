@@ -1,4 +1,4 @@
-use glam::Vec3;
+use glam::{IVec3, Vec3};
 use log::info;
 use crate::entities::camera::Camera;
 use crate::entities::collision::CollisionBox;
@@ -47,13 +47,15 @@ impl Scene {
         let smoothing_radius = particle_radius * 4.0;
 
 
-        let dt = 0.008;
+        let dt = 0.006;
 
         let viscosity = 0.15;
         let relax_factor = 0.5;
 
         let density_iterations = 4;
         let divergence_iterations = 1;
+
+        let grid_res = IVec3::new(128, 128, 128);
 
         let sim_params = SimulationParams::new(
             particle_radius,
@@ -68,6 +70,7 @@ impl Scene {
             Vec3::new(0.0, -9.81, 0.0),
             box_min,
             box_max,
+            grid_res,
         );
 
         info!("[Scene] Created new scene with {} particles.", initial_positions.len());

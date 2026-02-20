@@ -22,7 +22,9 @@ pub struct SkyData {
     pub index_buffer: Subbuffer<[u32]>,
     pub index_count: u32,
 
-    pub descriptor_set: Arc<DescriptorSet>
+    pub descriptor_set: Arc<DescriptorSet>,
+
+    pub texture_view: Arc<ImageView>,
 }
 
 impl SkyData {
@@ -65,7 +67,7 @@ impl SkyData {
             indices.clone(),
         ).map_err(|e| panic!("[SkySphere] Failed to create index buffer:\n{:?}", e)).unwrap();
 
-        let descriptor_set = Self::load_hdri_texture(
+        let (descriptor_set, texture_view) = Self::load_hdri_texture(
             path_to_hdri,
             memory_allocator.clone(),
             command_buffer_allocator.clone(),
@@ -79,6 +81,7 @@ impl SkyData {
             index_buffer,
             index_count: indices.len() as u32,
             descriptor_set,
+            texture_view,
         }
     }
     fn generate_uv_sphere(radius: f32, sectors: u16, stacks: u16) -> (Vec<ModelVertex>, Vec<u32>) {
@@ -126,7 +129,7 @@ impl SkyData {
         descriptor_allocator: Arc<StandardDescriptorSetAllocator>,
         sky_layout: Arc<PipelineLayout>,
         queue: Arc<Queue>,
-    ) -> Arc<DescriptorSet> {
+    ) -> (Arc<DescriptorSet>, Arc<ImageView>) {
         let img = image::open(path)
             .map_err(|e| panic!("[SkySphere] Failed to load HDRI image from path {}:\n{:?}", path, e))
             .unwrap();
@@ -188,12 +191,14 @@ impl SkyData {
         ).unwrap();
 
         let set_layout = sky_layout.set_layouts().get(0).unwrap();
-        DescriptorSet::new(
+        let descriptor_set = DescriptorSet::new(
             descriptor_allocator,
             set_layout.clone(),
-            [WriteDescriptorSet::image_view_sampler(0, texture_view, sampler)],
+            [WriteDescriptorSet::image_view_sampler(0, texture_view.clone(), sampler)],
             []
-        ).unwrap()
+        ).unwrap();
+
+        (descriptor_set, texture_view)
     }
     
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64) {

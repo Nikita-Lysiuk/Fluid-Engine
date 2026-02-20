@@ -24,6 +24,7 @@ layout(std140, set = 0, binding = 2) uniform SimulationParams {
     vec4 gravity;
     vec4 box_min;
     vec4 box_max;
+    ivec4 grid_res;
 } sim_params;
 
 uint get_cell_hash(ivec3 grid_pos, uint table_size) {

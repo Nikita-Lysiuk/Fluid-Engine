@@ -64,6 +64,20 @@ impl AppUI {
                 scene.sim_params.box_max = Vec4::new(scene.boundary.max.x, scene.boundary.max.y, scene.boundary.max.z, 0.0).into();
 
                 ui.separator();
+
+                ui.heading("Rendering Parameters");
+                ui.label("Adjust the resolution of the water texture:");
+
+                ui.group(|ui| {
+                    ui.label("Water texture resolution:");
+                    ui.vertical(|ui| {
+                        ui.add(Slider::new(&mut scene.sim_params.grid_res[0], 16..=256).text("X"));
+                        ui.add(Slider::new(&mut scene.sim_params.grid_res[1], 16..=256).text("Y"));
+                        ui.add(Slider::new(&mut scene.sim_params.grid_res[2], 16..=256).text("Z"));
+                    });
+                });
+
+                ui.separator();
                 ui.label(format!("Active Particles: {}", scene.initial_positions.len()));
 
                 ui.separator();

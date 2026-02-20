@@ -1,13 +1,14 @@
 use std::sync::Arc;
 use egui_winit_vulkano::{Gui, GuiConfig};
-use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferInfo, RenderingAttachmentInfo, RenderingInfo};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, ClearColorImageInfo, CommandBufferUsage, CopyBufferInfo, RenderingAttachmentInfo, RenderingInfo};
 use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
 use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
 use vulkano::device::DeviceFeatures;
-use vulkano::format::Format;
+use vulkano::format::{ClearColorValue, Format};
 use vulkano::image::ImageUsage;
 use vulkano::instance::{InstanceCreateInfo, InstanceExtensions};
 use vulkano::pipeline::graphics::viewport::{Scissor, Viewport};
+use vulkano::pipeline::Pipeline;
 use vulkano::render_pass::{AttachmentLoadOp, AttachmentStoreOp};
 use vulkano::swapchain::PresentMode;
 use vulkano::sync::GpuFuture;
@@ -19,6 +20,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 use crate::core::scene::Scene;
 use crate::entities::sky::SkyData;
+use crate::entities::water::WaterRenderer;
 use crate::renderer::pipelines::{ComputePipelines, ComputeStep, Pipelines};
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
@@ -36,6 +38,7 @@ pub struct Renderer {
     pipelines: Pipelines,
     physics_steps: ComputePipelines,
     sky_data: SkyData,
+    water_renderer: WaterRenderer,
 
     resources: GpuSceneResources,
 
@@ -138,6 +141,15 @@ impl Renderer {
             }
         );
 
+        let water_renderer = WaterRenderer::new(
+            context.memory_allocator().clone(),
+            descriptor_set_allocator.clone(),
+            pipelines.water_renderer_pipeline.inner.layout().clone(),
+            resources.density_view.clone(),
+            sky_data.texture_view.clone(),
+            &resources.sim_params_buffer,
+        );
+
         Self {
             context,
             window_renderer,
@@ -146,6 +158,7 @@ impl Renderer {
             pipelines,
             resources,
             sky_data,
+            water_renderer,
             physics_steps: gpu_physics,
             gui,
             app_ui: AppUI::new(),
@@ -252,7 +265,7 @@ impl Renderer {
                 &self.resources.sim_params_buffer,
             );
         }
-        
+
         let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
 
 
@@ -285,7 +298,7 @@ impl Renderer {
             .acquire(None, |_| {})
             .map_err(|e| panic!("[Renderer] Failed to acquire swapchain image: {:?}", e))
             .unwrap();
-        
+
         let physics_semaphore = self.step(scene, safe_dt, acquire_future.boxed());
 
         let mut builder = AutoCommandBufferBuilder::primary(
@@ -295,6 +308,19 @@ impl Renderer {
         ).map_err(|e| panic!("[Renderer] Failed to create command buffer builder: {:?}", e))
             .unwrap();
 
+        let mut clear_info = ClearColorImageInfo::image(self.resources.density_texture.clone());
+
+        clear_info.clear_value = ClearColorValue::Uint([0; 4]);
+
+        builder.clear_color_image(clear_info).unwrap();
+
+        self.physics_steps.density_texture.execute_with_image(
+            &mut builder,
+            self.descriptor_set_allocator.clone(),
+            &self.resources.physics_data,
+            self.resources.density_view.clone(),
+            &self.resources.sim_params_buffer,
+        );
 
         let extent = self.window_renderer.window_size();
 
@@ -329,6 +355,13 @@ impl Renderer {
             .set_scissor(0, [scissor.clone()].into_iter().collect()).map_err(|e| panic!("[Renderer] Failed to set scissor: {:?}", e)).unwrap();
 
         self.sky_data.bind_to_command_buffer(&mut builder, &self.pipelines, self.resources.camera_addr());
+        self.water_renderer.bind_to_command_buffer(
+            &mut builder,
+            self.pipelines.water_renderer_pipeline.inner.clone(),
+            self.resources.camera_addr(),
+            scene.sim_params.box_min,
+            scene.sim_params.box_max,
+        );
         self.resources.bind_to_command_buffer(&mut builder, &self.pipelines);
 
         builder.end_rendering().map_err(|e| panic!("[Renderer] Failed to end rendering: {:?}", e)).unwrap();

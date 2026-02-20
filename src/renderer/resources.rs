@@ -1,6 +1,9 @@
 use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::format::Format;
+use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
+use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use crate::core::scene::Scene;
 use crate::entities::camera::CameraData;
@@ -16,6 +19,9 @@ pub struct GpuSceneResources {
     pub render_data: GpuRenderData,
 
     pub sim_params_buffer: Subbuffer<SimulationParams>,
+
+    pub density_texture: Arc<Image>,
+    pub density_view: Arc<ImageView>,
 
     pub current_frame_idx: usize,
 }
@@ -45,6 +51,22 @@ impl GpuSceneResources {
             },
             scene.sim_params,
         ).expect("Failed to create simulation params buffer");
+        
+        let grid_res = scene.sim_params.grid_res;
+        
+        let density_texture = Image::new(
+            allocator.clone(),
+            ImageCreateInfo {
+                image_type: ImageType::Dim3d,
+                format: Format::R32_UINT,
+                extent: [grid_res[0] as u32, grid_res[1] as u32, grid_res[2] as u32],
+                usage: ImageUsage::STORAGE | ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
+                ..Default::default()
+            },
+            AllocationCreateInfo::default()
+        ).unwrap();
+        
+        let density_view = ImageView::new_default(density_texture.clone()).unwrap();
 
         Self {
             camera_data: CameraData::new(allocator.clone()),
@@ -53,6 +75,8 @@ impl GpuSceneResources {
             render_data,
             sim_params_buffer,
             current_frame_idx: 0,
+            density_texture,
+            density_view,
         }
     }
     pub fn camera_addr(&self) -> u64 {
@@ -69,7 +93,7 @@ impl GpuSceneResources {
 
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines) {
         self.collision_box_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx);
-        self.render_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx, self.physics_data.count);
+        //self.render_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx, self.physics_data.count);
     }
 
     pub fn prepare_next_frame(&mut self) {
