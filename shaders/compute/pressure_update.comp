@@ -70,12 +70,12 @@ void main() {
 
     float Ap_i = dt * sum_Ap;
 
-    if (alpha_i >= 1e-6 && rho_i > 1e-6) {
+    if (alpha_i > 1e-6 && rho_i > 1e-6) {
         float a_ii = -(dt / (rho_i * rho_i)) * alpha_i;
 
         float error = source_i - Ap_i;
 
-        if (abs(a_ii) > 1e-10) {
+        if (abs(a_ii) > 1e-20) {
             float correction = (relax_factor * error) / a_ii;
 
             pressures[i] = max(p_i + correction, 0.0);

@@ -67,6 +67,6 @@ void main() {
     if (alpha > 1e-6) {
         factors[i] = alpha;
     } else {
-        factors[i] = 1e-6;
+        factors[i] = 0.0;
     }
 }
