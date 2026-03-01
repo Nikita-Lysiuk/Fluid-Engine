@@ -17,8 +17,10 @@ impl Scene {
         let target_density = 1000.0;
 
         let box_min = Vec3::new(-1.5, 0.0, -1.0);
-        let box_max = Vec3::new(1.5, 4.0, 1.0);
-        let boundary = CollisionBox::new(box_min, box_max);
+        let box_max = Vec3::new(0.8, 4.0, 1.0);
+        let mut collision_box = CollisionBox::new(box_min, box_max);
+        collision_box.wave_amplitude = 0.3;
+        collision_box.wave_frequency = 0.5;
 
 
         let spawn_pos = Vec3::new(-1.0, 1.0, -0.8);
@@ -47,13 +49,13 @@ impl Scene {
         let smoothing_radius = particle_radius * 4.0;
 
 
-        let dt = 0.006;
+        let dt = 0.016;
 
         let viscosity = 0.15;
         let relax_factor = 0.5;
 
         let density_iterations = 4;
-        let divergence_iterations = 1;
+        let divergence_iterations = 4;
 
         let grid_res = IVec3::new(128, 128, 128);
 
@@ -79,7 +81,7 @@ impl Scene {
             initial_positions,
             sim_params,
             camera,
-            boundary,
+            boundary: collision_box,
         }
     }
 }

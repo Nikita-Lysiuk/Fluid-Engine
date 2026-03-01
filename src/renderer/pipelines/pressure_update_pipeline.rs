@@ -20,6 +20,8 @@ mod cs {
 
 pub struct PressureUpdatePipeline {
     pub pipeline: Arc<ComputePipeline>,
+    descriptor_set: Option<Arc<DescriptorSet>>,
+    dispatch_count: u32,
 }
 
 impl ComputeStep for PressureUpdatePipeline {
@@ -27,17 +29,21 @@ impl ComputeStep for PressureUpdatePipeline {
         load_shader_entry_point(device, cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
-        Self { pipeline }
+        Self { pipeline, descriptor_set: None, dispatch_count: 0 }
     }
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, allocator: Arc<StandardDescriptorSetAllocator>, physics_data: &GpuPhysicsData, sim_params: &Subbuffer<SimulationParams>) {
+    fn prepare(
+        &mut self,
+        allocator: Arc<StandardDescriptorSetAllocator>,
+        physics_data: &GpuPhysicsData,
+        sim_params: &Subbuffer<SimulationParams>,
+    ) {
         let num_particles = physics_data.count;
         let group_size = 256;
-        let dispatch_count = (num_particles + group_size - 1) / group_size;
+        self.dispatch_count = (num_particles + group_size - 1) / group_size;
 
         let layout = self.pipeline.layout().set_layouts().get(0).unwrap();
-
-        let set = DescriptorSet::new(
-            allocator.clone(),
+        self.descriptor_set = Some(DescriptorSet::new(
+            allocator,
             layout.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
@@ -51,15 +57,14 @@ impl ComputeStep for PressureUpdatePipeline {
                 WriteDescriptorSet::buffer(8, physics_data.pressures.clone()),
             ],
             []
-        ).unwrap();
-
+        ).unwrap());
+    }
+    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+        let set = self.descriptor_set.as_ref().expect("PressureUpdatePipeline: call prepare() before execute()");
         builder
             .bind_pipeline_compute(self.pipeline.clone()).unwrap()
-            .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set)
+            .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set.clone())
             .unwrap();
-
-        unsafe {
-            builder.dispatch([dispatch_count, 1, 1]).unwrap();
-        }
+        unsafe { builder.dispatch([self.dispatch_count, 1, 1]).unwrap(); }
     }
 }

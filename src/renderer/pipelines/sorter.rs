@@ -18,6 +18,8 @@ mod cs {
 
 pub struct GpuSorter {
     pipeline: Arc<ComputePipeline>,
+    descriptor_set: Option<Arc<DescriptorSet>>,
+    num_elements: u32,
 }
 
 impl ComputeStep for GpuSorter {
@@ -25,28 +27,29 @@ impl ComputeStep for GpuSorter {
         load_shader_entry_point(device, cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
-        Self { pipeline }
+        Self { pipeline, descriptor_set: None, num_elements: 0 }
     }
-    fn execute<Cb>(
-        &self,
-        builder: &mut AutoCommandBufferBuilder<Cb>,
+    fn prepare(
+        &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &GpuPhysicsData,
         _sim_params: &Subbuffer<SimulationParams>,
     ) {
         let grid_entries = &physics_data.grid_entries;
-        let num_elements = grid_entries.len() as u32;
+        self.num_elements = grid_entries.len() as u32;
+        assert!(self.num_elements.is_power_of_two(), "GpuSorter: Buffer len must be power of 2");
 
-        assert!(num_elements.is_power_of_two(), "GpuSorter: Buffer len must be power of 2");
-
-        let pipeline_layout = self.pipeline.layout().set_layouts().get(0).unwrap();
-
-        let set = DescriptorSet::new(
-            allocator.clone(),
-            pipeline_layout.clone(),
+        let layout = self.pipeline.layout().set_layouts().get(0).unwrap();
+        self.descriptor_set = Some(DescriptorSet::new(
+            allocator,
+            layout.clone(),
             [WriteDescriptorSet::buffer(0, grid_entries.clone())],
             []
-        ).unwrap();
+        ).unwrap());
+    }
+    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+        let set = self.descriptor_set.as_ref().expect("GpuSorter: call prepare() before execute()");
+        let num_elements = self.num_elements;
 
         let mut h = 2;
         while h <= num_elements {
@@ -67,13 +70,10 @@ impl ComputeStep for GpuSorter {
                 let group_size = 256;
                 let dispatch_count = (threads_needed + group_size - 1) / group_size;
 
-                unsafe {
-                    builder.dispatch([dispatch_count, 1, 1]).unwrap();
-                }
+                unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
 
                 step /= 2;
             }
-
             h *= 2;
         }
     }

@@ -63,13 +63,9 @@ pub trait ComputeStep: Sized {
 
         Self::from_pipeline(pipeline)
     }
-    fn execute<Cb>(
-        &self,
-        builder: &mut AutoCommandBufferBuilder<Cb>,
-        allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
-        sim_params: &Subbuffer<SimulationParams>,
-    );
+    fn prepare(&mut self, allocator: Arc<StandardDescriptorSetAllocator>,
+               physics_data: &GpuPhysicsData, sim_params: &Subbuffer<SimulationParams>);
+    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>);
 }
 
 pub struct ComputePipelines {

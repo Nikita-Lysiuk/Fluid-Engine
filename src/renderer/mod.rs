@@ -128,7 +128,59 @@ impl Renderer {
             "assets/hdri/citrus_orchard_road_puresky_4k.exr"
         );
 
-        let gpu_physics = ComputePipelines::new(context.device().clone());
+        let mut gpu_physics = ComputePipelines::new(context.device().clone());
+
+        gpu_physics.neighbor_search.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.density_alpha.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.viscosity.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.density_source_term.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.pressure_force.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.pressure_update.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.pressure_integration.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.divergence_source_term.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.divergence_integration.prepare(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            &resources.sim_params_buffer,
+        );
+        gpu_physics.density_texture.prepare_with_image(
+            descriptor_set_allocator.clone(),
+            &resources.physics_data,
+            resources.density_view.clone(),
+            &resources.sim_params_buffer,
+        );
 
         let gui = Gui::new(
             event_loop,
@@ -164,8 +216,9 @@ impl Renderer {
             app_ui: AppUI::new(),
         }
     }
-    pub fn step(&mut self, scene: &Scene, max_dt: f32, previous_future: Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
+    pub fn step(&mut self, scene: &mut Scene, max_dt: f32, previous_future: Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
         self.resources.sync_with_scene(scene);
+        scene.boundary.update(max_dt);
 
         let mut builder = AutoCommandBufferBuilder::primary(
             self.command_buffer_allocator.clone(),
@@ -173,97 +226,33 @@ impl Renderer {
             CommandBufferUsage::OneTimeSubmit,
         ).unwrap();
 
-        self.physics_steps.neighbor_search.execute(
-            &mut builder,
-            self.descriptor_set_allocator.clone(),
-            &self.resources.physics_data,
-            &self.resources.sim_params_buffer,
-        );
-
-        self.physics_steps.density_alpha.execute(
-            &mut builder,
-            self.descriptor_set_allocator.clone(),
-            &self.resources.physics_data,
-            &self.resources.sim_params_buffer,
-        );
+        self.physics_steps.neighbor_search.execute(&mut builder);
+        self.physics_steps.density_alpha.execute(&mut builder);
 
         let mut step = 0.0;
         while step < max_dt {
-            self.physics_steps.viscosity.execute(
-                &mut builder,
-                self.descriptor_set_allocator.clone(),
-                &self.resources.physics_data,
-                &self.resources.sim_params_buffer,
-            );
-
-            self.physics_steps.density_source_term.execute(
-                &mut builder,
-                self.descriptor_set_allocator.clone(),
-                &self.resources.physics_data,
-                &self.resources.sim_params_buffer,
-            );
+            self.physics_steps.viscosity.execute(&mut builder);
+            self.physics_steps.density_source_term.execute(&mut builder);
 
             for _ in 0..scene.sim_params.density_solver_iterations {
-                self.physics_steps.pressure_force.execute(
-                    &mut builder,
-                    self.descriptor_set_allocator.clone(),
-                    &self.resources.physics_data,
-                    &self.resources.sim_params_buffer,
-                );
-
-                self.physics_steps.pressure_update.execute(
-                    &mut builder,
-                    self.descriptor_set_allocator.clone(),
-                    &self.resources.physics_data,
-                    &self.resources.sim_params_buffer,
-                );
+                self.physics_steps.pressure_force.execute(&mut builder);
+                self.physics_steps.pressure_update.execute(&mut builder);
             }
 
-            self.physics_steps.pressure_integration.execute(
-                &mut builder,
-                self.descriptor_set_allocator.clone(),
-                &self.resources.physics_data,
-                &self.resources.sim_params_buffer,
-            );
+            self.physics_steps.pressure_integration.execute(&mut builder);
 
             step += scene.sim_params.dt;
 
-            self.physics_steps.density_alpha.execute(
-                &mut builder,
-                self.descriptor_set_allocator.clone(),
-                &self.resources.physics_data,
-                &self.resources.sim_params_buffer,
-            );
-
-            self.physics_steps.divergence_source_term.execute(
-                &mut builder,
-                self.descriptor_set_allocator.clone(),
-                &self.resources.physics_data,
-                &self.resources.sim_params_buffer,
-            );
+            self.physics_steps.neighbor_search.execute(&mut builder);
+            self.physics_steps.density_alpha.execute(&mut builder);
+            self.physics_steps.divergence_source_term.execute(&mut builder);
 
             for _ in 0..scene.sim_params.divergence_solver_iterations {
-                self.physics_steps.pressure_force.execute(
-                    &mut builder,
-                    self.descriptor_set_allocator.clone(),
-                    &self.resources.physics_data,
-                    &self.resources.sim_params_buffer,
-                );
-
-                self.physics_steps.pressure_update.execute(
-                    &mut builder,
-                    self.descriptor_set_allocator.clone(),
-                    &self.resources.physics_data,
-                    &self.resources.sim_params_buffer,
-                );
+                self.physics_steps.pressure_force.execute(&mut builder);
+                self.physics_steps.pressure_update.execute(&mut builder);
             }
 
-            self.physics_steps.divergence_integration.execute(
-                &mut builder,
-                self.descriptor_set_allocator.clone(),
-                &self.resources.physics_data,
-                &self.resources.sim_params_buffer,
-            );
+            self.physics_steps.divergence_integration.execute(&mut builder);
         }
 
         let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -314,13 +303,7 @@ impl Renderer {
 
         builder.clear_color_image(clear_info).unwrap();
 
-        self.physics_steps.density_texture.execute_with_image(
-            &mut builder,
-            self.descriptor_set_allocator.clone(),
-            &self.resources.physics_data,
-            self.resources.density_view.clone(),
-            &self.resources.sim_params_buffer,
-        );
+        self.physics_steps.density_texture.execute(&mut builder);
 
         let extent = self.window_renderer.window_size();
 

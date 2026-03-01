@@ -1,3 +1,4 @@
+use std::f32::consts::TAU;
 use std::sync::Arc;
 use glam::Vec3;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
@@ -10,13 +11,28 @@ use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 pub struct CollisionBox {
     pub min: Vec3,
     pub max: Vec3,
+    pub wave_amplitude: f32,
+    pub wave_frequency: f32,
+    time: f32,
+    base_min_x: f32,
 }
 
 impl CollisionBox {
     pub fn new(min: Vec3, max: Vec3) -> Self {
-        Self { min, max }
+        Self {
+            base_min_x: min.x,
+            min,
+            max,
+            wave_amplitude: 0.0,
+            wave_frequency: 1.0,
+            time: 0.0,
+        }
     }
-
+    pub fn update(&mut self, dt: f32) {
+        self.time += dt;
+        let offset = self.wave_amplitude * (self.time * self.wave_frequency * TAU).sin();
+        self.min.x = self.base_min_x + offset;
+    }
     pub fn contains(&self, actor: &impl Actor) -> bool {
         actor.location().x >= self.min.x && actor.location().x <= self.max.x &&
             actor.location().y >= self.min.y && actor.location().y <= self.max.y &&
@@ -76,7 +92,6 @@ impl CollisionBoxData {
             index_buffer,
         }
     }
-
     pub fn write_to_buffer(&self, collision_box: &CollisionBox, current_frame_idx: usize) {
         let min = collision_box.min;
         let max = collision_box.max;

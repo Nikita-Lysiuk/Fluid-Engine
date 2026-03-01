@@ -32,6 +32,15 @@ pub struct NeighborSearch {
     reorder_pipeline: Arc<ComputePipeline>,
 
     sorter: GpuSorter,
+
+    hash_set: Option<Arc<DescriptorSet>>,
+    offsets_set: Option<Arc<DescriptorSet>>,
+    reorder_set: Option<Arc<DescriptorSet>>,
+
+    grid_start: Option<Subbuffer<[u32]>>,
+
+    sort_buffer_len: u32,
+    num_particles: u32,
 }
 
 impl ComputeStep for NeighborSearch {
@@ -82,54 +91,41 @@ impl ComputeStep for NeighborSearch {
             offsets_pipeline,
             reorder_pipeline,
             sorter,
+            hash_set: None,
+            offsets_set: None,
+            reorder_set: None,
+            grid_start: None,
+            sort_buffer_len: 0,
+            num_particles: 0,
         }
     }
-    fn execute<Cb>(
-        &self, builder: &mut AutoCommandBufferBuilder<Cb>, 
+    fn prepare(
+        &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData, 
+        physics_data: &GpuPhysicsData,
         sim_params: &Subbuffer<SimulationParams>,
-    ) { 
-        let num_particles = physics_data.count;
-        let sort_buffer_len = physics_data.grid_entries.len() as u32;
+    ) {
+        self.num_particles = physics_data.count;
+        self.sort_buffer_len = physics_data.grid_entries.len() as u32;
+        self.grid_start = Some(physics_data.grid_start.clone());
 
         {
             let layout = self.spatial_hash_pipeline.layout().set_layouts().get(0).unwrap();
-            let set = DescriptorSet::new(
+            self.hash_set = Some(DescriptorSet::new(
                 allocator.clone(),
                 layout.clone(),
                 [
                     WriteDescriptorSet::buffer(0, physics_data.position_a.clone()),
                     WriteDescriptorSet::buffer(1, physics_data.grid_entries.clone()),
-                    WriteDescriptorSet::buffer(2, sim_params.clone())
+                    WriteDescriptorSet::buffer(2, sim_params.clone()),
                 ],
                 [],
-            ).unwrap();
-
-            let pc = cs_hash::PushConstants {
-                num_particles,
-                table_size: sort_buffer_len,
-            };
-
-            builder
-                .bind_pipeline_compute(self.spatial_hash_pipeline.clone()).unwrap()
-                .bind_descriptor_sets(PipelineBindPoint::Compute, self.spatial_hash_pipeline.layout().clone(), 0, set)
-                .unwrap()
-                .push_constants(self.spatial_hash_pipeline.layout().clone(), 0, pc).unwrap();
-            
-            let group_size = 256;
-            let dispatch_count = (sort_buffer_len + group_size - 1) / group_size;
-            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
+            ).unwrap());
         }
-
-       
-        self.sorter.execute(builder, allocator.clone(), physics_data, sim_params);
-        
-        builder.fill_buffer(physics_data.grid_start.clone(), 0xFFFFFFFF).unwrap();
 
         {
             let layout = self.offsets_pipeline.layout().set_layouts().get(0).unwrap();
-            let set = DescriptorSet::new(
+            self.offsets_set = Some(DescriptorSet::new(
                 allocator.clone(),
                 layout.clone(),
                 [
@@ -137,26 +133,12 @@ impl ComputeStep for NeighborSearch {
                     WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
                 ],
                 [],
-            ).unwrap();
-
-            let pc = cs_offsets::PushConstants {
-                num_entries: sort_buffer_len,
-            };
-
-            builder
-                .bind_pipeline_compute(self.offsets_pipeline.clone()).unwrap()
-                .bind_descriptor_sets(PipelineBindPoint::Compute, self.offsets_pipeline.layout().clone(), 0, set)
-                .unwrap()
-                .push_constants(self.offsets_pipeline.layout().clone(), 0, pc).unwrap();
-
-            let group_size = 256;
-            let dispatch_count = (sort_buffer_len + group_size - 1) / group_size;
-            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
+            ).unwrap());
         }
-        
+
         {
             let layout = self.reorder_pipeline.layout().set_layouts().get(0).unwrap();
-            let set = DescriptorSet::new(
+            self.reorder_set = Some(DescriptorSet::new(
                 allocator.clone(),
                 layout.clone(),
                 [
@@ -167,20 +149,51 @@ impl ComputeStep for NeighborSearch {
                     WriteDescriptorSet::buffer(5, physics_data.velocity_b.clone()),
                 ],
                 [],
-            ).unwrap();
+            ).unwrap());
+        }
 
-            let pc = cs_reorder::PushConstants {
-                num_particles,
-            };
+        self.sorter.prepare(allocator, physics_data, sim_params);
+    }
+    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+        let sort_buffer_len = self.sort_buffer_len;
+        let num_particles = self.num_particles;
+        let group_size = 256;
 
+        {
+            let set = self.hash_set.as_ref().expect("NeighborSearch: call prepare() before execute()");
+            let pc = cs_hash::PushConstants { num_particles, table_size: sort_buffer_len };
+            let dispatch_count = (sort_buffer_len + group_size - 1) / group_size;
+            builder
+                .bind_pipeline_compute(self.spatial_hash_pipeline.clone()).unwrap()
+                .bind_descriptor_sets(PipelineBindPoint::Compute, self.spatial_hash_pipeline.layout().clone(), 0, set.clone()).unwrap()
+                .push_constants(self.spatial_hash_pipeline.layout().clone(), 0, pc).unwrap();
+            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
+        }
+
+        self.sorter.execute(builder);
+
+        let grid_start = self.grid_start.as_ref().expect("NeighborSearch: grid_start not set");
+        builder.fill_buffer(grid_start.clone(), 0xFFFFFFFF).unwrap();
+
+        {
+            let set = self.offsets_set.as_ref().unwrap();
+            let pc = cs_offsets::PushConstants { num_entries: sort_buffer_len };
+            let dispatch_count = (sort_buffer_len + group_size - 1) / group_size;
+            builder
+                .bind_pipeline_compute(self.offsets_pipeline.clone()).unwrap()
+                .bind_descriptor_sets(PipelineBindPoint::Compute, self.offsets_pipeline.layout().clone(), 0, set.clone()).unwrap()
+                .push_constants(self.offsets_pipeline.layout().clone(), 0, pc).unwrap();
+            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
+        }
+
+        {
+            let set = self.reorder_set.as_ref().unwrap();
+            let pc = cs_reorder::PushConstants { num_particles };
+            let dispatch_count = (num_particles + group_size - 1) / group_size;
             builder
                 .bind_pipeline_compute(self.reorder_pipeline.clone()).unwrap()
-                .bind_descriptor_sets(PipelineBindPoint::Compute, self.reorder_pipeline.layout().clone(), 0, set)
-                .unwrap()
+                .bind_descriptor_sets(PipelineBindPoint::Compute, self.reorder_pipeline.layout().clone(), 0, set.clone()).unwrap()
                 .push_constants(self.reorder_pipeline.layout().clone(), 0, pc).unwrap();
-
-            let group_size = 256;
-            let dispatch_count = (num_particles + group_size - 1) / group_size;
             unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
         }
     }
