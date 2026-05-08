@@ -1,16 +1,18 @@
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::instance::debug::DebugUtilsLabel;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Device;
+use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use vulkano::shader::EntryPoint;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
-use crate::renderer::pipelines::ComputeStep;
-use crate::renderer::pipelines::sorter::GpuSorter;
+use crate::renderer::pipelines::{ComputeStep, SortAlgorithm};
+use crate::renderer::pipelines::sorter::{GpuSorter, RadixSorter};
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs_hash {
@@ -32,6 +34,7 @@ pub struct NeighborSearch {
     reorder_pipeline: Arc<ComputePipeline>,
 
     sorter: GpuSorter,
+    radix_sorter: RadixSorter,
 
     hash_set: Option<Arc<DescriptorSet>>,
     offsets_set: Option<Arc<DescriptorSet>>,
@@ -41,17 +44,18 @@ pub struct NeighborSearch {
 
     sort_buffer_len: u32,
     num_particles: u32,
+
+    pub sort_algorithm: SortAlgorithm,
 }
 
-impl ComputeStep for NeighborSearch {
-    fn load_shader_module(_device: Arc<Device>) -> EntryPoint {
-        unimplemented!("NeighborSearch uses multiple shaders, so load_shader_module is not implemented")
-    }
-    fn from_pipeline(_pipeline: Arc<ComputePipeline>) -> Self {
-        unimplemented!("NeighborSearch uses multiple pipelines, so from_pipeline is not implemented")
-    }
-    fn new(device: Arc<Device>) -> Self {
+impl NeighborSearch {
+    pub fn new_with_allocator(
+        device: Arc<Device>,
+        memory_allocator: Arc<StandardMemoryAllocator>,
+        sort_buffer_size: u32,
+    ) -> Self {
         let sorter = GpuSorter::new(device.clone());
+        let radix_sorter = RadixSorter::new(device.clone(), memory_allocator, sort_buffer_size);
 
         let hash_shader = load_shader_entry_point(device.clone(), cs_hash::load, "main");
         let hash_stage = PipelineShaderStageCreateInfo::new(hash_shader);
@@ -91,6 +95,8 @@ impl ComputeStep for NeighborSearch {
             offsets_pipeline,
             reorder_pipeline,
             sorter,
+            radix_sorter,
+            sort_algorithm: SortAlgorithm::Bitonic,
             hash_set: None,
             offsets_set: None,
             reorder_set: None,
@@ -98,6 +104,18 @@ impl ComputeStep for NeighborSearch {
             sort_buffer_len: 0,
             num_particles: 0,
         }
+    }
+}
+
+impl ComputeStep for NeighborSearch {
+    fn load_shader_module(_device: Arc<Device>) -> EntryPoint {
+        unimplemented!("NeighborSearch uses multiple shaders")
+    }
+    fn from_pipeline(_pipeline: Arc<ComputePipeline>) -> Self {
+        unimplemented!("NeighborSearch uses multiple pipelines")
+    }
+    fn new(_device: Arc<Device>) -> Self {
+        unimplemented!("NeighborSearch requires a memory allocator — use new_with_allocator")
     }
     fn prepare(
         &mut self,
@@ -152,7 +170,8 @@ impl ComputeStep for NeighborSearch {
             ).unwrap());
         }
 
-        self.sorter.prepare(allocator, physics_data, sim_params);
+        self.sorter.prepare(allocator.clone(), physics_data, sim_params);
+        self.radix_sorter.prepare(allocator, &physics_data.grid_entries);
     }
     fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let sort_buffer_len = self.sort_buffer_len;
@@ -170,7 +189,20 @@ impl ComputeStep for NeighborSearch {
             unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
         }
 
-        self.sorter.execute(builder);
+        match self.sort_algorithm {
+            SortAlgorithm::Bitonic => self.sorter.execute(builder),
+            SortAlgorithm::Radix   => {
+                builder.begin_debug_utils_label(DebugUtilsLabel {
+                    label_name: "Radix Sort".into(),
+                    color: [1.0, 0.3, 0.0, 1.0],
+                    ..Default::default()
+                }).unwrap();
+                self.radix_sorter.execute(builder);
+                unsafe {
+                    builder.end_debug_utils_label().unwrap();
+                }
+            },
+        }
 
         let grid_start = self.grid_start.as_ref().expect("NeighborSearch: grid_start not set");
         builder.fill_buffer(grid_start.clone(), 0xFFFFFFFF).unwrap();

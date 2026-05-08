@@ -1,0 +1,30 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer Velocities { vec4 velocities[]; };
+// [0]: max_speed_bits  [1]: density_error_fp  [2]: divergence_error_fp
+layout(std430, set = 0, binding = 1) buffer StatsBuffer { uint stats[]; };
+// binding 2 is sim_params from common.glsl
+layout(std430, set = 0, binding = 3) readonly buffer Densities { float densities[]; };
+layout(std430, set = 0, binding = 4) readonly buffer SourceTerms { float source_terms[]; };
+
+// Fixed-point scale factors — must match the constants in mod.rs.
+const float DENSITY_SCALE    = 1.0;   // 1 fp-unit = 1 kg/m³
+const float DIVERGENCE_SCALE = 10.0;  // 1 fp-unit = 0.1 kg/m³s
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(velocities.length())) return;
+
+    float speed = length(velocities[i].xyz);
+    atomicMax(stats[0], floatBitsToUint(speed));
+
+    float density_err = abs(densities[i] - sim_params.target_density);
+    atomicAdd(stats[1], min(uint(density_err * DENSITY_SCALE), 10000u));
+
+    float div_err = abs(source_terms[i]);
+    atomicAdd(stats[2], min(uint(div_err * DIVERGENCE_SCALE), 10000u));
+}

@@ -1,0 +1,98 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+
+#include "../include/common.glsl"
+
+#define WG_SIZE 256
+#define EPI 8
+#define CHUNK_SIZE (WG_SIZE * EPI)  // 2048
+
+layout(local_size_x = WG_SIZE) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer EntriesIn {
+    Entry entries_in[];
+};
+layout(set = 0, binding = 1, std430) buffer EntriesOut {
+    Entry entries_out[];
+};
+layout(set = 0, binding = 2, std430) buffer OffsetsBuffer {
+    uint offsets[];
+};
+
+layout(push_constant) uniform ReorderConstant {
+    uint shift;
+    uint num_elements;
+    uint num_workgroups;
+    uint elements_per_invocation;
+} pc;
+
+shared Entry local_entries[CHUNK_SIZE];
+
+shared uint local_counts[256];
+
+shared uint local_offsets[256];
+
+void main() {
+    uint lid = gl_LocalInvocationID.x;
+    uint wg = gl_WorkGroupID.x;
+    uint base = wg * CHUNK_SIZE;
+
+    for (uint i = 0; i < EPI; i++) {
+        uint local_idx = lid * EPI + i;
+        uint global_idx = base + local_idx;
+        if (global_idx < pc.num_elements) {
+            local_entries[local_idx] = entries_in[global_idx];
+        } else {
+            // Sentinel для padding
+            local_entries[local_idx].hash = 0xFFFFFFFF;
+            local_entries[local_idx].index = 0xFFFFFFFF;
+        }
+    }
+
+    local_counts[lid] = 0;
+
+    barrier();
+
+    for (uint i = 0; i < EPI; i++) {
+        uint local_idx = lid * EPI + i;
+        uint global_idx = base + local_idx;
+        if (global_idx >= pc.num_elements) break;
+
+        uint digit = (local_entries[local_idx].hash >> pc.shift) & 0xFF;
+        atomicAdd(local_counts[digit], 1);
+    }
+
+    barrier();
+
+    if (lid == 0) {
+        local_offsets[0] = 0;
+    } else {
+        local_offsets[lid] = local_counts[lid - 1];
+    }
+
+    barrier();
+
+    for (uint stride = 1; stride < 256; stride *= 2) {
+        uint val = 0;
+        if (lid >= stride) val = local_offsets[lid - stride];
+        barrier();
+        if (lid >= stride) local_offsets[lid] += val;
+        barrier();
+    }
+
+
+    uint global_offset = offsets[lid * pc.num_workgroups + wg];
+
+
+    uint local_pos = 0;
+    for (uint i = 0; i < CHUNK_SIZE; i++) {
+        uint global_idx = base + i;
+        if (global_idx >= pc.num_elements) continue;
+
+        uint d = (local_entries[i].hash >> pc.shift) & 0xFF;
+        if (d == lid) {
+            entries_out[global_offset + local_pos] = local_entries[i];
+            local_pos++;
+        }
+    }
+}

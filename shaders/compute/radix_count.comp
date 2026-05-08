@@ -1,0 +1,47 @@
+#version 460
+
+struct Entry {
+    uint hash;
+    uint index;
+};
+
+layout (local_size_x = 256) in;
+
+layout (set = 0, binding = 0, std430) readonly buffer EntriesBuffer {
+    Entry entries[];
+};
+layout (set = 0, binding = 1, std430) buffer CountBuffer {
+    uint counts[];
+};
+
+layout(push_constant) uniform CountConstant {
+    uint shift;
+    uint num_elements;
+    uint num_workgroups;
+    uint elements_per_invocation;
+} pc;
+
+shared uint local_counts[256];
+
+void main() {
+    uint lid = gl_LocalInvocationID.x;
+    local_counts[lid] = 0;
+
+    barrier();
+
+    uint base = gl_WorkGroupID.x * 256 * pc.elements_per_invocation
+            + lid * pc.elements_per_invocation;
+
+    for (uint i = 0; i < pc.elements_per_invocation; i++) {
+        uint global_idx = base + i;
+        if (global_idx >= pc.num_elements) break;
+
+        uint hash = entries[global_idx].hash;
+        uint digit = (hash >> pc.shift) & 0xFF;
+        atomicAdd(local_counts[digit], 1);
+    }
+
+    barrier();
+
+    counts[lid * pc.num_workgroups + gl_WorkGroupID.x] = local_counts[lid];
+}

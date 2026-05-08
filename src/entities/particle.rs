@@ -156,6 +156,8 @@ pub struct GpuPhysicsData {
     pub grid_entries: Subbuffer<[Entry]>,
     pub grid_start: Subbuffer<[u32]>,
 
+    // Single u32: max_speed_bits (IEEE 754 trick). Host-visible so CPU can read it next frame.
+    pub stats_buffer: Subbuffer<[u32]>,
 }
 
 impl GpuPhysicsData {
@@ -264,6 +266,20 @@ impl GpuPhysicsData {
             sort_buffer_size as u64
         );
 
+        let stats_buffer = Buffer::from_iter(
+            allocator.clone(),
+            BufferCreateInfo {
+                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_DST,
+                ..Default::default()
+            },
+            AllocationCreateInfo {
+                memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_RANDOM_ACCESS,
+                ..Default::default()
+            },
+            // [0]: max_speed_bits, [1]: density_error_fp, [2]: divergence_error_fp
+            [0u32, 0u32, 0u32].into_iter(),
+        ).expect("Failed to create stats buffer");
+
         Self {
             count,
             position_a,
@@ -278,6 +294,7 @@ impl GpuPhysicsData {
             pressure_accelerations,
             grid_entries,
             grid_start,
+            stats_buffer,
         }
     }
     fn create_buffer<T>(usage: BufferUsage, allocator: Arc<StandardMemoryAllocator>, count: u64) -> Subbuffer<[T]> where T: BufferContents {

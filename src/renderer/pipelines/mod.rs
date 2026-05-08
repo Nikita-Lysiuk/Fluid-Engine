@@ -9,6 +9,7 @@ use vulkano::pipeline::layout::{PipelineDescriptorSetLayoutCreateInfo, PipelineL
 use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::shader::{EntryPoint, ShaderStages};
+use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano_util::context::VulkanoContext;
 use crate::entities::particle::{GpuPhysicsData, SimulationParams};
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
@@ -25,12 +26,14 @@ use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
 use crate::renderer::pipelines::viscosity::ViscosityPipeline;
 use crate::renderer::pipelines::density_texture::DensityTexturePipeline;
 use crate::renderer::pipelines::water_pipeline::WaterRenderPipeline;
+use crate::renderer::pipelines::stats_pipeline::StatsPipeline;
 
 pub mod point_pipeline;
 pub mod sky_pipeline;
 pub mod collision_pipeline;
 mod neighbor_search;
 mod sorter;
+pub use sorter::SortAlgorithm;
 mod density_alpha;
 mod viscosity;
 mod density_source_term;
@@ -41,6 +44,7 @@ mod divergence_source_term;
 mod divergence_integration;
 mod density_texture;
 mod water_pipeline;
+mod stats_pipeline;
 
 pub trait ComputeStep: Sized {
     fn load_shader_module(device: Arc<Device>) -> EntryPoint;
@@ -79,11 +83,16 @@ pub struct ComputePipelines {
     pub divergence_source_term: DivergenceSourceTermPipeline,
     pub divergence_integration: DivergenceIntegrationPipeline,
     pub density_texture: DensityTexturePipeline,
+    pub stats: StatsPipeline,
 }
 
 impl ComputePipelines {
-    pub fn new(device: Arc<Device>) -> Self {
-        let neighbor_search = NeighborSearch::new(device.clone());
+    pub fn new(
+        device: Arc<Device>,
+        memory_allocator: Arc<StandardMemoryAllocator>,
+        sort_buffer_size: u32,
+    ) -> Self {
+        let neighbor_search = NeighborSearch::new_with_allocator(device.clone(), memory_allocator, sort_buffer_size);
         let density_alpha = DensityAlphaPipeline::new(device.clone());
         let viscosity = ViscosityPipeline::new(device.clone());
         let density_source_term = DensitySourceTermPipeline::new(device.clone());
@@ -93,6 +102,7 @@ impl ComputePipelines {
         let divergence_source_term = DivergenceSourceTermPipeline::new(device.clone());
         let divergence_integration = DivergenceIntegrationPipeline::new(device.clone());
         let density_texture = DensityTexturePipeline::new(device.clone());
+        let stats = StatsPipeline::new(device.clone());
 
         Self {
             neighbor_search,
@@ -105,6 +115,7 @@ impl ComputePipelines {
             divergence_source_term,
             divergence_integration,
             density_texture,
+            stats,
         }
     }
 }
