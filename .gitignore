@@ -16,3 +16,6 @@ Thumbs.db
 
 # By-products
 Cargo.lock
+
+.claude
+skills-lock.json

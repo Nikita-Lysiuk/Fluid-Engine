@@ -6,4 +6,3 @@ mod renderer;
 mod errors;
 mod entities;
 mod commands;
-mod physics;

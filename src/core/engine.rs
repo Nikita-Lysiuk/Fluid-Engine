@@ -12,8 +12,7 @@ use crate::core::scene::Scene;
 use crate::renderer::Renderer;
 
 use crate::errors::application_error::ApplicationError;
-use crate::physics::PhysicsEngine;
-use crate::utils::constants::{IS_PAINT_FPS_COUNTER, PREFERRED_FPS, WINDOW_TITLE};
+use crate::utils::constants::{PREFERRED_FPS};
 use crate::utils::fps_counter::FpsCounter;
 
 fn load_icon(path: &str) -> Result<Icon, ApplicationError> {
@@ -34,7 +33,6 @@ pub struct Engine {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
     scene: Scene,
-    physics_engine: PhysicsEngine,
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
@@ -50,16 +48,14 @@ impl Engine {
 
         event_loop.set_control_flow(ControlFlow::Poll);
         let scene = Scene::new();
-        let physics_engine = PhysicsEngine::new(&scene);
 
         Ok(Self {
             renderer: None,
             event_loop: Some(event_loop),
             scene,
-            physics_engine,
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
-            is_focused: true,
+            is_focused: false,
         })
     }
 
@@ -78,7 +74,7 @@ impl ApplicationHandler for Engine {
             info!("[Engine] System Resumed. Initializing Window and Graphics...");
 
             let window_attributes = WindowAttributes::default()
-                .with_inner_size(PhysicalSize::new(1280, 720))
+                .with_inner_size(PhysicalSize::new(1920, 1080))
                 .with_window_icon(load_icon("assets/logo.png").ok())
                 .with_taskbar_icon(load_icon("assets/logo.png").ok());
 
@@ -91,12 +87,22 @@ impl ApplicationHandler for Engine {
                     return;
                 }
             };
-            self.renderer = Some(Renderer::new(window));
+            self.renderer = Some(Renderer::new(window, &self.scene, event_loop));
             info!("[Engine] Systems initialized successfully.");
         }
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        let mut egui_wants_input = false;
+
+        if let Some(renderer) = self.renderer.as_mut() {
+            renderer.gui.update(&event);
+
+            if renderer.gui.context().wants_pointer_input() || renderer.gui.context().wants_keyboard_input() {
+                egui_wants_input = true;
+            }
+        }
+
         match event {
             WindowEvent::CloseRequested => {
                 info!("[Engine] Exit requested.");
@@ -118,22 +124,17 @@ impl ApplicationHandler for Engine {
                     }
                 }
             }
-            WindowEvent::MouseInput {
-                state: ElementState::Pressed,
-                button: MouseButton::Left,
-                ..
-            } => {
-                if !self.is_focused {
+            WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. } => {
+                if !egui_wants_input && !self.is_focused {
                     self.is_focused = true;
-                    info!("[Engine] Window clicked, restoring focus and cursor grab.");
-
                     if let Some(renderer) = self.renderer.as_mut() {
                         let window = renderer.window_renderer.window();
-                        window.set_cursor_grab(CursorGrabMode::Locked)
-                            .or_else(|_| window.set_cursor_grab(CursorGrabMode::Confined))
-                            .unwrap_or_else(|e| error!("Failed to grab cursor: {}", e));
+                        window.set_cursor_grab(CursorGrabMode::Confined)
+                            .or_else(|_| window.set_cursor_grab(CursorGrabMode::Locked))
+                            .ok();
                         window.set_cursor_visible(false);
                     }
+                    info!("[Input] Mouse Locked");
                 }
             }
             WindowEvent::Resized(_new_size) => {
@@ -153,14 +154,15 @@ impl ApplicationHandler for Engine {
                             renderer.window_renderer.window().set_cursor_visible(true);
                         }
                     }
-                    (physical_key, ElementState::Pressed) => {
-                        if let PhysicalKey::Code(code)  = physical_key {
-                            self.controller.update_key(code, KeyboardAction::Pressed);
-                        }
-                    }
-                    (physical_key, ElementState::Released) => {
-                        if let PhysicalKey::Code(code)  = physical_key {
-                            self.controller.update_key(code, KeyboardAction::Released);
+                    (physical_key, state) => {
+                        if self.is_focused {
+                            if let PhysicalKey::Code(code) = physical_key {
+                                let action = match state {
+                                    ElementState::Pressed => KeyboardAction::Pressed,
+                                    ElementState::Released => KeyboardAction::Released,
+                                };
+                                self.controller.update_key(code, action);
+                            }
                         }
                     }
                 }
@@ -169,33 +171,31 @@ impl ApplicationHandler for Engine {
                 let dt = self.fps_counter.tick().as_secs_f32();
                 let safe_dt = dt.min(0.1);
 
-
-                for command in self.controller.get_active_commands() {
-                    command.execute(&mut self.scene, safe_dt);
-                }
-                if let Some(cmd) = self.controller.get_mouse_command() {
-                    cmd.execute(&mut self.scene, safe_dt);
-                }
-
-                self.physics_engine.update(&mut self.scene, safe_dt);
-
-
-                if let Some(renderer) = self.renderer.as_mut() {
-                    renderer.render(&self.scene);
-                }
-
-                if IS_PAINT_FPS_COUNTER {
-                    if let Some(renderer) = self.renderer.as_ref() {
-                        let title = format!("{} | FPS: {}", WINDOW_TITLE, self.fps_counter.fps());
-                        renderer.window_renderer.window().set_title(&title);
+                if self.is_focused {
+                    for command in self.controller.get_active_commands() {
+                        command.execute(&mut self.scene, safe_dt);
+                    }
+                    if let Some(cmd) = self.controller.get_mouse_command() {
+                        cmd.execute(&mut self.scene, safe_dt);
                     }
                 }
+
+                if let Some(renderer) = self.renderer.as_mut() {
+                    renderer.update_and_render(&mut self.scene, safe_dt, self.fps_counter.fps());
+                }
+
+                // if IS_PAINT_FPS_COUNTER {
+                //     if let Some(renderer) = self.renderer.as_ref() {
+                //         let title = format!("{} | FPS: {}", WINDOW_TITLE, self.fps_counter.fps());
+                //         renderer.window_renderer.window().set_title(&title);
+                //     }
+                // }
             }
 
             _ => (),
         }
 
-        if self.is_focused && self.renderer.is_some() {
+        if self.renderer.is_some() {
             if let Some(renderer) = self.renderer.as_ref() {
                 renderer.window_renderer.window().request_redraw();
             }

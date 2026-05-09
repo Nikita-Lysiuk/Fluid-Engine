@@ -6,6 +6,7 @@ pub mod particle;
 pub mod camera;
 pub mod sky;
 pub mod collision;
+pub mod water;
 
 #[derive(BufferContents, Vertex, Debug, Clone, Copy)]
 #[repr(C)]

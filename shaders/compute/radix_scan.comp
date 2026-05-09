@@ -1,0 +1,52 @@
+#version 460
+
+struct Entry {
+    uint hash;
+    uint index;
+};
+
+layout (local_size_x = 256) in;
+
+layout (set = 0, binding = 0, std430) buffer CountBuffer { uint counts[]; };
+
+layout(push_constant) uniform ScanConstant {
+    uint num_workgroups;
+} pc;
+
+shared uint shared_sums[256];
+
+void main() {
+    uint lid = gl_LocalInvocationID.x;
+
+    uint start = lid * pc.num_workgroups;
+    uint end = start + pc.num_workgroups;
+
+    uint running = 0;
+    for (uint i = start; i < end; i++) {
+        uint val = counts[i];
+        counts[i] = running;
+        running += val;
+    }
+
+    shared_sums[lid] = running;
+
+    barrier();
+
+    for (uint stride = 1; stride < 256; stride *= 2) {
+        uint val = 0;
+        if (lid >= stride) {
+            val = shared_sums[lid - stride];
+        }
+        barrier();
+        if (lid >= stride) {
+            shared_sums[lid] += val;
+        }
+        barrier();
+    }
+
+    uint block_offset = (lid == 0) ? 0 : shared_sums[lid - 1];
+
+    for (uint i = start; i < end; i++) {
+        counts[i] += block_offset;
+    }
+}

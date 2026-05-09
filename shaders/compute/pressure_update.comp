@@ -1,0 +1,84 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#include "../include/common.glsl"
+
+layout(local_size_x = 256) in;
+
+layout(std430, set = 0, binding = 0) readonly buffer Entries { Entry entries[]; };
+layout(std430, set = 0, binding = 1) readonly buffer Offsets { uint grid_start[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Positions { vec4 positions[]; };
+layout(std430, set = 0, binding = 4) readonly buffer PressureForces { vec4 pressure_forces[]; };
+layout(std430, set = 0, binding = 5) readonly buffer Alphas { float factors[]; };
+layout(std430, set = 0, binding = 6) readonly buffer SourceTerms { float source_terms[]; };
+layout(std430, set = 0, binding = 7) readonly buffer Densities { float densities[]; };
+
+
+layout(std430, set = 0, binding = 8) buffer Pressures { float pressures[]; };
+
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    uint num_particles = uint(positions.length());
+
+    if (i >= num_particles) return;
+
+    vec3 pos_i = positions[i].xyz;
+    vec3 p_acc_i = pressure_forces[i].xyz;
+    float alpha_i = factors[i];
+    float rho_i = densities[i];
+    float source_i = source_terms[i];
+    float p_i = pressures[i];
+    float h = sim_params.smoothing_radius;
+    float mass = sim_params.particle_mass;
+    float relax_factor = sim_params.relax_factor;
+    float dt = sim_params.dt;
+
+    ivec3 cell_coords = ivec3(floor(pos_i / h));
+    uint table_size = uint(grid_start.length());
+
+    float sum_Ap = 0.0;
+
+    for (int z = -1; z <= 1; z++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
+                uint hash = get_cell_hash(neighbor_cell, table_size);
+                uint start_idx = grid_start[hash];
+
+                if (start_idx == 0xFFFFFFFF) continue;
+
+                for (uint j = start_idx; j < num_particles; j++) {
+                    if (entries[j].hash != hash) break;
+
+                    vec3 pos_j = positions[j].xyz;
+                    vec3 r_vec = pos_i - pos_j;
+                    float r2 = dot(r_vec, r_vec);
+
+                    if (r2 > h * h) continue;
+
+                    float r = sqrt(r2);
+
+                    if (r > 1e-6) {
+                        vec3 grad = kernel_grad(r_vec, r, h);
+                        vec3 p_acc_j = pressure_forces[j].xyz;
+                        vec3 p_acc_diff = p_acc_i - p_acc_j;
+                        sum_Ap += mass * dot(p_acc_diff, grad);
+                    }
+                }
+            }
+        }
+    }
+
+    float Ap_i = dt * sum_Ap;
+
+    if (alpha_i > 1e-6 && rho_i > 1e-6) {
+        float a_ii = -(dt / (rho_i * rho_i)) * alpha_i;
+
+        float error = source_i - Ap_i;
+
+        if (abs(a_ii) > 1e-20) {
+            float correction = (relax_factor * error) / a_ii;
+
+            pressures[i] = max(p_i + correction, 0.0);
+        }
+    }
+}

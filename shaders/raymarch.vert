@@ -3,6 +3,10 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
 
+layout(location = 0) in vec3 position;
+layout(location = 0) out vec3 outWorldPos;
+layout(location = 1) out vec3 outCameraPos;
+
 layout(buffer_reference, scalar) readonly buffer CameraDataRef {
     mat4 view;
     mat4 proj;
@@ -10,22 +14,19 @@ layout(buffer_reference, scalar) readonly buffer CameraDataRef {
     vec3 camera_pos;
 };
 
-layout(location = 0) in vec4 inPosition;
-layout(location = 1) in vec4 inColor;
-layout(location = 2) in float inRadius;
-
-layout(location = 0) out vec3 fragColor;
-layout(push_constant) uniform PushConstants {
+layout(push_constant) uniform PC {
     uint64_t camera_addr;
+    uint64_t _pad;
+    mat4 model;
 } push;
 
 void main() {
     CameraDataRef camera = CameraDataRef(push.camera_addr);
-    
-    gl_Position = camera.proj * camera.view * vec4(inPosition.xyz, 1.0);
 
-    float dist = length(camera.camera_pos - inPosition.xyz);
-    gl_PointSize = inRadius * 1000.0 / dist;
+    vec4 worldPos = push.model * vec4(position, 1.0);
+    outWorldPos = worldPos.xyz;
 
-    fragColor = inColor.xyz;
+    outCameraPos = camera.camera_pos;
+
+    gl_Position = camera.proj * camera.view * worldPos;
 }

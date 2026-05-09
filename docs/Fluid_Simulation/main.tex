@@ -1,0 +1,115 @@
+\documentclass[a4paper,12pt]{book}
+
+% --- Пакети з офіційного шаблону ---
+\usepackage[T1,plmath]{polski}
+\usepackage[utf8]{inputenc}
+\usepackage{fancyhdr}
+\usepackage{indentfirst}
+\usepackage[pdftex]{graphicx}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage[pdftex,
+            left=1.1in,right=1.1in,
+            top=1.1in,bottom=1.1in]{geometry}
+\usepackage{float}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{cite}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage[colorlinks=true]{hyperref}
+\hypersetup{allcolors=black}
+
+% --- Налаштування лістингів для Rust ---
+\lstset{
+    basicstyle=\footnotesize\ttfamily,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=tb,
+    tabsize=4,
+    columns=fixed,
+    showstringspaces=false,
+    keepspaces,
+    commentstyle=\color{red},
+    keywordstyle=\color{blue},
+    % Додаємо підтримку польських символів:
+    extendedchars=true,
+    inputencoding=utf8,
+    literate={ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l}}1 {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1
+             {Ą}{{\k{A}}}1 {Ć}{{\'C}}1 {Ę}{{\k{E}}}1 {Ł}{{\L}}1 {Ń}{{\'N}}1 {Ó}{{\'O}}1 {Ś}{{\'S}}1 {Ź}{{\'Z}}1 {Ż}{{\.Z}}1,
+    captionpos=b
+}
+
+% --- Налаштування колонтитулів ---
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\fancyhf{}
+\fancyhead[LE,RO]{\footnotesize\bfseries\thepage}
+\fancyhead[LO]{\footnotesize\rightmark}
+\fancyhead[RE]{\footnotesize\leftmark}
+\renewcommand{\headrulewidth}{0.5pt}
+\addtolength{\headheight}{1.5pt}
+\fancypagestyle{plain}{\fancyhead{}\cfoot{\footnotesize\bfseries\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+\linespread{1.25}
+\bibliographystyle{plain}
+
+\begin{document}
+
+% 1. Титульна сторінка
+\input{titlepage}
+\cleardoublepage
+
+% 2. Порожня сторінка (вимога для двостороннього друку в класі book)
+\thispagestyle{empty}
+\newpage
+
+% 3. Зміст
+\tableofcontents
+\cleardoublepage
+
+% 4. Вступ (без номера)
+\chapter*{Wstęp}
+\addcontentsline{toc}{chapter}{Wstęp}
+\chaptermark{Wstęp}
+\input{chapters/introduction}
+\cleardoublepage
+
+% 5. Розділи основної частини
+\chapter{Metodyka i podstawy teoretyczne symulacji i wizualizacji cieczy}
+\input{chapters/theory} 
+
+\chapter{Przegląd technologii i środowisko programistyczne}
+\input{chapters/technology}
+
+\chapter{Implementacja i oryginalne rozwiązania techniczne}
+\input{chapters/implementation}
+
+\chapter{Analiza wydajności i weryfikacja systemu}
+\input{chapters/results}
+
+% 6. Підсумок
+\chapter*{Podsumowanie}
+\addcontentsline{toc}{chapter}{Podsumowanie}
+\chaptermark{Podsumowanie}
+\input{chapters/summary}
+\cleardoublepage
+
+% 7. Додатки (Appendices)
+\appendix
+\chapter{Instrukcja użytkowania}
+\chapter{Specyfikacja API}
+
+% 8. Списки об'єктів
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Spis rysunków}
+\listoffigures
+
+\cleardoublepage
+\addcontentsline{toc}{chapter}{Bibliografia}
+\bibliography{bibliography}
+
+\end{document}
