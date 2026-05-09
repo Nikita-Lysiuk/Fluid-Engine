@@ -225,11 +225,9 @@ impl Renderer {
         }
     }
     pub fn step(&mut self, scene: &mut Scene, max_dt: f32, previous_future: Box<dyn GpuFuture>) -> Box<dyn GpuFuture> {
-        // Scale factors must match stats.comp constants.
         const DENSITY_SCALE: f32 = 1.0;
         const DIVERGENCE_SCALE: f32 = 10.0;
 
-        // Read last frame's stats: max speed, avg density error, avg divergence error.
         if let Ok(stats) = self.resources.physics_data.stats_buffer.read() {
             let n = scene.initial_positions.len() as f32;
             let max_speed = f32::from_bits(stats[0]);

@@ -31,7 +31,7 @@ impl CollisionBox {
     pub fn update(&mut self, dt: f32) {
         self.time += dt;
         let offset = self.wave_amplitude * (self.time * self.wave_frequency * TAU).sin();
-        self.min.x = self.base_min_x;
+        self.min.x = self.base_min_x + offset;
     }
     pub fn contains(&self, actor: &impl Actor) -> bool {
         actor.location().x >= self.min.x && actor.location().x <= self.max.x &&
