@@ -4,7 +4,7 @@
 \contentsline {subsection}{\numberline {1.1.1}Istota podejścia Eulerowskiego}{8}{subsection.1.1.1}%
 \contentsline {subsection}{\numberline {1.1.2}Istota podejścia Lagrange'owskiego}{9}{subsection.1.1.2}%
 \contentsline {section}{\numberline {1.2}Sformułowanie matematyczne metody cząsteczkowej SPH i jej wariantu DFSPH}{10}{section.1.2}%
-\contentsline {subsection}{\numberline {1.2.1} Równania Naviera-Stokesa jako fundament teoretyczny}{10}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.1}Równania Naviera-Stokesa jako fundament teoretyczny}{10}{subsection.1.2.1}%
 \contentsline {subsection}{\numberline {1.2.2}Interpolacja jądrowa i dyskretyzacja SPH}{11}{subsection.1.2.2}%
 \contentsline {subsection}{\numberline {1.2.3}Algorytm Divergence-Free SPH (DFSPH)}{13}{subsection.1.2.3}%
 \contentsline {paragraph}{Poziom zagęszczenia.}{13}{section*.3}%

@@ -82,7 +82,7 @@ konieczności definiowania sztywnej domeny obliczeniowej.
 
 Mimo solidnych fundamentów matematycznych, praktyczne zastosowanie tego podejścia do złożonych symulacji 
 cieczy pojawiło się dopiero w 1977 roku wraz z metodą SPH. Motywacja do jej stworzenia płynęła z potrzeb 
-astrofizyki – badacze tacy jak Gingold i Monaghan poszukiwali sposobu na modelowanie dynamicznych układów 
+astrofizyki --- badacze tacy jak Gingold i Monaghan poszukiwali sposobu na modelowanie dynamicznych układów 
 gwiazdowych i procesów formowania się galaktyk, gdzie materia ulega ekstremalnym deformacjom i 
 przemieszczeniom w próżni. Tradycyjne metody oparte na siatce okazywały się całkowicie niewydolne w 
 symulowaniu obiektów, które nie posiadają stałych granic i swobodnie ewoluują w otwartej przestrzeni.
@@ -106,8 +106,8 @@ oferuje niezrównaną elastyczność w wizualizacji dynamicznych i silnie rozpro
 
 \section{Sformułowanie matematyczne metody cząsteczkowej SPH i jej wariantu DFSPH}
 W celu przejścia od modelu ciągłego do postaci obliczeniowej konieczne jest sformułowanie równań Naviera–Stokesa w sposób umożliwiający ich dyskretyzację w ramach metody cząsteczkowej.
-\subsection{ Równania Naviera-Stokesa jako fundament teoretyczny} 
-Zarówno metody siatkowe, jak i bezsiatkowe (takie jak SPH), stanowią numeryczne przybliżenia rozwiązań układu różniczkowych równań cząstkowych, nazwanego na cześć Claude'a-Louisa Naviera oraz Sir George'a Gabriela Stokesa. Prace nad tymi równaniami, prowadzone w latach 1822–1850, zdefiniowały sposób, w jaki współczesna fizyka opisuje ruch płynów lepkich \cite{batchelor1967introduction}. Każda analiza z zakresu symulacji cieczy musi opierać się na tym fundamencie, który de facto stanowi sformułowanie podstawowych praw zachowania masy i pędu w mechanice kontinuum \cite{mclean2012continuum}.
+\subsection{Równania Naviera-Stokesa jako fundament teoretyczny} 
+Zarówno metody siatkowe, jak i bezsiatkowe (takie jak SPH), stanowią numeryczne przybliżenia rozwiązań układu różniczkowych równań cząstkowych, nazwanego na cześć Claude'a-Louisa Naviera oraz Sir George'a Gabriela Stokesa. Prace nad tymi równaniami, prowadzone w latach 1822--1850, zdefiniowały sposób, w jaki współczesna fizyka opisuje ruch płynów lepkich \cite{batchelor1967introduction}. Każda analiza z zakresu symulacji cieczy musi opierać się na tym fundamencie, który de facto stanowi sformułowanie podstawowych praw zachowania masy i pędu w mechanice kontinuum \cite{mclean2012continuum}.
 
 Pełny opis dynamiki cieczy wymaga spełnienia dwóch kluczowych warunków:
 \begin{enumerate}
@@ -124,10 +124,12 @@ Opisuje zachowanie ośrodka ciągłego pod wpływem działających na niego sił
         \rho \frac{D\mathbf{u}}{Dt} = -\nabla p + \nabla \cdot \mathbf{\tau} + \rho \mathbf{a}
     \end{equation}Gdzie poszczególne symbole oznaczają:
     \begin{itemize}
-        \item $\frac{D}{Dt}$ – pochodna materiałowa (operator $\frac{\partial}{\partial t} + \mathbf{u} \cdot \nabla$), łącząca zmianę lokalną z~efektem adwekcji,
-        \item $\rho$ – gęstość masy cieczy,\item $\mathbf{u}$ – wektor prędkości przepływu,\item $p$ – ciśnienie izotropowe (składowa determinująca siłę ciśnienia),
-        \item $\mathbf{\tau}$ – tensor naprężeń dewiacyjnych (odpowiedzialny za opór lepki),
-        \item $\mathbf{a}$ – przyspieszenia masowe (np. grawitacja $\mathbf{g}$).
+        \item $\frac{D}{Dt}$ --- pochodna materiałowa (operator $\frac{\partial}{\partial t} + \mathbf{u} \cdot \nabla$), łącząca zmianę lokalną z~efektem adwekcji,
+        \item $\rho$ --- gęstość masy cieczy,
+        \item $\mathbf{u}$ --- wektor prędkości przepływu,
+        \item $p$ --- ciśnienie izotropowe (składowa determinująca siłę ciśnienia),
+        \item $\mathbf{\tau}$ --- tensor naprężeń dewiacyjnych (odpowiedzialny za opór lepki),
+        \item $\mathbf{a}$ --- przyspieszenia masowe (np. grawitacja $\mathbf{g}$).
     \end{itemize}
 \end{enumerate}
 
@@ -143,7 +145,7 @@ Istota metody SPH polega na śledzeniu właściwości fizycznych cieczy poprzez 
 Dodatkowo, musi zostać spełniony warunek normalizacji, oznaczający, że niezależnie od wybranego obszaru całkowania, masa całkowita pozostaje jednostkowa: 
 
 \begin{equation}
-    \int \delta(r) dv = 1
+    \int \delta(r) \,\mathrm{d}v = 1
 \end{equation}
 
 
@@ -156,7 +158,7 @@ ale także kierunek zmian tych oddziaływań \cite{koschier2020smoothed}.
 
 Dzięki temu dowolną właściwość fizyczną $A(\mathbf{x})$ możemy przybliżyć poprzez splot z~funkcją jądra:
 \begin{equation}
-    A(\mathbf{x}) \approx (A * W)(\mathbf{x}) = \int A(\mathbf{x}') W(\mathbf{x} - \mathbf{x}', h) d\mathbf{x}'
+    A(\mathbf{x}) \approx (A * W)(\mathbf{x}) = \int A(\mathbf{x}') W(\mathbf{x} - \mathbf{x}', h) \,\mathrm{d}\mathbf{x}'
 \end{equation}
 
 Ponieważ system komputerowy operuje na skończonej pamięci, nie możemy rozważać całki po bezgranicznej przestrzeni. W procesie dyskretyzacji całka zostaje zastąpiona sumą po skończonej liczbie sąsiadujących cząsteczek \cite{mon92}:
@@ -166,7 +168,7 @@ Ponieważ system komputerowy operuje na skończonej pamięci, nie możemy rozwa�
 
 Aby funkcja jądra była użyteczna w stabilnej symulacji cieczy, musi spełniać szereg rygorystycznych warunków matematycznych \cite{koschier2020smoothed}:
 \begin{itemize}
-    \item \textbf{Warunek normalizacji:} $\int W(r', h) dv' = 1$, co gwarantuje zachowanie całkowitej wartości przybliżanej wielkości.
+    \item \textbf{Warunek normalizacji:} $\int W(r', h) \,\mathrm{d}v' = 1$, co gwarantuje zachowanie całkowitej wartości przybliżanej wielkości.
     \item \textbf{Warunek Diraca:} $\lim_{h \to 0} W(r, h) = \delta(r)$, co oznacza, że wraz ze zmniejszaniem promienia $h$, przybliżenie dąży do rozwiązania idealnego.
     \item \textbf{Dodatniość i symetria:} $W(r, h) \ge 0$ oraz $W(r, h) = W(-r, h)$.
     \item \textbf{Zwarta podpora:} $W(r, h) = 0$ dla $r \ge h$. Jest to kluczowy warunek z punktu widzenia wydajności --- komputer musi analizować tylko te cząsteczki, które znajdują się w fizycznym zasięgu oddziaływania, co drastycznie redukuje liczbę operacji.
@@ -255,7 +257,7 @@ potwierdzając dominację DFSPH w scenariuszach wymagających dużych kroków cz
 
 Przedstawione sformułowanie matematyczne metody SPH oraz algorytmu DFSPH definiuje fizyczny fundament systemu. Dzięki dyskretyzacji kontinuum cieczy za pomocą chmury punktów oraz rygorystycznemu wymuszeniu nieściśliwości przez dwuetapowy solver ciśnienia, możliwe jest uzyskanie stabilnej i wydajnej symulacji w czasie rzeczywistym.
 
-Jednak wynik symulacji w czystej postaci Lagrange’owskiej to jedynie zbiór danych o pozycjach i prędkościach cząsteczek - surowa ,,chmura punktów'', która nie posiada wizualnych cech ciągłej cieczy, takich jak gładka powierzchnia, załamania światła czy przezroczystość. Aby przekształcić te dane w realistyczny obraz, konieczne jest zastosowanie zaawansowanych technik graficznych.
+Jednak wynik symulacji w czystej postaci Lagrange’owskiej to jedynie zbiór danych o pozycjach i prędkościach cząsteczek --- surowa ,,chmura punktów'', która nie posiada wizualnych cech ciągłej cieczy, takich jak gładka powierzchnia, załamania światła czy przezroczystość. Aby przekształcić te dane w realistyczny obraz, konieczne jest zastosowanie zaawansowanych technik graficznych.
 
 \section{Wizualizacja objętościowa metodą Ray Marching}
 Przekształcenie surowych danych cząsteczkowych, pochodzących z symulacji SPH, w ciągły i fotorealistyczny obraz cieczy wymaga zastosowania metod pośredniej reprezentacji materii. W przeciwieństwie do klasycznych technik graficznych, które opierają się na generowaniu jawnej geometrii, w niniejszej pracy zdecydowano się na wykorzystanie bezpośredniego renderowania objętościowego. Koncepcja ta, zaproponowana przez Marca Levoya \cite{levoy1988volume}, zakłada formowanie obrazu bezpośrednio z danych wolumetrycznych bez konieczności kosztownej ekstrakcji izopowierzchni do postaci siatki wielokątów.
@@ -266,7 +268,7 @@ Symulacja w ujęciu lagrange’owskim dostarcza jedynie dyskretny zbiór punktó
         \rho(\mathbf{x}) = \sum_{j} m_j W(|\mathbf{x} - \mathbf{x}_j|, h)
     \end{equation}
     
-    Gdzie $\mathbf{x}$ jest dowolnym punktem w przestrzeni, a $W$ funkcją wygładzającą. Równanie to opisuje przejście od punktowej reprezentacji materii do trójwymiarowego, ciągłego pola objętościowego, spopularyzowanego w nowoczesnej grafice czasu rzeczywistego m.in. przez prace Inigo Quileza \cite{quilez2008raymarching}. W praktyce obliczeniowej pole to poddawane jest dyskretyzacji - przestrzeń symulacji dzieli się na regularną strukturę o rozdzielczości $N_x \times N_y \times N_z$, gdzie każdy węzeł przechowuje próbkowaną wartość gęstości $\rho_{i,j,k} = \rho(\mathbf{x}_{i,j,k})$.
+    Gdzie $\mathbf{x}$ jest dowolnym punktem w przestrzeni, a $W$ funkcją wygładzającą. Równanie to opisuje przejście od punktowej reprezentacji materii do trójwymiarowego, ciągłego pola objętościowego, spopularyzowanego w nowoczesnej grafice czasu rzeczywistego m.in. przez prace Inigo Quileza \cite{quilez2008raymarching}. W praktyce obliczeniowej pole to poddawane jest dyskretyzacji --- przestrzeń symulacji dzieli się na regularną strukturę o rozdzielczości $N_x \times N_y \times N_z$, gdzie każdy węzeł przechowuje próbkowaną wartość gęstości $\rho_{i,j,k} = \rho(\mathbf{x}_{i,j,k})$.
     
 
 \paragraph{Numeryczna integracja promieni.}
