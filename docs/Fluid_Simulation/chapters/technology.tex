@@ -12,8 +12,8 @@ i układów graficznych.
 \section{Istniejące rozwiązania symulacji cieczy}
 
 Współczesne techniki symulacji cieczy ewoluowały w stronę metod hybrydowych oraz optymalizowanych 
-podejść cząsteczkowych, aby sprostać wymaganiom realizmu w nauce i rozrywce. Współczesne rozwiązania 
-obejmują szeroki wachlarz podejść - od metod czysto eulerowskich i czysto cząsteczkowych po hybrydy obu. 
+podejść cząsteczkowych, aby sprostać wymaganiom realizmu w nauce i rozrywce. Współczesne rozwiązania
+obejmują szeroki wachlarz podejść --- od metod czysto eulerowskich i czysto cząsteczkowych po hybrydy obu. 
 Jak omówiono w rozdziale pierwszym, aktualnym standardem przemysłowym jest metoda FLIP, łącząca stabilność 
 siatki eulerowskiej z elastycznością cząsteczek lagrange'owskich \cite{brackbill1986flip}. 
 Dominuje ona w silnikach przeznaczonych do tworzenia gier i animacji, gdzie liczy się zarówno wydajność, 
@@ -28,12 +28,13 @@ podejść projektowych oraz wyznaczyć punkt, w którym lokuje się system opisa
 
 \subsection{Symulacja FLIP w programie Blender}
 
-Blender jest wolnym i otwartoźródłowym pakietem do modelowania, animacji i renderowania 
+Blender jest wolnym i otwartoźródłowym pakietem do modelowania, animacji i~renderowania 
 trójwymiarowego, rozwijanym przez Blender Foundation od 1994 roku \cite{blender2023}. 
 Narzędzia symulacji cieczy dostępne w tym programie opierają się na silniku Mantaflow, 
 zintegrowanym z Blenderem począwszy od wersji 2.82 \cite{mantaflow2021}. 
 Implementacja ta korzysta z metody FLIP, w której domenę obliczeniową opisuje siatka 
-eulerowska, a cząsteczki lagrange'owskie pełnią rolę tracerów adwekcji. 
+eulerowska, a~cząsteczki lagrange'owskie pełnią rolę tracerów adwekcji ---
+znaczników śledzących, które przenoszą prędkość przepływu między kolejnymi krokami symulacji. 
 Centralna logika obliczeniowa wykonywana jest na procesorze głównym.
 
 Blender jest narzędziem zorientowanym na fizycznie dokładną animację komputerową --- jego 
@@ -48,42 +49,76 @@ rzeczywistym. Typowy widok interfejsu konfiguracji domeny i podglądu pola ciecz
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/blender_flip.png}
-    \caption{Interfejs symulacji FLIP w programie Blender z widocznym panelem konfiguracji domeny i podglądem cieczy. \newline Źródło: Własne opracowanie na podstawie dokumentacji \cite{blenderdocs2023}.}
+    \caption{Interfejs symulacji FLIP w programie Blender z widocznym panelem konfiguracji domeny i podglądem cieczy \newline Źródło: Własne opracowanie na podstawie dokumentacji \cite{blenderdocs2023}}
     \label{fig:blender_flip}
 \end{figure}
 
 \subsection{Symulacja FLIP w silniku Unreal Engine 5}
 
-Unreal Engine 5 jest zaawansowanym silnikiem aplikacji interaktywnych, rozwijanym przez Epic Games i stosowanym zarówno w produkcji gier, jak i przy tworzeniu efektów wizualnych dla filmów i symulacji \cite{ue5fluids}. Jednym z jego kluczowych podsystemów jest Niagara - elastyczny system efektów wizualnych i cząsteczkowych, wykonujący obliczenia w całości na GPU. Możliwości symulacji cieczy udostępnia wtyczka NiagaraFluids, implementująca metodę FLIP dla trójwymiarowych cieczy.
+Unreal Engine 5 jest zaawansowanym silnikiem aplikacji interaktywnych, rozwijanym przez Epic Games i 
+stosowanym zarówno w produkcji gier, jak i przy tworzeniu efektów wizualnych dla filmów i symulacji \cite{ue5fluids}. 
+Jednym z jego kluczowych podsystemów jest Niagara --- elastyczny system efektów wizualnych i cząsteczkowych, 
+wykonujący obliczenia w całości na GPU. Możliwości symulacji cieczy udostępnia wtyczka NiagaraFluids, 
+implementująca metodę FLIP dla trójwymiarowych cieczy.
 
-Środowisko pracy oparte jest na edytorze węzłów, widocznym na rysunku~\ref{fig:ue5_flip}, który oferuje gotowe szablony symulacji przeznaczone do bezpośredniego umieszczenia na poziomie gry. Szablony te stanowią punkt wyjścia do dalszej personalizacji - elastyczna architektura modułów pozwala twórcy dostosować każdy aspekt symulacji do konkretnego zadania, od konfiguracji sił i warunków brzegowych, aż po modyfikację poszczególnych kroków solvera. Silnik jest zatem rozwiązaniem skalowalnym: umożliwia zarówno szybkie prototypowanie efektów przez artystów, jak i głębszą ingerencję algorytmiczną przez programistów efektów.
+Środowisko pracy oparte jest na edytorze węzłów, widocznym na rysunku~\ref{fig:ue5_flip}, 
+który oferuje gotowe szablony symulacji przeznaczone do bezpośredniego umieszczenia na poziomie gry. 
+Szablony te stanowią punkt wyjścia do dalszej personalizacji --- modularna architektura komponentów pozwala twórcy dostosować 
+każdy aspekt symulacji do konkretnego zadania, od konfiguracji sił i warunków brzegowych, aż po modyfikację 
+poszczególnych kroków solvera. Silnik jest zatem rozwiązaniem skalowalnym: 
+umożliwia zarówno szybkie składanie efektów przez artystów --- osoby bez specjalistycznego
+przygotowania programistycznego, konfigurujące symulację wyłącznie przez interfejs graficzny ---
+jak i głębszą ingerencję algorytmiczną przez programistów efektów, którzy mają możliwość pisania
+własnych modułów obliczeniowych i modyfikowania wewnętrznej logiki solvera.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/ue5_flip.png}
-    \caption{Interfejs edytora Niagara w silniku Unreal Engine 5 z aktywną symulacją 3D FLIP zrealizowaną przy użyciu wtyczki NiagaraFluids. \newline Źródło: Własne opracowanie na podstawie dokumentacji \cite{ue5fluids}.}
+    \caption{Interfejs edytora Niagara w silniku Unreal Engine 5 z aktywną symulacją 3D FLIP zrealizowaną przy użyciu wtyczki NiagaraFluids \newline Źródło: Własne opracowanie na podstawie dokumentacji \cite{ue5fluids}}
     \label{fig:ue5_flip}
 \end{figure}
 
 \subsection{Biblioteka SPlisHSPlasH}
 
-SPlisHSPlasH (ang.~\textit{Smoothed Particle Hydrodynamics Simulation Library}) jest otwartą biblioteką symulacyjną tworzoną przez grupę badawczą Jana Bendera \cite{SPlisHSPlasH_Library}. W odróżnieniu od dwóch poprzednich rozwiązań, biblioteka ta opiera się wyłącznie na metodzie SPH w formie cząsteczkowej, bez stosowania pomocniczej siatki eulerowskiej. Pod względem przyjętego modelu fizycznego stanowi ona najbliższy odpowiednik systemu opisanego w niniejszej pracy.
+SPlisHSPlasH (ang.~\textit{Smoothed Particle Hydrodynamics Simulation Library}) jest 
+otwartą biblioteką symulacyjną tworzoną przez grupę badawczą Jana Bendera \cite{SPlisHSPlasH_Library}. 
+W odróżnieniu od dwóch poprzednich rozwiązań, biblioteka ta opiera się wyłącznie na metodzie SPH w 
+formie cząsteczkowej, bez stosowania pomocniczej siatki eulerowskiej. Pod względem przyjętego modelu 
+fizycznego stanowi ona najbliższy odpowiednik systemu opisanego w niniejszej pracy.
 
-Biblioteka implementuje zestaw nowoczesnych solverów nieściśliwości, w tym m.in. DFSPH. Ponadto wspierane są modele fenomenologiczne lepkości, napięcia powierzchniowego i sił wirowania. Jej architektura opiera się wyłącznie na języku C++, a cały potok symulacyjny wykonywany jest na procesorze głównym. Jedynym krokiem dopuszczającym opcjonalne przeniesienie obliczeń na GPU jest wyszukiwanie sąsiedztwa, realizowane przez zewnętrzną bibliotekę Compact\-N\-Search - jej wariant cu\-N\-Search umożliwia wykonanie tego kroku na karcie graficznej \cite{CompactNSearch_Library}. Warstwa wizualizacyjna korzysta z OpenGL~3.3 wyłącznie do renderowania wyników symulacji, co widoczne jest na rysunku~\ref{fig:splishsplash}. SPlisHSPlasH jest szeroko stosowana w środowisku naukowym jako platforma referencyjna do testowania i porównywania nowych algorytmów SPH \cite{koschier2020smoothed}.
+Biblioteka implementuje zestaw nowoczesnych solverów nieściśliwości, w tym m.in. DFSPH. 
+Ponadto wspierane są modele fenomenologiczne lepkości, napięcia powierzchniowego i sił wirowania. 
+Jej architektura opiera się wyłącznie na języku C++, a cały potok symulacyjny wykonywany jest na procesorze głównym. 
+Jedynym krokiem dopuszczającym opcjonalne przeniesienie obliczeń na GPU jest wyszukiwanie sąsiedztwa, 
+realizowane przez zewnętrzną bibliotekę Compact\-N\-Search --- jej wariant cu\-N\-Search umożliwia wykonanie tego 
+kroku na karcie graficznej \cite{CompactNSearch_Library}. Warstwa wizualizacyjna 
+korzysta z OpenGL~3.3 wyłącznie do renderowania wyników symulacji, co widoczne jest na rysunku~\ref{fig:splishsplash}. 
+SPlisHSPlasH jest szeroko stosowana w środowisku naukowym jako platforma referencyjna do testowania i 
+porównywania nowych algorytmów SPH \cite{koschier2020smoothed}.
 
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/splishsplash.png}
-    \caption{Symulacja cieczy w bibliotece SPlisHSPlasH z aktywnym solverem DFSPH i panelem konfiguracji parametrów fizycznych. \newline Źródło: Własne opracowanie na podstawie dokumentacji biblioteki \cite{SPlisHSPlasH_Library}.}
+    \caption{Symulacja cieczy w bibliotece SPlisHSPlasH z aktywnym solverem DFSPH i panelem konfiguracji parametrów fizycznych \newline Źródło: Własne opracowanie na podstawie dokumentacji biblioteki \cite{SPlisHSPlasH_Library}}
 
     \label{fig:splishsplash}
 \end{figure}
 
 \subsection{Podsumowanie rozwiązań i kontekst projektu}
 
-Podsumowując przegląd istniejących rozwiązań, można wskazać na istotne różnice w ich architekturze oraz zastosowaniach. Blender jest środowiskiem nastawionym na generowanie wysokiej jakości animacji, które wymagają wcześniejszego przeliczenia. Unreal Engine 5 z systemem Niagara oferuje wysoką wydajność w środowisku interaktywnym, lecz opiera się na złożonej, wysokopoziomowej architekturze silnika gry. SPlisHSPlasH z kolei jest biblioteką koncentrującą się na obliczeniach równoległych na procesorze w celach naukowych.
+Podsumowując przegląd istniejących rozwiązań, można wskazać na istotne różnice w ich architekturze oraz zastosowaniach. 
+Blender jest środowiskiem nastawionym na generowanie wysokiej jakości animacji, które wymagają wcześniejszego przeliczenia.
+Unreal Engine 5 z systemem Niagara oferuje wysoką wydajność w środowisku interaktywnym, lecz opiera 
+się na złożonej, wysokopoziomowej architekturze silnika gry. SPlisHSPlasH z kolei jest biblioteką koncentrującą 
+się na obliczeniach równoległych na procesorze w celach naukowych.
 
-Niniejsza praca stanowi implementację algorytmu DFSPH z wykorzystaniem nowoczesnego stosu technologicznego: języka Rust oraz API Vulkan. W odróżnieniu od omawianych systemów, projekt skupia się na pełnym przeniesieniu potoku obliczeniowego na procesor graficzny przy zachowaniu niskopoziomowej kontroli nad zasobami sprzętowymi. Bezpośrednie porównanie cech technicznych opisanych rozwiązań z systemem opracowanym w ramach pracy przedstawiono w tabeli~\ref{tab:solutions_comparison}. Wybór tego podejścia wynika z chęci zbadania granic wydajności i jakości, jakie można osiągnąć dzięki nowoczesnym technologiom programistycznym, oraz z potrzeby stworzenia elastycznej platformy do dalszych eksperymentów z algorytmami SPH.
+Niniejsza praca stanowi implementację algorytmu DFSPH z wykorzystaniem nowoczesnego stosu technologicznego: 
+języka Rust oraz API Vulkan. W odróżnieniu od omawianych systemów, projekt skupia się na pełnym przeniesieniu 
+potoku obliczeniowego na procesor graficzny przy zachowaniu niskopoziomowej kontroli nad zasobami sprzętowymi. 
+Bezpośrednie porównanie cech technicznych opisanych rozwiązań z systemem opracowanym w ramach pracy przedstawiono 
+w tabeli~\ref{tab:solutions_comparison}. Wybór tego podejścia wynika z chęci zbadania granic wydajności i jakości, 
+jakie można osiągnąć dzięki nowoczesnym technologiom programistycznym, oraz z potrzeby stworzenia elastycznej 
+platformy do dalszych eksperymentów z algorytmami SPH.
 
 \begin{table}[ht]
     \centering
@@ -107,11 +142,11 @@ Niniejsza praca stanowi implementację algorytmu DFSPH z wykorzystaniem nowoczes
 
 \section{Język programowania Rust}
 
-Rust jest wieloparadygmatowym językiem programowania systemowego, zaprojektowanym przez pracowników Mozilla Research i opublikowanym w pierwszej stabilnej wersji w 2015 roku \cite{rust-book}. Od 2021 roku jego rozwój nadzoruje niezależna fundacja Rust Foundation. Język został stworzony z myślą o wypełnieniu niszy zajmowanej dotychczas przez C i C++ - oferuje porównywalną wydajność obliczeniową przy jednoczesnym wyeliminowaniu całej klasy błędów wynikających z ręcznego zarządzania pamięcią.
+Rust jest wieloparadygmatowym językiem programowania systemowego, zaprojektowanym przez pracowników Mozilla Research i opublikowanym w pierwszej stabilnej wersji w 2015 roku \cite{rust-book}. Od 2021 roku jego rozwój nadzoruje niezależna fundacja Rust Foundation. Język został stworzony z myślą o wypełnieniu niszy zajmowanej dotychczas przez C i C++ --- oferuje porównywalną wydajność obliczeniową przy jednoczesnym wyeliminowaniu całej klasy błędów wynikających z ręcznego zarządzania pamięcią.
 
-Centralną innowacją języka jest system własności, który pozwala kompilatorowi weryfikować poprawność zarządzania pamięcią statycznie - bez konieczności stosowania odśmiecacza pamięci. W odróżnieniu od języków zarządzanych, takich jak Java czy C\#, programy w Rust nie ponoszą kosztów przerw wywołanych odśmiecaniem. Jednocześnie, w odróżnieniu od C i C++, kompilator gwarantuje brak niezdefiniowanych zachowań w bezpiecznym kodzie: wiszące wskaźniki, przepełnienia buforów i wyścigi danych są weryfikowane statycznie i odrzucane już na etapie kompilacji. Brak wskaźników null jest egzekwowany przez typ \texttt{Option<T>}, natomiast obsługa błędów opiera się na typie \texttt{Result<T,\,E>}, wymuszającym jawne rozpatrzenie każdego przypadku wyjątkowego. Rust nie zapewnia jednak automatycznej ochrony w blokach oznaczonych jako \texttt{unsafe} - programista przejmuje wówczas pełną odpowiedzialność za poprawność operacji niskopoziomowych, co jest niezbędne przy bezpośredniej komunikacji z API graficznym.
+Centralną innowacją języka jest system własności, który pozwala kompilatorowi weryfikować poprawność zarządzania pamięcią statycznie --- bez konieczności stosowania odśmiecacza pamięci. W odróżnieniu od języków zarządzanych, takich jak Java czy C\#, programy w Rust nie ponoszą kosztów przerw wywołanych odśmiecaniem. Jednocześnie, w odróżnieniu od C i C++, kompilator gwarantuje brak niezdefiniowanych zachowań w bezpiecznym kodzie: wiszące wskaźniki, przepełnienia buforów i wyścigi danych są weryfikowane statycznie i odrzucane już na etapie kompilacji. Brak wskaźników null jest egzekwowany przez typ \texttt{Option<T>}, natomiast obsługa błędów opiera się na typie \texttt{Result<T,\,E>}, wymuszającym jawne rozpatrzenie każdego przypadku wyjątkowego. Rust nie zapewnia jednak automatycznej ochrony w blokach oznaczonych jako \texttt{unsafe} --- programista przejmuje wówczas pełną odpowiedzialność za poprawność operacji niskopoziomowych, co jest niezbędne przy bezpośredniej komunikacji z API graficznym.
 
-Ekosystem języka Rust opiera się na wbudowanym menedżerze pakietów Cargo oraz publicznym repozytorium crates.io. Podstawową jednostką dystrybucji kodu jest \textit{crate} - pakiet kodu Rust przyjmujący formę biblioteki lub programu wykonywalnego. Repozytorium crates.io pełni rolę analogiczną do PyPI w Pythonie czy npm w JavaScript, pozwalając na deklaratywne zarządzanie zależnościami bezpośrednio w pliku konfiguracyjnym projektu, bez potrzeby instalowania zewnętrznych narzędzi. W niniejszym projekcie zastosowano szereg bibliotek uzupełniających. Zarządzanie oknem aplikacji i obsługę pętli zdarzeń zapewnia \texttt{winit} \cite{winit}. Obliczenia algebraiczne po stronie CPU, wektory i macierze przekształceń, realizuje \texttt{glam} \cite{glam}, biblioteka zoptymalizowana pod kątem instrukcji SIMD. Interfejs użytkownika do konfiguracji parametrów symulacji w czasie rzeczywistym zbudowano przy użyciu \texttt{egui} \cite{egui} z integracją \texttt{egui\_winit\_vulkano} \cite{egui-winit-vulkano}. Obsługę błędów na poziomie modułów i aplikacji upraszczają odpowiednio \texttt{thiserror} \cite{thiserror} i \texttt{anyhow} \cite{anyhow}, natomiast ujednoliconą infrastrukturę logowania dostarcza para \texttt{log} \cite{log-rs} i \texttt{simple\_logger} \cite{simple-logger}.
+Ekosystem języka Rust opiera się na wbudowanym menedżerze pakietów Cargo oraz publicznym repozytorium crates.io. Podstawową jednostką dystrybucji kodu jest \textit{crate} --- pakiet kodu Rust przyjmujący formę biblioteki lub programu wykonywalnego. Repozytorium crates.io pełni rolę analogiczną do PyPI w Pythonie czy npm w JavaScript, pozwalając na deklaratywne zarządzanie zależnościami bezpośrednio w pliku konfiguracyjnym projektu, bez potrzeby instalowania zewnętrznych narzędzi. W niniejszym projekcie zastosowano szereg bibliotek uzupełniających. Zarządzanie oknem aplikacji i obsługę pętli zdarzeń zapewnia \texttt{winit} \cite{winit}. Obliczenia algebraiczne po stronie CPU, wektory i macierze przekształceń, realizuje \texttt{glam} \cite{glam}, biblioteka zoptymalizowana pod kątem instrukcji SIMD. Interfejs użytkownika do konfiguracji parametrów symulacji w czasie rzeczywistym zbudowano przy użyciu \texttt{egui} \cite{egui} z integracją \texttt{egui\_winit\_vulkano} \cite{egui-winit-vulkano}. Obsługę błędów na poziomie modułów i aplikacji upraszczają odpowiednio \texttt{thiserror} \cite{thiserror} i \texttt{anyhow} \cite{anyhow}, natomiast ujednoliconą infrastrukturę logowania dostarcza para \texttt{log} \cite{log-rs} i \texttt{simple\_logger} \cite{simple-logger}.
 
 \begin{table}[ht]
     \centering
@@ -147,7 +182,7 @@ niejawne mechanizmy zarządzania zasobami. Sterownik OpenGL pełnił rolę rozbu
 pośrednika: sam synchronizował polecenia GPU, podejmował decyzje o alokacji pamięci i 
 kompilował shadery w nieokreślonych momentach, co prowadziło do znacznego narzutu procesora głównego, 
 uniemożliwiało efektywną wielowątkowość i skutkowało nieprzewidywalnym zachowaniem w sytuacjach granicznych. 
-Bezpośrednim poprzednikiem Vulkana jest biblioteka Mantle, opracowana przez AMD we współpracy z deweloperami 
+Bezpośrednim poprzednikiem Vulkana jest biblioteka Mantle \cite{amdmantle2015}, opracowana przez AMD we współpracy z deweloperami 
 gier w 2013 roku, stanowiąca pierwszą propozycję niskopoziomowego API graficznego, która wykazała, 
 że jawne przejęcie przez programistę kontroli nad sprzętem przekłada się na mierzalne zyski wydajnościowe.
 
@@ -158,18 +193,34 @@ Rezygnacja z globalnego automatu stanów na rzecz izolowanych, niezależnych obi
 równoległe budowanie potoków poleceń w wielu wątkach bez ryzyka konfliktu stanu. 
 Ujednoliconym wzorcem inicjalizacji w API Vulkan jest wykorzystanie struktur opisowych. 
 Tworzenie dowolnego obiektu wymaga od programisty wypełnienia dedykowanej struktury konfiguracyjnej, 
-która precyzyjnie definiuje jego parametry, a następnie przekazania jej do odpowiedniej funkcji tworzącej. Podejście to, stosowane konsekwentnie w całym standardzie, sprawia, że konfiguracja systemu jest w pełni jawna. Pozwala to na precyzyjne określenie zależności między obiektami już na poziomie kodu, co eliminuje domyślne stany sterownika graficznego.
+która precyzyjnie definiuje jego parametry, a następnie przekazania jej do odpowiedniej funkcji tworzącej. 
+Podejście to, stosowane konsekwentnie w całym standardzie, sprawia, że konfiguracja systemu jest w pełni jawna. 
+Pozwala to na precyzyjne określenie zależności między obiektami już na poziomie kodu, co eliminuje domyślne stany 
+sterownika graficznego.
 
 Drugą fundamentalną cechą Vulkana jest system rozszerzeń, zaprojektowany jako integralna 
 część architektury API od pierwszej wersji specyfikacji. Rdzeń Vulkana jest celowo minimalny i stabilny: 
 obejmuje wyłącznie operacje wspólne dla wszystkich implementacji sprzętowych. 
 Wszelkie funkcjonalności specyficzne dla producenta lub nowsze możliwości renderowania 
 udostępniane są przez rozszerzenia aktywowane jawnie przy tworzeniu instancji lub urządzenia. 
-Rozszerzenia dzielą się na trzy kategorie: rozszerzenia producenta sprzętu (np.\ \texttt{VK\_NV\_*} lub 
-\texttt{VK\_AMD\_*}), rozszerzenia wieloproducentowe (\texttt{VK\_EXT\_*}) oraz rozszerzenia 
-ratyfikowane przez Khronos (\texttt{VK\_KHR\_*}), z których część jest z czasem włączana do 
-specyfikacji rdzeniowej. Podejście to umożliwia producentom sprzętu udostępnianie możliwości swoich układów 
-bez naruszania globalnej kompatybilności, pozwalając jednocześnie programiście na jawne deklarowanie 
+Rozszerzenia dzielą się na trzy kategorie: rozszerzenia producenta sprzętu (np.\ \texttt{VK\_NV\_*} lub
+\texttt{VK\_AMD\_*}), rozszerzenia wieloproducentowe (\texttt{VK\_EXT\_*}) oraz rozszerzenia
+ratyfikowane przez Khronos (\texttt{VK\_KHR\_*}).
+
+Ostatnia kategoria powstaje w~drodze konsensusu wszystkich członków organizacji Khronos~---
+AMD, NVIDIA, Intel, ARM, Google, Apple i~innych --- i~pełni dwojaką rolę.
+Po pierwsze, dostarcza krytyczne funkcjonalności obsługiwane przez wszystkie współczesne karty graficzne,
+które z~różnych powodów nie trafiły do rdzenia specyfikacji; przykładem jest \texttt{VK\_KHR\_swapchain}
+umożliwiający prezentację obrazu na ekranie systemu operacyjnego, czy \texttt{VK\_KHR\_ray\_tracing\_pipeline}
+wprowadzający sprzętowe śledzenie promieni.
+Po drugie, rozszerzenia \texttt{KHR} pełnią rolę oficjalnej ,,\textit{poczekalni}'' dla nowych technologii:
+zamiast pospiesznie modyfikować stabilny rdzeń, Khronos publikuje rozszerzenie, pozwala deweloperom
+je przetestować w~warunkach produkcyjnych, a~jeśli okaże się ono dojrzałe~--- włącza je do kolejnej
+wersji specyfikacji rdzeniowej (ang.~\textit{core specification}). Mechanizm ten był stosowany konsekwentnie 
+w~wersjach Vulkan 1.1, 1.2 i~1.3, do których przeniesiono łącznie kilkadziesiąt wcześniejszych rozszerzeń \texttt{KHR}.
+
+Podejście to umożliwia producentom sprzętu udostępnianie możliwości swoich układów
+bez naruszania globalnej kompatybilności, pozwalając jednocześnie programiście na jawne deklarowanie
 funkcjonalności wymaganych przez aplikację.
 
 \subsection{Instancja, urządzenie fizyczne i logiczne}
@@ -236,7 +287,8 @@ Relację między trzema warstwami inicjalizacyjnymi ilustruje rysunek~\ref{fig:v
 \end{tikzpicture}
 \caption{Hierarchia inicjalizacyjna Vulkana. Instancja daje dostęp do urządzeń fizycznych,
 z których jedno wybierane jest do utworzenia urządzenia logicznego \texttt{VkDevice}, będącego
-punktem zaczepu wszystkich pozostałych obiektów API. Szary węzeł oznacza niewybrany układ fizyczny.}
+punktem zaczepu wszystkich pozostałych obiektów API. Szary węzeł oznacza niewybrany układ fizyczny
+\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:vulkan_hierarchy}
 \end{figure}
 
@@ -360,7 +412,8 @@ Oba podejścia, tradycyjne i dynamiczne, zestawia rysunek~\ref{fig:vulkan_render
 \end{tikzpicture}
 \caption{Porównanie ścieżek renderowania w Vulkanie. Zacienione pola w modelu tradycyjnym
 (\texttt{VkRenderPass} i \texttt{VkFramebuffer}) są zbędne w dynamicznym renderowaniu,
-które deklaruje załączniki bezpośrednio w buforze poleceń.}
+które deklaruje załączniki bezpośrednio w buforze poleceń
+\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:vulkan_rendering_path}
 \end{figure}
 
@@ -369,8 +422,6 @@ w buforze poleceń, tuż przed poleceniami rysowania, zamiast opisywać je z wyp
 w dedykowanym obiekcie kompilowanym przez sterownik. Eliminuje to potrzebę utrzymywania
 zgodności między przejściami renderowania a potokami graficznymi i lepiej odpowiada
 architekturom, w których zestaw załączników zmienia się między krokami renderowania.
-Silnik opisany w niniejszej pracy korzysta wyłącznie z tego podejścia, omijając obiekty
-\texttt{VkRenderPass} i \texttt{VkFramebuffer}.
 
 \subsection{Zasoby: bufory, obrazy i deskryptory}
 
@@ -388,16 +439,18 @@ wewnętrznej. Jego semantykę określają flagi użycia przekazane przy tworzeni
 w jaki shadery go odczytują i zapisują. Tworzenie bufora składa się z dwóch etapów:
 najpierw tworzy się obiekt \texttt{VkBuffer} opisujący rozmiar i zamierzone użycie,
 a następnie przydziela się mu pamięć wybraną z odpowiedniego stosu. Vulkan eksponuje
-wiele stosów pamięci o różnych własnościach: pamięć \textit{device-local} rezyduje
-wyłącznie po stronie układu graficznego i oferuje najwyższą przepustowość, natomiast
-pamięć \textit{host-visible} jest dostępna do bezpośredniego zapisu przez procesor główny.
-W praktyce zarządzanie tym procesem deleguje się do biblioteki Vulkan Memory Allocator~(VMA) \cite{vma-library}, 
+wiele stosów pamięci o różnych własnościach: pamięć lokalna dla urządzenia
+(ang.~\textit{device-local}) rezyduje wyłącznie po stronie układu graficznego
+i oferuje najwyższą przepustowość, natomiast pamięć widoczna dla procesora
+(ang.~\textit{host-visible}) jest dostępna do bezpośredniego zapisu przez procesor główny.
+W praktyce zarządzanie tym procesem deleguje się do biblioteki Vulkan Memory Allocator~(VMA) \cite{vma-library},
 opracowanej przez AMD: programista deklaruje wyłącznie przeznaczenie bufora,
 a VMA dobiera właściwy stos pamięci i zarządza jego fragmentacją.
 Aby załadować dane przygotowane po stronie procesora do bufora rezydującego w pamięci
-device-local, stosuje się bufor pośredniczący (\textit{staging buffer}): tymczasowy bufor
-w pamięci host-visible, wypełniany przez CPU, którego zawartość kopiowana jest następnie
-przez rodzinę kolejek transferowych do docelowej pamięci układu graficznego.
+lokalnej dla urządzenia, stosuje się bufor pośredniczący (ang.~\textit{staging buffer}):
+tymczasowy bufor w pamięci widocznej dla procesora, wypełniany przez CPU, którego
+zawartość kopiowana jest następnie przez rodzinę kolejek transferowych do docelowej
+pamięci układu graficznego.
 
 Flagi użycia determinują dozwolone operacje na buforze i wpływają na wybór stosu pamięci
 przez VMA. Tabela~\ref{tab:buffer_types} zestawia typy buforów istotne dla niniejszej
@@ -473,7 +526,8 @@ Zależności między wymienionymi obiektami ilustruje rysunek~\ref{fig:vulkan_re
 \caption{Schemat zarządzania zasobami i powiązań deskryptorowych w Vulkanie.
 Górna warstwa przedstawia alokację zasobów przez VMA; dolna warstwa pokazuje
 mechanizm deskryptorów. Przerywane strzałki oznaczają referencje
-\texttt{VkDescriptorSet} do konkretnych buforów i widoków obrazów.}
+\texttt{VkDescriptorSet} do konkretnych buforów i widoków obrazów
+\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:vulkan_resources}
 \end{figure}
 
@@ -495,18 +549,24 @@ służący do rasteryzowanego przetwarzania geometrii, oraz potok obliczeniowy, 
 do równoległych obliczeń ogólnego przeznaczenia.
 
 Potok graficzny (\texttt{VkGraphicsPipeline}) realizuje klasyczny potok rasteryzacyjny:
-dane wierzchołkowe wchodzą do układu, przechodzą przez kolejne etapy przekształceń
-i dyskretyzacji, a wynikiem jest obraz w załączniku koloru. Składa się z etapów
+dane wierzchołkowe są wprowadzane do potoku, przechodzą przez kolejne etapy przekształceń
+i dyskretyzacji, a~wynikiem końcowym jest renderowany obraz (ang.~\textit{color attachment}). Składa się z etapów
 programowalnych, definiowanych shaderami SPIR-V, oraz etapów stałofunkcyjnych,
 konfigurowanych strukturami opisowymi przy tworzeniu potoku. Etap wejścia wierzchołków
 deklaruje format i rozmieszczenie atrybutów wierzchołkowych w buforach. Shader
 wierzchołków, wywoływany raz dla każdego wierzchołka, przekształca jego pozycję
 do przestrzeni klipu i może przepuszczać dowolne dane do kolejnych etapów. Po
-shaderze wierzchołków mogą opcjonalnie wystąpić trzy dalsze etapy programowalne:
-shader sterowania teselacją oraz shader oceny teselacji realizują wspólnie dynamiczne
-podział siatki na karcie graficznej, dodając geometrię bez udziału procesora,
-natomiast shader geometrii operuje na kompletnych prymitywach i jest w stanie emitować
-nowe wierzchołki lub zmieniać typ primitywu. Rasteryzacja przekształca prymitywy
+shaderze wierzchołków mogą opcjonalnie wystąpić trzy dalsze etapy programowalne ---
+jeśli żaden z nich nie zostanie dostarczony przy tworzeniu potoku, etap ten jest
+całkowicie pomijany i geometria trafia bezpośrednio do rasteryzatora.
+Shader sterowania teselacją określa, na ile mniejszych trójkątów należy podzielić
+każdy trójkąt wejściowy (tzw. poziom teselacji), natomiast shader oceny teselacji
+oblicza dokładne pozycje nowo wygenerowanych wierzchołków --- razem pozwalają
+dynamicznie zagęszczać siatkę bliżej kamery bez przesyłania dodatkowych danych z procesora.
+Shader geometrii z kolei operuje na kompletnych prymitywach i~może emitować nowe
+wierzchołki lub zmieniać typ prymitywu (np. zamieniać punkty w czworokąty), co pozwala
+generować geometrię pomocniczą --- taką jak sylwetki czy cząstki --- bezpośrednio
+na karcie graficznej. Rasteryzacja przekształca prymitywy
 geometryczne w dyskretne fragmenty pikseli na podstawie ich pozycji ekranowej.
 Shader fragmentów, wywoływany dla każdego wygenerowanego fragmentu, oblicza jego
 końcowy kolor. Etapy testu głębi i szablonu oraz mieszania kolorów są stałofunkcyjne,
@@ -557,7 +617,8 @@ rysunek~\ref{fig:graphics_pipeline}.
 \caption{Etapy potoku graficznego Vulkana. Etapy z przerywaną ramką są opcjonalne
 i mogą być pominięte przy tworzeniu potoku; etapy szare są stałofunkcyjne
 i konfigurowane strukturami opisowymi; etapy białe z ciągłą ramką są programowalne
-przez shadery SPIR-V.}
+przez shadery SPIR-V
+\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:graphics_pipeline}
 \end{figure}
 
@@ -574,7 +635,7 @@ przetwarzany jest przez shader wierzchołków, prymitywy podlegają rasteryzacji
 a dla każdego fragmentu wywoływany jest shader fragmentów. Polecenie dispatch, wydawane
 funkcją \texttt{vkCmdDispatch(x,\,y,\,z)}, uruchamia $x \cdot y \cdot z$ grup roboczych
 shadera obliczeniowego bez geometrii wejściowej; każda grupa składa się z tylu wątków,
-ile zdefiniowano w shaderze dyrektywą \texttt{local\_size}, a wyniki zapisywane są
+ile zdefiniowano w~shaderze dyrektywą \texttt{local\_size}, a wyniki zapisywane są
 bezpośrednio do buforów składowania lub obrazów obliczeniowych przez deskryptory.
 Przekazanie wyników dispatch do kolejnych etapów renderowania wymaga jawnego wstawienia
 bariery potoku poleceniem \texttt{vkCmdPipelineBarrier}, która gwarantuje widoczność
@@ -584,7 +645,7 @@ Ponieważ procesor i GPU pracują asynchronicznie, a kolejki mogą działać ró
 Vulkan udostępnia dwa mechanizmy synchronizacji. Semafor (\texttt{VkSemaphore})
 synchronizuje pracę między kolejkami GPU: jedna kolejka sygnalizuje semafor po
 zakończeniu przesłanego zestawu pracy, a inna deklaruje oczekiwanie na ten sygnał
-przed rozpoczęciem własnych poleceń. Ogrodzenie (\texttt{VkFence}) służy do
+przed rozpoczęciem własnych poleceń. Fence (\texttt{VkFence}) służy do
 synchronizacji między GPU a procesorem: po przesłaniu pracy do kolejki procesor
 może zablokować się wywołaniem \texttt{vkWaitForFences} do chwili, gdy GPU
 zasygnalizuje ukończenie tej partii pracy.
@@ -594,9 +655,9 @@ Powyższe mechanizmy łączą się w pętlę renderowania każdej klatki. Wywoł
 i sygnalizuje semafor dostępności obrazu. Wypełniony bufor poleceń przesyłany jest
 do kolejki graficznej z deklaracją oczekiwania na semafor dostępności i sygnalizowania
 semafora gotowości do prezentacji po zakończeniu; jednocześnie przekazywane jest
-ogrodzenie powiadamiające procesor o ukończeniu klatki. Wywołanie
+fence powiadamiający procesor o ukończeniu klatki. Wywołanie
 \texttt{vkQueuePresentKHR}, oczekujące na semafor gotowości, prezentuje obraz
-na ekranie. Procesor czeka na ogrodzenie przed ponownym użyciem zasobów danej klatki.
+na ekranie. Procesor czeka na fence przed ponownym użyciem zasobów danej klatki.
 
 Jak pokazuje powyższy opis, Vulkan wymaga jawnego zarządzania każdym aspektem
 inicjalizacji, synchronizacji i przepływu zasobów, co przekłada się na znaczną ilość
@@ -614,7 +675,7 @@ pozwalającego na wywoływanie obcych funkcji C bezpośrednio z kodu Rust.
 Mechanizm ten, zwany interfejsem funkcji zewnętrznych (ang.~\textit{Foreign Function Interface},
 \textit{FFI}), umożliwia deklarowanie w kodzie Rust sygnatur funkcji zdefiniowanych w innych
 językach, a następnie wywoływanie ich z przekazaniem kontroli do obcej biblioteki.
-Każde wywołanie przez FFI jest z definicji niebezpieczne w rozumieniu kompilatora Rust,
+Każde wywołanie przez FFI jest z definicji niebezpieczne w~rozumieniu kompilatora Rust,
 gdyż nie może on zweryfikować poprawności konwencji wywołania, czasu życia wskaźników
 ani nienaruszalności reguł własności po drugiej stronie granicy językowej.
 
@@ -636,7 +697,8 @@ Każdy obiekt Vulkana owinięty jest w typ Rust zarządzany przez licznik refere
 co przenosi gwarancje czasu życia do systemu typów: zniszczenie urządzenia logicznego
 przed zależnymi od niego buforami lub potokami staje się błędem kompilacji, a nie
 niezdefiniowanym zachowaniem w czasie wykonania. Konfiguracja zasobów odbywa się przez
-budowce Rust, które wymuszają podanie wszystkich wymaganych pól
+struktury realizujące wzorzec budowniczego (ang.~\textit{builder pattern}), 
+które wymuszają podanie wszystkich wymaganych pól
 i odrzucają niespójne kombinacje parametrów już na etapie kompilacji, eliminując
 całą klasę błędów inicjalizacyjnych, które bez takiej ochrony ujawniałyby się dopiero
 przez warstwę walidacyjną Vulkana w czasie wykonania.
@@ -650,7 +712,7 @@ trudnego do wykrycia i niedeterministycznego w objawach.
 \texttt{AutoCommandBufferBuilder} śledzi stan każdego zasobu w wewnętrznym grafie zależności
 i wstawia odpowiednie bariery automatycznie między kolejnymi operacjami rejestrowanymi
 w buforze poleceń, bez konieczności ręcznego określania etapów źródłowych i docelowych.
-W analogiczny sposób obsługiwane są semafory i ogrodzenia powiązane z łańcuchem wymiany:
+W analogiczny sposób obsługiwane są semafory i obiekty typu fence powiązane z łańcuchem wymiany:
 zależności między kolejnymi przesłaniami są wykrywane automatycznie, a semafory zarządzane
 wewnętrznie, co uwalnia programistę od ręcznego pilnowania gotowości zasobów przed
 kolejną klatką.
@@ -794,7 +856,8 @@ co zapewnia gładkie zanikanie wpływu odległych cząsteczek.
     \centering
     \includegraphics[width=0.72\textwidth]{figures/kernel_cubic_bw.png}
     \caption{Wartość $W(q)$ oraz pochodna radialna $\partial W/\partial q$ sześciennej
-    funkcji sklejanej w funkcji znormalizowanej odległości $q = r/h$.}
+    funkcji sklejanej w funkcji znormalizowanej odległości $q = r/h$
+    \newline Źródło: Opracowanie własne na podstawie \cite{koschier2020smoothed}}
     \label{fig:kernel_cubic}
 \end{figure}
 
@@ -834,7 +897,8 @@ nośnika, co ilustruje rysunek~\ref{fig:kernel_wendland}.
     \centering
     \includegraphics[width=0.72\textwidth]{figures/kernel_wendland_bw.png}
     \caption{Wartość $W(q)$ oraz pochodna radialna $\partial W/\partial q$ jądra
-    Wendlanda C2 w funkcji znormalizowanej odległości $q = r/h$.}
+    Wendlanda C2 w funkcji znormalizowanej odległości $q = r/h$
+    \newline Źródło: Opracowanie własne na podstawie \cite{wendland1995piecewise}}
     \label{fig:kernel_wendland}
 \end{figure}
 
@@ -991,15 +1055,15 @@ dla każdego kandydata. Schemat tej procedury ilustruje rysunek~\ref{fig:hashgri
 stanowią obszar przeszukiwania (w 3D odpowiada mu $3\times3\times3 = 27$ komórek).
 Przerywane kółko oznacza promień wygładzania $h$; cząsteczka zapytania zaznaczona
 jest w komórce centralnej. Jedynie cząsteczki z wyróżnionych komórek są sprawdzane
-pod kątem warunku $\|\mathbf{r}_i - \mathbf{r}_j\| < h$.}
+pod kątem warunku $\|\mathbf{r}_i - \mathbf{r}_j\| < h$
+\newline Źródło: Opracowanie własne na podstawie \cite{green2010particle}}
 \label{fig:hashgrid}
 \end{figure}
 
 Metoda zapewnia złożoność budowy $\mathcal{O}(N)$ i złożoność zapytania
 $\mathcal{O}(1)$ niezależną od liczby cząsteczek. Zakłada ona jednak z góry
 określony rozmiar tablicy haszującej i stałą domenę symulacji, co jest
-akceptowalne dla zamkniętych scen symulacyjnych. W niniejszej implementacji
-zastosowano tę metodę jako podstawowy mechanizm wyszukiwania sąsiedztwa.
+akceptowalne dla zamkniętych scen symulacyjnych.
 
 \subsection{Skompresowane listy sąsiedztwa jako alternatywa}
 
@@ -1076,7 +1140,8 @@ indeksy cząsteczek posortowane według indeksu komórki (wyznaczonego krzywą M
 środkowy wiersz pokazuje odpowiadające indeksy komórek; dolny wiersz przedstawia
 zwartą tablicę komórek przechowującą wyłącznie niepuste komórki z odniesieniem do
 pierwszej cząsteczki w posortowanej tablicy. Wyróżnione (szare) pola odpowiadają
-przykładowym komórkom 3 i 7.}
+przykładowym komórkom 3 i 7
+\newline Źródło: Opracowanie własne na podstawie \cite{band2019compressed}}
 \label{fig:cll}
 \end{figure}
 
@@ -1216,7 +1281,8 @@ cząsteczek. Sytuację tę ilustruje rysunek~\ref{fig:boundary_support}.
 \caption{Problem niepełnego sąsiedztwa przy granicy domeny. Sfera wsparcia
 cząsteczki $i$ przecina ścianę; brak sąsiadów po lewej stronie prowadzi do
 zaniżenia oszacowania gęstości i błędu gradientu ciśnienia. Cząsteczki-duchy
-(szare, przerywane) uzupełniają brakujący obszar wsparcia.}
+(szare, przerywane) uzupełniają brakujący obszar wsparcia
+\newline Źródło: Opracowanie własne na podstawie \cite{schechter2012ghost}}
 \label{fig:boundary_support}
 \end{figure}
 
@@ -1270,14 +1336,15 @@ rysunek~\ref{fig:vis_pipeline}.
   \draw[arr] (ray) -- (shd);
   \draw[arr] (shd) -- (px);
 \end{tikzpicture}
-\caption{Potok wizualizacji: od listy cząsteczek SPH do końcowego koloru piksela.}
+\caption{Potok wizualizacji: od listy cząsteczek SPH do końcowego koloru piksela
+\newline Źródło: Opracowanie własne}
 \label{fig:vis_pipeline}
 \end{figure}
 
 \subsection{Rekonstrukcja pola gęstości}
 
 Pierwszym krokiem potoku jest przekształcenie listy pozycji cząsteczek w~trójwymiarową
-teksturę wolumetryczną \cite{levoy1988volume}. Domenę symulacji dzieli się na
+teksturę wolumetryczną \cite{kaufman2005overview}. Domenę symulacji dzieli się na
 regularną siatkę wokseli o~rozdzielczości $G_x \times G_y \times G_z$, gdzie każdy
 woksel przechowuje skumulowaną gęstość wyrażoną liczbą całkowitą. Dla każdej
 cząsteczki $i$ wyznaczany jest odpowiadający jej woksel centralny $\mathbf{c}_i$,
@@ -1311,7 +1378,7 @@ raymarching \cite{quilez2008raymarching, tomczak2012gpu}: promień emitowany ze
 środka projekcji przemieszcza się równomiernymi krokami $\Delta t$ wzdłuż swojego
 kierunku, w każdym punkcie próbkując teksturę, aż wartość gęstości przekroczy próg.
 Przed rozpoczęciem marszowania wykonywany jest test przecięcia promienia
-z~prostopadłościanem AABB (\textit{Axis-Aligned Bounding Box}), czyli
+z~prostopadłościanem wyrównanym do osi (ang.~\textit{Axis-Aligned Bounding Box}, AABB), czyli
 minimalnym prostopadłościanem wyrównanym do osi układu współrzędnych,
 który szczelnie otacza domenę symulacji. Test ten, oparty na metodzie płaszczyzn
 równoległych, wyznacza w~sposób analityczny zakres
@@ -1375,12 +1442,12 @@ rysunek~\ref{fig:raymarching}.
 \caption{Schemat raymarchingu z~binarnym zawężaniem. Białe kółka to próbki poniżej
          progu gęstości (powietrze), szare kółko to pierwsza próbka powyżej progu
          (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni
-         $\mathbf{p}_s$ z~dokładnością $\Delta t / 2^8$.}
+         $\mathbf{p}_s$ z~dokładnością $\Delta t / 2^8$
+         \newline Źródło: Opracowanie własne na podstawie \cite{quilez2013advancing}}
 \label{fig:raymarching}
 \end{figure}
 
-Normalna powierzchni wyznaczana jest metodą różnic skończonych na polu gęstości
-\cite{quilez2013advancing}:
+Normalna powierzchni wyznaczana jest metodą różnic skończonych na polu gęstości~\cite{tomczak2012gpu}:
 \begin{equation}
     \mathbf{N}(\mathbf{p}) = -\,\nabla\rho(\mathbf{p}) \approx -\frac{1}{2\varepsilon}
     \begin{pmatrix}
@@ -1401,7 +1468,7 @@ ulegają absorpcji i~rozproszeniu \cite{pharr2016physically}. Poniżej omówiono
 efekty zaimplementowane w~shaderze fragmentów.
 
 \textbf{Środowisko HDRI.} Otoczenie sceny reprezentuje sferyczna mapa środowiskowa
-w~formacie równokątnym (\textit{equirectangular}), próbkowana przez osobny shader
+w~formacie równokątnym (ang.~\textit{equirectangular}), próbkowana przez osobny shader
 nieba. Każde odbicie i~załamanie na powierzchni wody próbkuje tę samą teksturę
 w~przeliczonym kierunku, zapewniając spójność oświetlenia między cieczą a~tłem.
 
@@ -1436,7 +1503,7 @@ do tylnej ściany AABB.
 \textbf{Rozproszenie podpowierzchniowe.} Część energii słonecznej nie jest
 pochłaniana, lecz wielokrotnie rozpraszana wewnątrz cieczy i~wychodzi jako miękka
 turkusowa poświata widoczna zwłaszcza w~cienkich partiach fali. Efekt modeluje się
-przybliżeniem łączącym zawiniętą dyfuzję (\textit{wrapped diffuse}) z~tylnym
+przybliżeniem łączącym zawiniętą dyfuzję (ang.~\textit{wrapped diffuse}) z~tylnym
 rozproszeniem:
 \begin{equation}
     L_{\mathrm{sss}} = c_s \cdot L_{\odot} \cdot
@@ -1448,14 +1515,15 @@ modeluje oświetlenie przechodzące przez krawędź fali, a~$\sigma_{\mathrm{bac
 \max(0,\,-\mathbf{N}{\cdot}\mathbf{L})$ odpowiada za tylne rozproszenie w~kierunku
 obserwatora.
 
-\textbf{Odbłysk spekulany GGX.} Mikrostruktury falującej powierzchni modeluje
-rozkład normalnych GGX \cite{walter2007microfacet} o~niskiej chropowatości ($\alpha = 0{,}04$):
+\textbf{Odbłysk spekularny GGX.} Mikrostruktury falującej powierzchni modeluje
+rozkład normalnych GGX \cite{walter2007microfacet} o~parametrze szerokości $\alpha = 0{,}04$:
 \begin{equation}
     D_{\mathrm{GGX}}(\mathbf{H}, \alpha) =
-    \frac{\alpha^4}{\pi\,\bigl[(\mathbf{N}{\cdot}\mathbf{H})^2(\alpha^4-1)+1\bigr]^2},
+    \frac{\alpha^2}{\pi\,\bigl[(\mathbf{N}{\cdot}\mathbf{H})^2(\alpha^2-1)+1\bigr]^2},
 \end{equation}
 gdzie $\mathbf{H} = \mathrm{normalize}(\mathbf{L} + \mathbf{V})$ jest półwektorem
-między kierunkiem światła a~wektorem widoku.
+między kierunkiem światła a~wektorem widoku, a~$\alpha$~--- parametrem szerokości
+rozkładu GGX odpowiadającym chropowatości powierzchni.
 
 \textbf{Piana i~mapowanie tonalne.} Regiony, w~których normalna jest prawie pionowa
 ($N_y \approx 1$) przy małej grubości cieczy, maskowane są kolorem pianki,

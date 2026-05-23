@@ -21,29 +21,29 @@
 \contentsline {section}{\numberline {2.2}Język programowania Rust}{21}{section.2.2}%
 \contentsline {section}{\numberline {2.3}API graficzne Vulkan}{23}{section.2.3}%
 \contentsline {subsection}{\numberline {2.3.1}Instancja, urządzenie fizyczne i logiczne}{24}{subsection.2.3.1}%
-\contentsline {subsection}{\numberline {2.3.2}Kolejki i pule poleceń}{25}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.2}Kolejki i pule poleceń}{26}{subsection.2.3.2}%
 \contentsline {subsection}{\numberline {2.3.3}Łańcuch wymiany i dynamiczne renderowanie}{26}{subsection.2.3.3}%
 \contentsline {subsection}{\numberline {2.3.4}Zasoby: bufory, obrazy i deskryptory}{28}{subsection.2.3.4}%
-\contentsline {subsection}{\numberline {2.3.5}Potok obliczeniowy i graficzny}{29}{subsection.2.3.5}%
-\contentsline {section}{\numberline {2.4}Biblioteka Vulkano}{32}{section.2.4}%
+\contentsline {subsection}{\numberline {2.3.5}Potok obliczeniowy i graficzny}{30}{subsection.2.3.5}%
+\contentsline {section}{\numberline {2.4}Biblioteka Vulkano}{33}{section.2.4}%
 \contentsline {section}{\numberline {2.5}Narzędzia programistyczne}{34}{section.2.5}%
-\contentsline {subsection}{\numberline {2.5.1}Tracy Profiler}{34}{subsection.2.5.1}%
-\contentsline {subsection}{\numberline {2.5.2}RenderDoc}{35}{subsection.2.5.2}%
+\contentsline {subsection}{\numberline {2.5.1}Tracy Profiler}{35}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}RenderDoc}{36}{subsection.2.5.2}%
 \contentsline {section}{\numberline {2.6}Wybór funkcji wygładzającej}{36}{section.2.6}%
-\contentsline {subsection}{\numberline {2.6.1}Sześcienna funkcja sklejana}{36}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.1}Sześcienna funkcja sklejana}{37}{subsection.2.6.1}%
 \contentsline {subsection}{\numberline {2.6.2}Funkcja Wendlanda C2}{37}{subsection.2.6.2}%
-\contentsline {subsection}{\numberline {2.6.3}Dobór jądra dla solvera DFSPH}{37}{subsection.2.6.3}%
-\contentsline {section}{\numberline {2.7}Wyszukiwanie sąsiedztwa cząsteczek}{39}{section.2.7}%
+\contentsline {subsection}{\numberline {2.6.3}Dobór jądra dla solvera DFSPH}{38}{subsection.2.6.3}%
+\contentsline {section}{\numberline {2.7}Wyszukiwanie sąsiedztwa cząsteczek}{40}{section.2.7}%
 \contentsline {subsection}{\numberline {2.7.1}Siatka haszująca według Simona Greena}{40}{subsection.2.7.1}%
 \contentsline {subsection}{\numberline {2.7.2}Skompresowane listy sąsiedztwa jako alternatywa}{41}{subsection.2.7.2}%
 \contentsline {section}{\numberline {2.8}Modelowanie zjawisk fizycznych}{42}{section.2.8}%
-\contentsline {subsection}{\numberline {2.8.1}Lepkość}{42}{subsection.2.8.1}%
+\contentsline {subsection}{\numberline {2.8.1}Lepkość}{43}{subsection.2.8.1}%
 \contentsline {subsection}{\numberline {2.8.2}Napięcie powierzchniowe}{43}{subsection.2.8.2}%
-\contentsline {subsection}{\numberline {2.8.3}Warunki brzegowe}{43}{subsection.2.8.3}%
-\contentsline {section}{\numberline {2.9}Potok wizualizacji}{44}{section.2.9}%
-\contentsline {subsection}{\numberline {2.9.1}Rekonstrukcja pola gęstości}{44}{subsection.2.9.1}%
-\contentsline {subsection}{\numberline {2.9.2}Raymarching izopowierzchni}{45}{subsection.2.9.2}%
-\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{46}{subsection.2.9.3}%
+\contentsline {subsection}{\numberline {2.8.3}Warunki brzegowe}{44}{subsection.2.8.3}%
+\contentsline {section}{\numberline {2.9}Potok wizualizacji}{45}{section.2.9}%
+\contentsline {subsection}{\numberline {2.9.1}Rekonstrukcja pola gęstości}{45}{subsection.2.9.1}%
+\contentsline {subsection}{\numberline {2.9.2}Raymarching izopowierzchni}{46}{subsection.2.9.2}%
+\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{47}{subsection.2.9.3}%
 \contentsline {chapter}{\numberline {3}Implementacja i oryginalne rozwiązania techniczne}{49}{chapter.3}%
 \contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{51}{chapter.4}%
 \contentsline {chapter}{Podsumowanie}{53}{chapter*.27}%

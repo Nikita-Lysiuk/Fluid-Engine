@@ -24,21 +24,17 @@ const float DENSITY_MULTIPLIER = 1.0;
 const int   MAX_STEPS          = 96;   
 const float STEP_SIZE          = 0.007;
 
-// Фізично коректний IOR морської води
 const float IOR_WATER = 1.333;
 const float IOR_AIR   = 1.0;
 
 const vec3  ABSORPTION_COEFF = vec3(0.45, 0.085, 0.025);
 
-// Scattering — колір розсіювання всередині товщі
 const vec3  SCATTER_COLOR    = vec3(0.04, 0.18, 0.28);
 const float SCATTER_STRENGTH = 0.35;
 
-// Sонце
 const vec3  SUN_DIR          = normalize(vec3(0.4, 1.0, 0.3));
 const vec3  SUN_COLOR        = vec3(1.0, 0.95, 0.85);
 
-// Foam — з'являється там де нормаль дуже "рівна" (горизонтальна поверхня з хвилями)
 const vec3  FOAM_COLOR       = vec3(0.92, 0.96, 1.0);
 
 // ============================================================

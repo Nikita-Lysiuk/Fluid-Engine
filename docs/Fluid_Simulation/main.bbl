@@ -1,5 +1,11 @@
 \begin{thebibliography}{10}
 
+\bibitem{amdmantle2015}
+{Advanced Micro Devices, Inc.}
+\newblock {\em {Mantle Programming Guide and API Reference}}.
+\newblock AMD, revision 1.0 edition, march 2015.
+\newblock Official API Specification.
+
 \bibitem{ash-rs}
 {Ash contributors}.
 \newblock Ash --- a low-level {Vulkan} bindings generator for {Rust}.
@@ -124,6 +130,11 @@ Baldur Karlsson.
 \newblock {RenderDoc} --- a stand-alone graphics debugger.
 \newblock \url{https://renderdoc.org/}.
 \newblock Dostęp: 2026.
+
+\bibitem{kaufman2005overview}
+Arie~E. Kaufman and Klaus Mueller.
+\newblock Overview of volume rendering.
+\newblock {\em The Visualization Handbook}, 7:127--174, 2005.
 
 \bibitem{rust-book}
 Steve Klabnik, Carol Nichols, and the Rust~Community.
