@@ -1,0 +1,288 @@
+\begin{thebibliography}{10}
+
+\bibitem{ash-rs}
+{Ash contributors}.
+\newblock Ash --- a low-level {Vulkan} bindings generator for {Rust}.
+\newblock \url{https://docs.rs/ash/latest/ash/}.
+\newblock Dostęp: 2026.
+
+\bibitem{band2019compressed}
+Stefan Band, Christoph Gissler, and Matthias Teschner.
+\newblock Compressed neighbour lists for {SPH}.
+\newblock {\em Computer Graphics Forum}, 39(1):206--220, 2019.
+
+\bibitem{batchelor1967introduction}
+George~K. Batchelor.
+\newblock {\em An Introduction to Fluid Dynamics}.
+\newblock Cambridge University Press, 1967.
+
+\bibitem{SPlisHSPlasH_Library}
+Jan Bender et~al.
+\newblock {SPlisHSPlasH Library}.
+
+\bibitem{bender2015divergence}
+Jan Bender and Dan Koschier.
+\newblock Divergence-free smoothed particle hydrodynamics.
+\newblock In {\em Proceedings of the 14th ACM SIGGRAPH/Eurographics Symposium
+  on Computer Animation}, 08 2015.
+
+\bibitem{blender2023}
+{Blender Foundation}.
+\newblock Blender.
+\newblock \url{https://www.blender.org}.
+\newblock Wersja 5.1, dostęp: 2026.
+
+\bibitem{blenderdocs2023}
+{Blender Foundation}.
+\newblock Blender documentation.
+\newblock
+  \url{https://docs.blender.org/manual/en/latest/physics/fluid/introduction.html#liquid-simulations}.
+\newblock Dostęp: 2026.
+
+\bibitem{brackbill1986flip}
+J.U. Brackbill and H.M. Ruppel.
+\newblock Flip: A method for adaptively zoned, particle-in-cell calculations of
+  fluid flows in two dimensions.
+\newblock {\em Journal of Computational Physics}, 65(2):314--343, 1986.
+
+\bibitem{braley2010fluid}
+Colin Braley and Adrian Sandu.
+\newblock Fluid simulation for computer graphics: A tutorial in grid based and
+  particle based methods.
+\newblock {\em Virginia Tech, Blacksburg}, 3, 2010.
+
+\bibitem{de2006reflections}
+Bram De~Greve.
+\newblock Reflections and refractions in ray tracing.
+\newblock {\em Reflections}, 1:1--23, 2006.
+
+\bibitem{egui-winit-vulkano}
+{egui\_winit\_vulkano contributors}.
+\newblock egui\_winit\_vulkano --- integration layer for egui, winit, and
+  vulkano.
+\newblock \url{https://docs.rs/egui_winit_vulkano/latest/egui_winit_vulkano/}.
+\newblock Dostęp: 2026.
+
+\bibitem{ue5fluids}
+{Epic Games}.
+\newblock Fluid simulation in {Unreal Engine 5}.
+\newblock
+  \url{https://dev.epicgames.com/documentation/en-us/unreal-engine/fluid-simulation-in-unreal-engine}.
+\newblock Dostęp: 2026.
+
+\bibitem{egui}
+Emil Ernerfeldt et~al.
+\newblock egui --- an easy-to-use immediate mode {GUI} in {Rust}.
+\newblock \url{https://docs.rs/egui/latest/egui/}.
+\newblock Dostęp: 2026.
+
+\bibitem{euler1757principes}
+Leonhard Euler.
+\newblock Principes g{\'e}n{\'e}raux du mouvement des fluides.
+\newblock {\em M{\'e}moires de l'acad{\'e}mie des sciences de Berlin}, pages
+  274--315, 1757.
+
+\bibitem{euler1761principia}
+Leonhard Euler.
+\newblock Principia motus fluidorum.
+\newblock {\em Novi Commentarii Academiae Scientiarum Petropolitanae}, pages
+  271--311, 1761.
+
+\bibitem{gingold1977smoothed}
+Robert~A Gingold and Joseph~J Monaghan.
+\newblock Smoothed particle hydrodynamics: theory and application to
+  non-spherical stars.
+\newblock {\em Monthly notices of the Royal Astronomical Society},
+  181(3):375--389, 1977.
+
+\bibitem{glam}
+{glam contributors}.
+\newblock glam --- a simple and fast linear algebra library for games and
+  graphics.
+\newblock \url{https://docs.rs/glam/latest/glam/}.
+\newblock Dostęp: 2026.
+
+\bibitem{vma-library}
+{GPUOpen, AMD}.
+\newblock {Vulkan Memory Allocator}.
+\newblock \url{https://gpuopen.com/vulkan-memory-allocator/}.
+\newblock Dostęp: 2026.
+
+\bibitem{green2010particle}
+Simon Green.
+\newblock Particle simulation using cuda.
+\newblock {\em NVIDIA whitepaper}, 6:121--128, 2010.
+
+\bibitem{harlow1965numerical}
+Francis~H Harlow and J~Eddie Welch.
+\newblock Numerical calculation of time-dependent viscous incompressible flow
+  of fluid with a free surface.
+\newblock {\em The physics of fluids}, 8(12):2182--2189, 1965.
+
+\bibitem{renderdoc}
+Baldur Karlsson.
+\newblock {RenderDoc} --- a stand-alone graphics debugger.
+\newblock \url{https://renderdoc.org/}.
+\newblock Dostęp: 2026.
+
+\bibitem{rust-book}
+Steve Klabnik, Carol Nichols, and the Rust~Community.
+\newblock {\em The Rust Programming Language}.
+\newblock No Starch Press, 2nd edition, 2025.
+\newblock Accessed: 2026-05-09.
+
+\bibitem{CompactNSearch_Library}
+Dan Koschier.
+\newblock {CompactNSearch Library}.
+
+\bibitem{koschier2020smoothed}
+Dan Koschier, Jan Bender, Barbara Solenthaler, and Matthias Teschner.
+\newblock Smoothed particle hydrodynamics techniques for the physics based
+  simulation of fluids and solids.
+\newblock {\em arXiv preprint arXiv:2009.06944}, 2020.
+
+\bibitem{lagrange1788mecanique}
+Joseph~Louis Lagrange.
+\newblock {\em M{\'e}canique analytique}.
+\newblock Desaint, 1788.
+
+\bibitem{landau1987fluid}
+Lev~Davidovich Landau and Evgenii~Mikhailovich Lifshitz.
+\newblock {\em Fluid Mechanics}, volume~6.
+\newblock Pergamon Press, 1987.
+
+\bibitem{lavrov2015density}
+Alexandre Lavrov, Paal Skjetne, Bj{\o}rnar Lund, Erik~W. Bj{\o}nnes, Finn~Olav
+  Bj{\o}rnson, Jan~Ove Busklein, T{\'e}rence Coudert, Pascal Klebert, and
+  Kjetil~Olsen Lye.
+\newblock Density-consistent initialization of {SPH} on a regular {Cartesian}
+  grid: Comparative numerical study of 10 smoothing kernels in 1, 2 and 3
+  dimensions.
+\newblock {\em Procedia IUTAM}, 18:85--95, 2015.
+
+\bibitem{levoy1988volume}
+Marc Levoy.
+\newblock Volume rendering.
+\newblock {\em IEEE Computer graphics and Applications}, 8(3):29--37, 1988.
+
+\bibitem{mclean2012continuum}
+Doug McLean.
+\newblock {\em Understanding Aerodynamics: Arguing from the Real Physics}.
+\newblock John Wiley \& Sons, 2012.
+
+\bibitem{monaghan1989problem}
+Joseph~J. Monaghan.
+\newblock On the problem of penetration in particle methods.
+\newblock {\em Journal of Computational Physics}, 82(1):1--15, 1989.
+
+\bibitem{mon92}
+Joseph~J. Monaghan.
+\newblock Smoothed particle hydrodynamics.
+\newblock {\em Annual Review of Astronomy and Astrophysics}, 30(1):543--574,
+  1992.
+
+\bibitem{morris1997modeling}
+Joseph~P. Morris, Patrick~J. Fox, and Yi~Zhu.
+\newblock Modeling low {Reynolds} number incompressible flows using {SPH}.
+\newblock {\em Journal of Computational Physics}, 136(1):214--226, 1997.
+
+\bibitem{pharr2016physically}
+Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+\newblock {\em Physically Based Rendering: From Theory to Implementation}.
+\newblock Morgan Kaufmann, 3rd edition, 2016.
+
+\bibitem{quilez2008raymarching}
+Inigo Quilez.
+\newblock Raymarching distance fields.
+\newblock {\em inigoquilez.org}, 2008.
+
+\bibitem{quilez2013advancing}
+Inigo Quilez.
+\newblock Advancing the visualization of distance fields.
+\newblock {\em inigoquilez.org}, 2013.
+
+\bibitem{reinhard2002photographic}
+Erik Reinhard, Michael Stark, Peter Shirley, and James Ferwerda.
+\newblock Photographic tone reproduction for digital images.
+\newblock In {\em Proceedings of the 29th Annual Conference on Computer
+  Graphics and Interactive Techniques}, pages 267--276, 2002.
+
+\bibitem{schechter2012ghost}
+Hagit Schechter and Robert Bridson.
+\newblock Ghost sph for animating water.
+\newblock {\em ACM Transactions on Graphics - TOG}, 31, 07 2012.
+
+\bibitem{simple-logger}
+{simple\_logger contributors}.
+\newblock simple\_logger --- a logger that prints all messages with a readable
+  output format.
+\newblock \url{https://docs.rs/simple_logger/latest/simple_logger/}.
+\newblock Dostęp: 2026.
+
+\bibitem{vulkan-spec}
+{The Khronos Group}.
+\newblock {Vulkan} specification.
+\newblock
+  \url{https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html}.
+\newblock Dostęp: 2026.
+
+\bibitem{log-rs}
+{The Rust Project Developers}.
+\newblock log --- a lightweight logging facade for {Rust}.
+\newblock \url{https://docs.rs/log/latest/log/}.
+\newblock Dostęp: 2026.
+
+\bibitem{mantaflow2021}
+Nils Thuerey and Tobias Pfaff.
+\newblock {MantaFlow}, 2018.
+\newblock \emph{http://mantaflow.com}.
+
+\bibitem{anyhow}
+David Tolnay.
+\newblock anyhow --- flexible concrete error type built on
+  \texttt{std::error::Error}.
+\newblock \url{https://docs.rs/anyhow/latest/anyhow/}.
+\newblock Dostęp: 2026.
+
+\bibitem{thiserror}
+David Tolnay.
+\newblock thiserror --- derive macro for \texttt{std::error::Error}.
+\newblock \url{https://docs.rs/thiserror/latest/thiserror/}.
+\newblock Dostęp: 2026.
+
+\bibitem{tomczak2012gpu}
+Lukasz~Jaroslaw Tomczak.
+\newblock Gpu ray marching of distance fields.
+\newblock {\em Technical University of Denmark}, 8:3, 2012.
+
+\bibitem{vulkano-rs}
+{Vulkano contributors}.
+\newblock Vulkano --- safe and rich rust wrapper around the {Vulkan} api.
+\newblock \url{https://docs.rs/vulkano/latest/vulkano/}.
+\newblock Dostęp: 2026.
+
+\bibitem{walter2007microfacet}
+Bruce Walter, Stephen~R. Marschner, Hongsong Li, and Kenneth~E. Torrance.
+\newblock Microfacet models for refraction through rough surfaces.
+\newblock In {\em Proceedings of the 18th Eurographics Conference on Rendering
+  Techniques}, pages 195--206, 2007.
+
+\bibitem{wendland1995piecewise}
+Holger Wendland.
+\newblock Piecewise polynomial, positive definite and compactly supported
+  radial functions of minimal degree.
+\newblock {\em Advances in computational Mathematics}, 4(1):389--396, 1995.
+
+\bibitem{winit}
+{winit contributors}.
+\newblock winit --- window handling library in pure {Rust}.
+\newblock \url{https://docs.rs/winit/latest/winit/}.
+\newblock Dostęp: 2026.
+
+\bibitem{tracy-profiler}
+Bartosz Wysocki.
+\newblock Tracy profiler --- a real time, nanosecond resolution frame profiler.
+\newblock \url{https://github.com/wolfpld/tracy}.
+\newblock Dostęp: 2026.
+
+\end{thebibliography}

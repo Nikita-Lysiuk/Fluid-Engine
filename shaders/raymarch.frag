@@ -21,7 +21,7 @@ layout(push_constant) uniform PC {
 const float DENSITY_THRESHOLD  = 0.01;
 const float DENSITY_OFFSET     = 300.0;
 const float DENSITY_MULTIPLIER = 1.0;
-const int   MAX_STEPS          = 96;        // менше кроків = більше FPS
+const int   MAX_STEPS          = 96;   
 const float STEP_SIZE          = 0.007;
 
 // Фізично коректний IOR морської води
@@ -74,9 +74,7 @@ float getDensity(vec3 worldPos, vec3 boxMin, vec3 boxMax) {
     return max(0.0, (mix(v0, v1, f.z) - DENSITY_OFFSET) * DENSITY_MULTIPLIER);
 }
 
-// Нормаль через центральні різниці — eps менший для чіткішої поверхні
 vec3 calcNormal(vec3 p, vec3 bMin, vec3 bMax) {
-    // Адаптивний epsilon: менший = більш деталізований, більший = більш гладкий
     float eps = 0.018;
     vec2  h   = vec2(eps, 0.0);
     return normalize(vec3(
@@ -86,7 +84,6 @@ vec3 calcNormal(vec3 p, vec3 bMin, vec3 bMax) {
                      ));
 }
 
-// Schlick Fresnel
 float fresnel(float cosTheta, float F0) {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
@@ -98,13 +95,12 @@ vec3 sampleSkybox(vec3 dir) {
     return texture(skyboxTex, uv).rgb;
 }
 
-// Thickness raymarching — без break, рахує весь шлях крізь рідину
-// Використовує великі кроки (дешево)
+
 float calcThickness(vec3 startP, vec3 dir, float tMax, vec3 bMin, vec3 bMax) {
     float thickness = 0.0;
     float dStep = 0.06;
     float t = 0.0;
-    // Обмежуємо кількість кроків щоб не вбивати FPS
+
     for (int i = 0; i < 32 && t < tMax; i++, t += dStep) {
 if (getDensity(startP + dir * t, bMin, bMax) > DENSITY_THRESHOLD)
 thickness += dStep;
@@ -112,7 +108,6 @@ thickness += dStep;
 return thickness;
 }
 
-// GGX NDF для більш фізично коректного specularu
 float ggxD(float NdotH, float roughness) {
     float a  = roughness * roughness;
     float a2 = a * a;
@@ -124,7 +119,6 @@ void main() {
     vec3 rayDir    = normalize(inWorldPos - inCameraPos);
     vec3 rayOrigin = inCameraPos;
 
-    // Bounding box з матриці моделі
     vec3 boxCenter = vec3(push.model[3]);
     vec3 boxScale  = vec3(length(push.model[0]), length(push.model[1]), length(push.model[2]));
     vec3 boxMin    = boxCenter - boxScale * 0.5;
@@ -136,7 +130,6 @@ void main() {
     float stepWorld = STEP_SIZE * max(max(boxScale.x, boxScale.y), boxScale.z);
     float tCurrent  = max(tHit.x, 0.0);
 
-    // --- Raymarching: знайти першу точку поверхні ---
     bool hit = false;
     for (int i = 0; i < MAX_STEPS; i++) {
         if (tCurrent > tHit.y) break;
@@ -148,7 +141,6 @@ void main() {
     }
     if (!hit) discard;
 
-    // --- Binary search refinement (8 ітерацій замість 4 — точніша поверхня) ---
     float t0 = tCurrent - stepWorld, t1 = tCurrent;
     for (int i = 0; i < 8; i++) {
         float m = (t0 + t1) * 0.5;
