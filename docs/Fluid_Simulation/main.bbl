@@ -57,6 +57,13 @@ Colin Braley and Adrian Sandu.
   particle based methods.
 \newblock {\em Virginia Tech, Blacksburg}, 3, 2010.
 
+\bibitem{christensen2021bitonic}
+Michael Christensen.
+\newblock Bitonic sort in {PyRTL}.
+\newblock \url{https://mdko.github.io/2021/06/17/pyrtl-bitonic-sort.html},
+  2021.
+\newblock Dostęp: 2026.
+
 \bibitem{de2006reflections}
 Bram De~Greve.
 \newblock Reflections and refractions in ray tracing.
@@ -119,11 +126,22 @@ Simon Green.
 \newblock Particle simulation using cuda.
 \newblock {\em NVIDIA whitepaper}, 6:121--128, 2010.
 
+\bibitem{harada2011introduction}
+Takahiro Harada and Lee Howes.
+\newblock Introduction to gpu radix sort.
+\newblock {\em Heterogeneous Computing with OpenCL. Morgan Kaufman}, 2011.
+
 \bibitem{harlow1965numerical}
 Francis~H Harlow and J~Eddie Welch.
 \newblock Numerical calculation of time-dependent viscous incompressible flow
   of fluid with a free surface.
 \newblock {\em The physics of fluids}, 8(12):2182--2189, 1965.
+
+\bibitem{jain2015bitonic}
+Megha Jain, Sanjay Kumar, and VK~Patle.
+\newblock Bitonic sorting algorithm: A review.
+\newblock {\em International Journal of Computer Applications}, 113(13):40--43,
+  2015.
 
 \bibitem{renderdoc}
 Baldur Karlsson.

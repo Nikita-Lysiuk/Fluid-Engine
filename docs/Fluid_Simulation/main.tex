@@ -1,6 +1,5 @@
 \documentclass[a4paper,12pt]{book}
 
-% --- Пакети з офіційного шаблону ---
 \usepackage[T1,plmath]{polski}
 \usepackage[utf8]{inputenc}
 \usepackage{fancyhdr}
@@ -14,6 +13,7 @@
             left=1.1in,right=1.1in,
             top=1.1in,bottom=1.1in]{geometry}
 \usepackage{float}
+\usepackage[section]{placeins}
 \usepackage[font=small,labelfont=bf]{caption}
 \usepackage{cite}
 \usepackage{listings}
@@ -27,7 +27,6 @@
 \usepackage[colorlinks=true]{hyperref}
 \hypersetup{allcolors=black}
 
-% --- Налаштування лістингів для Rust ---
 \lstset{
     basicstyle=\footnotesize\ttfamily,
     numbers=left,
@@ -39,7 +38,6 @@
     keepspaces,
     commentstyle=\color{red},
     keywordstyle=\color{blue},
-    % Додаємо підтримку польських символів:
     extendedchars=true,
     inputencoding=utf8,
     literate={ą}{{\k{a}}}1 {ć}{{\'c}}1 {ę}{{\k{e}}}1 {ł}{{\l}}1 {ń}{{\'n}}1 {ó}{{\'o}}1 {ś}{{\'s}}1 {ź}{{\'z}}1 {ż}{{\.z}}1
@@ -47,7 +45,6 @@
     captionpos=b
 }
 
-% --- Налаштування колонтитулів ---
 \pagestyle{fancy}
 \renewcommand{\chaptermark}[1]{\markboth{#1}{}}
 \renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
@@ -64,19 +61,15 @@
 
 \begin{document}
 
-% 1. Титульна сторінка
 \input{titlepage}
 \cleardoublepage
 
-% 2. Порожня сторінка (вимога для двостороннього друку в класі book)
 \thispagestyle{empty}
 \newpage
 
-% 3. Зміст
 \tableofcontents
 \cleardoublepage
 
-% 4. Вступ (без номера)
 \chapter*{Wstęp}
 \addcontentsline{toc}{chapter}{Wstęp}
 \chaptermark{Wstęp}
@@ -103,12 +96,10 @@
 \input{chapters/summary}
 \cleardoublepage
 
-% 7. Додатки (Appendices)
 \appendix
 \chapter{Instrukcja użytkowania}
 \chapter{Specyfikacja API}
 
-% 8. Списки об'єктів
 \cleardoublepage
 \addcontentsline{toc}{chapter}{Spis rysunków}
 \listoffigures

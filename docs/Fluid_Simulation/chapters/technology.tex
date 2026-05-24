@@ -146,7 +146,26 @@ Rust jest wieloparadygmatowym językiem programowania systemowego, zaprojektowan
 
 Centralną innowacją języka jest system własności, który pozwala kompilatorowi weryfikować poprawność zarządzania pamięcią statycznie --- bez konieczności stosowania odśmiecacza pamięci. W odróżnieniu od języków zarządzanych, takich jak Java czy C\#, programy w Rust nie ponoszą kosztów przerw wywołanych odśmiecaniem. Jednocześnie, w odróżnieniu od C i C++, kompilator gwarantuje brak niezdefiniowanych zachowań w bezpiecznym kodzie: wiszące wskaźniki, przepełnienia buforów i wyścigi danych są weryfikowane statycznie i odrzucane już na etapie kompilacji. Brak wskaźników null jest egzekwowany przez typ \texttt{Option<T>}, natomiast obsługa błędów opiera się na typie \texttt{Result<T,\,E>}, wymuszającym jawne rozpatrzenie każdego przypadku wyjątkowego. Rust nie zapewnia jednak automatycznej ochrony w blokach oznaczonych jako \texttt{unsafe} --- programista przejmuje wówczas pełną odpowiedzialność za poprawność operacji niskopoziomowych, co jest niezbędne przy bezpośredniej komunikacji z API graficznym.
 
-Ekosystem języka Rust opiera się na wbudowanym menedżerze pakietów Cargo oraz publicznym repozytorium crates.io. Podstawową jednostką dystrybucji kodu jest \textit{crate} --- pakiet kodu Rust przyjmujący formę biblioteki lub programu wykonywalnego. Repozytorium crates.io pełni rolę analogiczną do PyPI w Pythonie czy npm w JavaScript, pozwalając na deklaratywne zarządzanie zależnościami bezpośrednio w pliku konfiguracyjnym projektu, bez potrzeby instalowania zewnętrznych narzędzi. W niniejszym projekcie zastosowano szereg bibliotek uzupełniających. Zarządzanie oknem aplikacji i obsługę pętli zdarzeń zapewnia \texttt{winit} \cite{winit}. Obliczenia algebraiczne po stronie CPU, wektory i macierze przekształceń, realizuje \texttt{glam} \cite{glam}, biblioteka zoptymalizowana pod kątem instrukcji SIMD. Interfejs użytkownika do konfiguracji parametrów symulacji w czasie rzeczywistym zbudowano przy użyciu \texttt{egui} \cite{egui} z integracją \texttt{egui\_winit\_vulkano} \cite{egui-winit-vulkano}. Obsługę błędów na poziomie modułów i aplikacji upraszczają odpowiednio \texttt{thiserror} \cite{thiserror} i \texttt{anyhow} \cite{anyhow}, natomiast ujednoliconą infrastrukturę logowania dostarcza para \texttt{log} \cite{log-rs} i \texttt{simple\_logger} \cite{simple-logger}.
+W odróżnieniu od języków obiektowych Rust nie posiada klas --- dane
+i zachowanie są rozdzielone: struktury (ang.~\textit{structs}) przechowują
+pola, a bloki \textit{impl} definiują operujące na nich metody.
+Rolę interfejsów pełnią cechy (ang.~\textit{traits}) --- określają
+kontrakt metod, który dowolny typ może spełnić niezależnie od swojej
+wewnętrznej reprezentacji.
+
+Ekosystem języka Rust opiera się na wbudowanym menedżerze pakietów 
+Cargo oraz publicznym repozytorium crates.io. Podstawową jednostką dystrybucji
+kodu jest skrzynka (ang.~\textit{crate}) --- pakiet kodu Rust przyjmujący 
+formę biblioteki lub programu wykonywalnego. Repozytorium crates.io pełni rolę analogiczną 
+do PyPI w Pythonie czy npm w JavaScript, pozwalając na deklaratywne zarządzanie zależnościami 
+bezpośrednio w pliku konfiguracyjnym projektu, bez potrzeby instalowania zewnętrznych narzędzi. 
+W niniejszym projekcie zastosowano szereg bibliotek uzupełniających. Zarządzanie oknem aplikacji 
+i obsługę pętli zdarzeń zapewnia \texttt{winit} \cite{winit}. Obliczenia algebraiczne po stronie CPU, 
+wektory i macierze przekształceń, realizuje \texttt{glam} \cite{glam}, biblioteka zoptymalizowana pod kątem 
+instrukcji SIMD. Interfejs użytkownika do konfiguracji parametrów symulacji w czasie rzeczywistym 
+zbudowano przy użyciu \texttt{egui} \cite{egui} z integracją \texttt{egui\_winit\_vulkano} \cite{egui-winit-vulkano}. 
+Obsługę błędów na poziomie modułów i aplikacji upraszczają odpowiednio \texttt{thiserror} \cite{thiserror} i \texttt{anyhow} \cite{anyhow}, 
+natomiast ujednoliconą infrastrukturę logowania dostarcza para \texttt{log} \cite{log-rs} i \texttt{simple\_logger} \cite{simple-logger}.
 
 \begin{table}[ht]
     \centering
@@ -182,7 +201,7 @@ niejawne mechanizmy zarządzania zasobami. Sterownik OpenGL pełnił rolę rozbu
 pośrednika: sam synchronizował polecenia GPU, podejmował decyzje o alokacji pamięci i 
 kompilował shadery w nieokreślonych momentach, co prowadziło do znacznego narzutu procesora głównego, 
 uniemożliwiało efektywną wielowątkowość i skutkowało nieprzewidywalnym zachowaniem w sytuacjach granicznych. 
-Bezpośrednim poprzednikiem Vulkana jest biblioteka Mantle \cite{amdmantle2015}, opracowana przez AMD we współpracy z deweloperami 
+Bezpośrednim poprzednikiem Vulkana jest biblioteka Mantle \cite{amdmantle2015}, opracowana przez AMD we współpracy z~deweloperami 
 gier w 2013 roku, stanowiąca pierwszą propozycję niskopoziomowego API graficznego, która wykazała, 
 że jawne przejęcie przez programistę kontroli nad sprzętem przekłada się na mierzalne zyski wydajnościowe.
 
@@ -192,7 +211,7 @@ a każda operacja synchronizacji między procesorem a GPU musi być ręcznie zde
 Rezygnacja z globalnego automatu stanów na rzecz izolowanych, niezależnych obiektów umożliwia 
 równoległe budowanie potoków poleceń w wielu wątkach bez ryzyka konfliktu stanu. 
 Ujednoliconym wzorcem inicjalizacji w API Vulkan jest wykorzystanie struktur opisowych. 
-Tworzenie dowolnego obiektu wymaga od programisty wypełnienia dedykowanej struktury konfiguracyjnej, 
+Tworzenie dowolnego obiektu wymaga od programisty wypełnienia~dedykowanej struktury konfiguracyjnej, 
 która precyzyjnie definiuje jego parametry, a następnie przekazania jej do odpowiedniej funkcji tworzącej. 
 Podejście to, stosowane konsekwentnie w całym standardzie, sprawia, że konfiguracja systemu jest w pełni jawna. 
 Pozwala to na precyzyjne określenie zależności między obiektami już na poziomie kodu, co eliminuje domyślne stany 
@@ -224,6 +243,7 @@ bez naruszania globalnej kompatybilności, pozwalając jednocześnie programiśc
 funkcjonalności wymaganych przez aplikację.
 
 \subsection{Instancja, urządzenie fizyczne i logiczne}
+\label{sec:vulkan_hierarchy}
 
 \texttt{VkInstance} jest punktem wejścia do środowiska uruchomieniowego Vulkana i
 korzeniem całej hierarchii obiektów API. Jej utworzenie ładuje sterownik Vulkana
@@ -300,7 +320,7 @@ z których każda obsługuje określony zestaw operacji. Typowa karta graficzna 
 najmniej rodzinę graficzną, obsługującą rysowanie i prezentację klatek, oraz rodzinę obliczeniową, 
 przeznaczoną do obliczeń ogólnego przeznaczenia. Wiele układów udostępnia też 
 wyspecjalizowaną rodzinę transferową, zoptymalizowaną sprzętowo do kopiowania danych
-między pamięcią systemową procesora głównego a dedykowaną pamięcią karty graficznej.
+między pamięcią systemową procesora głównego a~dedykowaną pamięcią karty graficznej.
 W nomenklaturze Vulkana strona procesorowa systemu, obejmująca procesor główny i pamięć RAM,
 określana jest terminem \textit{host}, zaś strona układu graficznego wraz z jego pamięcią
 wideo terminem \textit{device}.
@@ -328,6 +348,7 @@ reprezentujący stały zestaw pracy, który nie zmienia się między klatkami, m
 zarejestrowany raz i wysyłany wielokrotnie bez ponownego budowania.
 
 \subsection{Łańcuch wymiany i dynamiczne renderowanie}
+\label{sec:vulkan_swapchain}
 
 Renderowanie w czasie rzeczywistym polega na cyklicznym generowaniu kolejnych obrazów klatki
 i przesyłaniu ich na ekran. Konieczność synchronizacji tego procesu z monitorem wynika
@@ -335,7 +356,7 @@ z fundamentalnej właściwości sprzętu wyświetlającego: monitor odświeża o
 częstotliwością, odczytując zawartość bufora wideo z pamięci karty graficznej.
 Jeśli aplikacja zapisuje nową klatkę bezpośrednio do obszaru, który monitor właśnie odczytuje,
 na ekranie pojawia się artefakt rozrywania obrazu (ang.~\textit{screen tearing}):
-górna część klatki pochodzi z poprzedniego obrazu, a dolna z aktualnie zapisywanego.
+górna część klatki pochodzi z poprzedniego obrazu, a dolna z~aktualnie zapisywanego.
 Rozwiązaniem jest oddzielenie bufora wyświetlanego od bufora roboczego i podmiana ich zawartości
 dopiero po zakończeniu cyklu odświeżania. W odróżnieniu od OpenGL, które ukrywało ten
 mechanizm za pojęciem domyślnego bufora ramki, Vulkan wymaga jawnego skonstruowania tej
@@ -545,7 +566,7 @@ Sterownik kompiluje ten bytekod do natywnych instrukcji konkretnej karty graficz
 tworzeniu potoku i scala je z parametrami etapów stałofunkcyjnych. Ponieważ ta operacja
 jest kosztowna, potoki tworzy się jednorazowo podczas inicjalizacji i wiąże w buforach
 poleceń bez ponownej kompilacji. Vulkan rozróżnia dwa typy potoków: potok graficzny,
-służący do rasteryzowanego przetwarzania geometrii, oraz potok obliczeniowy, przeznaczony
+służący do~rasteryzowanego przetwarzania geometrii, oraz potok obliczeniowy, przeznaczony
 do równoległych obliczeń ogólnego przeznaczenia.
 
 Potok graficzny (\texttt{VkGraphicsPipeline}) realizuje klasyczny potok rasteryzacyjny:
@@ -728,6 +749,7 @@ wyborem urządzenia, kolejkami i układem pamięci, którą zapewnia Vulkan.
 % ----------------------------------------------------------------
 
 \section{Narzędzia programistyczne}
+\label{sec:dev_tools}
 
 Niskopoziomowa natura Vulkana, będąca źródłem jego wydajności i elastyczności,
 pociąga za sobą istotną konsekwencję: API nie oferuje żadnych wbudowanych mechanizmów
@@ -813,14 +835,14 @@ diagnostyczną, której Vulkan celowo nie adresuje w swoim rdzeniu.
 \section{Wybór funkcji wygładzającej}
 
 Pojęcie funkcji wygładzającej i jej rola w metodzie SPH zostały wprowadzone
-w podrozdziale~\ref{subsec:kernel-interpolation}. W niniejszej sekcji przedstawiono
+w~podrozdziale~\ref{subsec:kernel-interpolation}. W niniejszej sekcji przedstawiono
 dwa konkretne jądra rozważane w ramach niniejszej implementacji wraz z ich wzorami
 analitycznymi, właściwościami oraz wykresami wartości i gradientu.
 
 \subsection{Sześcienna funkcja sklejana}
 
 Sześcienna funkcja sklejana (ang.~\textit{cubic spline kernel}) pochodzi od Monaghana
-\cite{mon92} i jest jednym z najszerzej stosowanych jąder w literaturze SPH.
+\cite{mon92} i jest jednym z najszerzej stosowanych jąder w~literaturze SPH.
 Dla trójwymiarowej przestrzeni jądro przyjmuje postać:
 
 \begin{equation}
@@ -856,7 +878,7 @@ co zapewnia gładkie zanikanie wpływu odległych cząsteczek.
     \centering
     \includegraphics[width=0.72\textwidth]{figures/kernel_cubic_bw.png}
     \caption{Wartość $W(q)$ oraz pochodna radialna $\partial W/\partial q$ sześciennej
-    funkcji sklejanej w funkcji znormalizowanej odległości $q = r/h$
+    funkcji sklejanej w~funkcji znormalizowanej odległości $q = r/h$
     \newline Źródło: Opracowanie własne na podstawie \cite{koschier2020smoothed}}
     \label{fig:kernel_cubic}
 \end{figure}
@@ -950,6 +972,7 @@ zachowaniu pełnej stabilności numerycznej gwarantowanej przez solver DFSPH.
 % ----------------------------------------------------------------
 
 \section{Wyszukiwanie sąsiedztwa cząsteczek}
+\label{sec:neighbor_search_theory}
 
 Każda cząsteczka w metodzie SPH oddziałuje wyłącznie z cząsteczkami znajdującymi się
 w odległości nie większej niż promień wygładzania $h$. Poza tym promieniem wartość
@@ -968,7 +991,7 @@ redukując złożoność zapytania do $\mathcal{O}(1)$ lub $\mathcal{O}(\log N)$
 Najszerzej stosowaną klasą takich struktur w metodzie SPH są siatki jednolite
 (ang.~\textit{uniform grids}), których rozmiar komórki dobierany jest równy
 promieniowi wygładzania $h$. Wówczas sąsiedzi danej cząsteczki mogą znajdować
-się wyłącznie w sąsiednich komórkach siatki, co w przestrzeni trójwymiarowej
+się wyłącznie w~sąsiednich komórkach siatki, co w przestrzeni trójwymiarowej
 ogranicza przeszukiwany obszar do co najwyżej $27$ komórek niezależnie od $N$.
 
 \subsection{Siatka haszująca według Simona Greena}
@@ -976,14 +999,14 @@ ogranicza przeszukiwany obszar do co najwyżej $27$ komórek niezależnie od $N$
 Podejście zaproponowane przez Simona Greena \cite{green2010particle} jest
 praktyczną realizacją idei siatki jednolitej przystosowaną do masowego
 zrównoleglenia na GPU. Przestrzeń symulacji dzielona jest na sześcienne komórki
-o boku równym $h$. Każda cząsteczka o pozycji $\mathbf{r}_i$ przypisywana jest
+o boku równym $h$. Każda cząsteczka o~pozycji $\mathbf{r}_i$ przypisywana jest
 do komórki o współrzędnych całkowitych:
 \begin{equation}
     (k,\,l,\,m) = \left\lfloor \frac{\mathbf{r}_i}{h} \right\rfloor,
 \end{equation}
 a następnie te trzy współrzędne całkowite odwzorowywane są na jeden indeks tablicy
 przez funkcję haszującą, co pozwala uniknąć jawnego przechowywania całej siatki
-w pamięci. Tablica haszująca przechowuje dla każdej komórki zakres indeksów
+w~pamięci. Tablica haszująca przechowuje dla każdej komórki zakres indeksów
 cząsteczek posortowanej tablicy cząsteczek. Budowa struktury sprowadza się do
 posortowania cząsteczek według ich indeksu komórki, co na GPU realizowane jest
 przez szybkie sortowanie radixowe \cite{green2010particle}.
@@ -1054,7 +1077,7 @@ dla każdego kandydata. Schemat tej procedury ilustruje rysunek~\ref{fig:hashgri
 \caption{Schemat wyszukiwania sąsiedztwa metodą siatki haszującej w 2D. Szare komórki
 stanowią obszar przeszukiwania (w 3D odpowiada mu $3\times3\times3 = 27$ komórek).
 Przerywane kółko oznacza promień wygładzania $h$; cząsteczka zapytania zaznaczona
-jest w komórce centralnej. Jedynie cząsteczki z wyróżnionych komórek są sprawdzane
+jest w~komórce centralnej. Jedynie cząsteczki z wyróżnionych komórek są sprawdzane
 pod kątem warunku $\|\mathbf{r}_i - \mathbf{r}_j\| < h$
 \newline Źródło: Opracowanie własne na podstawie \cite{green2010particle}}
 \label{fig:hashgrid}
@@ -1079,7 +1102,7 @@ Kluczowym elementem metody jest posortowanie cząsteczek według indeksu komórk
 wyznaczonego krzywą Mortona, przestrzenną krzywą wypełniającą odwzorowującą
 współrzędne komórki na jednowymiarowy indeks tak, by sąsiednie przestrzennie
 cząsteczki trafiały do sąsiednich pozycji w tablicy. Poprawia to lokalność danych
-w pamięci podręcznej podczas iteracji po listach sąsiedztwa, co ilustruje
+w~pamięci podręcznej podczas iteracji po listach sąsiedztwa, co ilustruje
 rysunek~\ref{fig:cll}.
 
 \begin{figure}[ht]

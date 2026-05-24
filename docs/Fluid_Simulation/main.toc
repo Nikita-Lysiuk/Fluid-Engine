@@ -1,53 +1,87 @@
-\contentsline {chapter}{Wstęp}{5}{chapter*.2}%
-\contentsline {chapter}{\numberline {1}Metodyka i podstawy teoretyczne symulacji i wizualizacji cieczy}{7}{chapter.1}%
-\contentsline {section}{\numberline {1.1}Porównanie podejścia Lagrange'owskiego i Eulerowskiego}{7}{section.1.1}%
-\contentsline {subsection}{\numberline {1.1.1}Istota podejścia Eulerowskiego}{8}{subsection.1.1.1}%
-\contentsline {subsection}{\numberline {1.1.2}Istota podejścia Lagrange'owskiego}{9}{subsection.1.1.2}%
-\contentsline {section}{\numberline {1.2}Sformułowanie matematyczne metody cząsteczkowej SPH i jej wariantu DFSPH}{10}{section.1.2}%
-\contentsline {subsection}{\numberline {1.2.1}Równania Naviera-Stokesa jako fundament teoretyczny}{10}{subsection.1.2.1}%
-\contentsline {subsection}{\numberline {1.2.2}Interpolacja jądrowa i dyskretyzacja SPH}{11}{subsection.1.2.2}%
-\contentsline {subsection}{\numberline {1.2.3}Algorytm Divergence-Free SPH (DFSPH)}{13}{subsection.1.2.3}%
-\contentsline {paragraph}{Poziom zagęszczenia.}{13}{section*.3}%
-\contentsline {paragraph}{Poziom prędkości.}{13}{section*.5}%
-\contentsline {section}{\numberline {1.3}Wizualizacja objętościowa metodą Ray Marching}{15}{section.1.3}%
-\contentsline {paragraph}{Rekonstrukcja ciągłego pola skalarnego.}{15}{section*.8}%
-\contentsline {paragraph}{Numeryczna integracja promieni.}{16}{section*.9}%
-\contentsline {chapter}{\numberline {2}Przegląd technologii i środowisko programistyczne}{17}{chapter.2}%
-\contentsline {section}{\numberline {2.1}Istniejące rozwiązania symulacji cieczy}{17}{section.2.1}%
-\contentsline {subsection}{\numberline {2.1.1}Symulacja FLIP w programie Blender}{18}{subsection.2.1.1}%
-\contentsline {subsection}{\numberline {2.1.2}Symulacja FLIP w silniku Unreal Engine 5}{18}{subsection.2.1.2}%
-\contentsline {subsection}{\numberline {2.1.3}Biblioteka SPlisHSPlasH}{19}{subsection.2.1.3}%
-\contentsline {subsection}{\numberline {2.1.4}Podsumowanie rozwiązań i kontekst projektu}{20}{subsection.2.1.4}%
-\contentsline {section}{\numberline {2.2}Język programowania Rust}{21}{section.2.2}%
-\contentsline {section}{\numberline {2.3}API graficzne Vulkan}{23}{section.2.3}%
-\contentsline {subsection}{\numberline {2.3.1}Instancja, urządzenie fizyczne i logiczne}{24}{subsection.2.3.1}%
-\contentsline {subsection}{\numberline {2.3.2}Kolejki i pule poleceń}{26}{subsection.2.3.2}%
-\contentsline {subsection}{\numberline {2.3.3}Łańcuch wymiany i dynamiczne renderowanie}{26}{subsection.2.3.3}%
-\contentsline {subsection}{\numberline {2.3.4}Zasoby: bufory, obrazy i deskryptory}{28}{subsection.2.3.4}%
-\contentsline {subsection}{\numberline {2.3.5}Potok obliczeniowy i graficzny}{30}{subsection.2.3.5}%
-\contentsline {section}{\numberline {2.4}Biblioteka Vulkano}{33}{section.2.4}%
-\contentsline {section}{\numberline {2.5}Narzędzia programistyczne}{34}{section.2.5}%
-\contentsline {subsection}{\numberline {2.5.1}Tracy Profiler}{35}{subsection.2.5.1}%
-\contentsline {subsection}{\numberline {2.5.2}RenderDoc}{36}{subsection.2.5.2}%
-\contentsline {section}{\numberline {2.6}Wybór funkcji wygładzającej}{36}{section.2.6}%
-\contentsline {subsection}{\numberline {2.6.1}Sześcienna funkcja sklejana}{37}{subsection.2.6.1}%
-\contentsline {subsection}{\numberline {2.6.2}Funkcja Wendlanda C2}{37}{subsection.2.6.2}%
-\contentsline {subsection}{\numberline {2.6.3}Dobór jądra dla solvera DFSPH}{38}{subsection.2.6.3}%
-\contentsline {section}{\numberline {2.7}Wyszukiwanie sąsiedztwa cząsteczek}{40}{section.2.7}%
-\contentsline {subsection}{\numberline {2.7.1}Siatka haszująca według Simona Greena}{40}{subsection.2.7.1}%
-\contentsline {subsection}{\numberline {2.7.2}Skompresowane listy sąsiedztwa jako alternatywa}{41}{subsection.2.7.2}%
-\contentsline {section}{\numberline {2.8}Modelowanie zjawisk fizycznych}{42}{section.2.8}%
-\contentsline {subsection}{\numberline {2.8.1}Lepkość}{43}{subsection.2.8.1}%
-\contentsline {subsection}{\numberline {2.8.2}Napięcie powierzchniowe}{43}{subsection.2.8.2}%
-\contentsline {subsection}{\numberline {2.8.3}Warunki brzegowe}{44}{subsection.2.8.3}%
-\contentsline {section}{\numberline {2.9}Potok wizualizacji}{45}{section.2.9}%
-\contentsline {subsection}{\numberline {2.9.1}Rekonstrukcja pola gęstości}{45}{subsection.2.9.1}%
-\contentsline {subsection}{\numberline {2.9.2}Raymarching izopowierzchni}{46}{subsection.2.9.2}%
-\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{47}{subsection.2.9.3}%
-\contentsline {chapter}{\numberline {3}Implementacja i oryginalne rozwiązania techniczne}{49}{chapter.3}%
-\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{51}{chapter.4}%
-\contentsline {chapter}{Podsumowanie}{53}{chapter*.27}%
-\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{55}{appendix.A}%
-\contentsline {chapter}{\numberline {B}Specyfikacja API}{57}{appendix.B}%
-\contentsline {chapter}{Spis rysunków}{59}{appendix.B}%
-\contentsline {chapter}{Bibliografia}{61}{appendix*.28}%
+\contentsline {chapter}{Wstęp}{7}{chapter*.2}%
+\contentsline {chapter}{\numberline {1}Metodyka i podstawy teoretyczne symulacji i wizualizacji cieczy}{9}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Porównanie podejścia Lagrange'owskiego i Eulerowskiego}{9}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Istota podejścia Eulerowskiego}{10}{subsection.1.1.1}%
+\contentsline {subsection}{\numberline {1.1.2}Istota podejścia Lagrange'owskiego}{11}{subsection.1.1.2}%
+\contentsline {section}{\numberline {1.2}Sformułowanie matematyczne metody cząsteczkowej SPH i jej wariantu DFSPH}{12}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}Równania Naviera-Stokesa jako fundament teoretyczny}{12}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Interpolacja jądrowa i dyskretyzacja SPH}{13}{subsection.1.2.2}%
+\contentsline {subsection}{\numberline {1.2.3}Algorytm Divergence-Free SPH (DFSPH)}{15}{subsection.1.2.3}%
+\contentsline {paragraph}{Poziom zagęszczenia.}{15}{section*.3}%
+\contentsline {paragraph}{Poziom prędkości.}{15}{section*.5}%
+\contentsline {section}{\numberline {1.3}Wizualizacja objętościowa metodą Ray Marching}{17}{section.1.3}%
+\contentsline {paragraph}{Rekonstrukcja ciągłego pola skalarnego.}{17}{section*.8}%
+\contentsline {paragraph}{Numeryczna integracja promieni.}{18}{section*.9}%
+\contentsline {chapter}{\numberline {2}Przegląd technologii i środowisko programistyczne}{19}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Istniejące rozwiązania symulacji cieczy}{19}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Symulacja FLIP w programie Blender}{20}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Symulacja FLIP w silniku Unreal Engine 5}{20}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}Biblioteka SPlisHSPlasH}{21}{subsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.1.4}Podsumowanie rozwiązań i kontekst projektu}{22}{subsection.2.1.4}%
+\contentsline {section}{\numberline {2.2}Język programowania Rust}{23}{section.2.2}%
+\contentsline {section}{\numberline {2.3}API graficzne Vulkan}{25}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Instancja, urządzenie fizyczne i logiczne}{26}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Kolejki i pule poleceń}{27}{subsection.2.3.2}%
+\contentsline {subsection}{\numberline {2.3.3}Łańcuch wymiany i dynamiczne renderowanie}{29}{subsection.2.3.3}%
+\contentsline {subsection}{\numberline {2.3.4}Zasoby: bufory, obrazy i deskryptory}{30}{subsection.2.3.4}%
+\contentsline {subsection}{\numberline {2.3.5}Potok obliczeniowy i graficzny}{32}{subsection.2.3.5}%
+\contentsline {section}{\numberline {2.4}Biblioteka Vulkano}{35}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Narzędzia programistyczne}{37}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Tracy Profiler}{37}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}RenderDoc}{38}{subsection.2.5.2}%
+\contentsline {section}{\numberline {2.6}Wybór funkcji wygładzającej}{39}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}Sześcienna funkcja sklejana}{39}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}Funkcja Wendlanda C2}{39}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.3}Dobór jądra dla solvera DFSPH}{40}{subsection.2.6.3}%
+\contentsline {section}{\numberline {2.7}Wyszukiwanie sąsiedztwa cząsteczek}{42}{section.2.7}%
+\contentsline {subsection}{\numberline {2.7.1}Siatka haszująca według Simona Greena}{43}{subsection.2.7.1}%
+\contentsline {subsection}{\numberline {2.7.2}Skompresowane listy sąsiedztwa jako alternatywa}{44}{subsection.2.7.2}%
+\contentsline {section}{\numberline {2.8}Modelowanie zjawisk fizycznych}{45}{section.2.8}%
+\contentsline {subsection}{\numberline {2.8.1}Lepkość}{45}{subsection.2.8.1}%
+\contentsline {subsection}{\numberline {2.8.2}Napięcie powierzchniowe}{46}{subsection.2.8.2}%
+\contentsline {subsection}{\numberline {2.8.3}Warunki brzegowe}{46}{subsection.2.8.3}%
+\contentsline {section}{\numberline {2.9}Potok wizualizacji}{47}{section.2.9}%
+\contentsline {subsection}{\numberline {2.9.1}Rekonstrukcja pola gęstości}{48}{subsection.2.9.1}%
+\contentsline {subsection}{\numberline {2.9.2}Raymarching izopowierzchni}{48}{subsection.2.9.2}%
+\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{49}{subsection.2.9.3}%
+\contentsline {chapter}{\numberline {3}Implementacja i oryginalne rozwiązania techniczne}{51}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Założenia projektowe}{52}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Architektura systemu}{53}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Warstwa aplikacji}{55}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Zarządzanie oknem}{55}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Kamera}{56}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Scena i parametry symulacji}{58}{subsection.3.3.3}%
+\contentsline {section}{\numberline {3.4}Inicjalizacja GPU z Vulkano}{59}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Kontekst Vulkan}{59}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Wzorzec ComputeStep}{60}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Deskryptory i synchronizacja}{61}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Struktury danych cząstek}{63}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Organizacja danych: AOS i SOA}{63}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Bufory cząstek na GPU}{64}{subsection.3.5.2}%
+\contentsline {section}{\numberline {3.6}Wyszukiwanie sąsiadów}{65}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Haszowanie przestrzenne}{65}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Potok wyszukiwania}{66}{subsection.3.6.2}%
+\contentsline {section}{\numberline {3.7}Sortowanie na GPU}{67}{section.3.7}%
+\contentsline {subsection}{\numberline {3.7.1}Bitonic Sort}{67}{subsection.3.7.1}%
+\contentsline {subsection}{\numberline {3.7.2}Radix Sort}{68}{subsection.3.7.2}%
+\contentsline {subsection}{\numberline {3.7.3}Porównanie algorytmów}{71}{subsection.3.7.3}%
+\contentsline {section}{\numberline {3.8}Solver DFSPH}{71}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{71}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{71}{subsection.3.8.2}%
+\contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{71}{subsection.3.8.3}%
+\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{71}{subsection.3.8.4}%
+\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{71}{subsection.3.8.5}%
+\contentsline {section}{\numberline {3.9}Siły fizyczne}{71}{section.3.9}%
+\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{71}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{71}{subsection.3.9.2}%
+\contentsline {section}{\numberline {3.10}Wizualizacja}{71}{section.3.10}%
+\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{71}{subsection.3.10.1}%
+\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{71}{subsection.3.10.2}%
+\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{71}{subsection.3.10.3}%
+\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{71}{subsection.3.10.4}%
+\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{73}{chapter.4}%
+\contentsline {chapter}{Podsumowanie}{75}{chapter*.38}%
+\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{77}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Specyfikacja API}{79}{appendix.B}%
+\contentsline {chapter}{Spis rysunków}{81}{appendix.B}%
+\contentsline {chapter}{Bibliografia}{85}{appendix*.39}%
