@@ -33,6 +33,7 @@
 \citation{bender2015divergence}
 \citation{bender2015divergence}
 \@writefile{toc}{\contentsline {subsection}{\numberline {1.2.3}Algorytm Divergence-Free SPH (DFSPH)}{15}{subsection.1.2.3}\protected@file@percent }
+\newlabel{subsec:dfsph}{{1.2.3}{15}{Algorytm Divergence-Free SPH (DFSPH)}{subsection.1.2.3}{}}
 \@writefile{toc}{\contentsline {paragraph}{Poziom zagęszczenia.}{15}{section*.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Poziom prędkości.}{15}{section*.5}\protected@file@percent }
 \citation{bender2015divergence}
@@ -289,46 +290,61 @@
 \citation{harada2011introduction}
 \@writefile{lof}{\contentsline {figure}{\numberline {3.4}{\ignorespaces Przepływ danych w jednym przebiegu sortowania radix. Shadery zliczania i reorganizacji uruchamiane są z $m = \lceil N/2048\rceil $ grupami roboczymi; skan prefiksowy zawsze w pojedynczej grupie roboczej (dispatch $[1,1,1]$) \newline  Źródło: Opracowanie własne na podstawie~\cite  {harada2011introduction}}}{69}{figure.caption.37}\protected@file@percent }
 \newlabel{fig:radix_one_pass}{{3.4}{69}{Przepływ danych w jednym przebiegu sortowania radix. Shadery zliczania i reorganizacji uruchamiane są z $m = \lceil N/2048\rceil $ grupami roboczymi; skan prefiksowy zawsze w pojedynczej grupie roboczej (dispatch $[1,1,1]$) \newline Źródło: Opracowanie własne na podstawie~\cite {harada2011introduction}}{figure.caption.37}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.7.3}Porównanie algorytmów}{71}{subsection.3.7.3}\protected@file@percent }
-\newlabel{subsec:sort_comparison}{{3.7.3}{71}{Porównanie algorytmów}{subsection.3.7.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.8}Solver DFSPH}{71}{section.3.8}\protected@file@percent }
-\newlabel{sec:dfsph}{{3.8}{71}{Solver DFSPH}{section.3.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{71}{subsection.3.8.1}\protected@file@percent }
-\newlabel{subsec:substep_loop}{{3.8.1}{71}{Pętla substepów}{subsection.3.8.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{71}{subsection.3.8.2}\protected@file@percent }
-\newlabel{subsec:density}{{3.8.2}{71}{Obliczanie gęstości}{subsection.3.8.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{71}{subsection.3.8.3}\protected@file@percent }
-\newlabel{subsec:density_correction}{{3.8.3}{71}{Korekcja gęstości}{subsection.3.8.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{71}{subsection.3.8.4}\protected@file@percent }
-\newlabel{subsec:divergence_correction}{{3.8.4}{71}{Korekcja dywergencji}{subsection.3.8.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{71}{subsection.3.8.5}\protected@file@percent }
-\newlabel{subsec:cfl}{{3.8.5}{71}{Warunek CFL i dobór \(\Delta t\)}{subsection.3.8.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.9}Siły fizyczne}{71}{section.3.9}\protected@file@percent }
-\newlabel{sec:forces}{{3.9}{71}{Siły fizyczne}{section.3.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{71}{subsection.3.9.1}\protected@file@percent }
-\newlabel{subsec:xsph}{{3.9.1}{71}{Lepkość XSPH}{subsection.3.9.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{71}{subsection.3.9.2}\protected@file@percent }
-\newlabel{subsec:collision}{{3.9.2}{71}{Obsługa kolizji}{subsection.3.9.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.10}Wizualizacja}{71}{section.3.10}\protected@file@percent }
-\newlabel{sec:visualization}{{3.10}{71}{Wizualizacja}{section.3.10}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{71}{subsection.3.10.1}\protected@file@percent }
-\newlabel{subsec:density_splat}{{3.10.1}{71}{Splatowanie gęstości do tekstury 3D}{subsection.3.10.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{71}{subsection.3.10.2}\protected@file@percent }
-\newlabel{subsec:raymarching}{{3.10.2}{71}{Ray Marching}{subsection.3.10.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{71}{subsection.3.10.3}\protected@file@percent }
-\newlabel{subsec:shading}{{3.10.3}{71}{Model oświetlenia}{subsection.3.10.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{71}{subsection.3.10.4}\protected@file@percent }
-\newlabel{subsec:hdri}{{3.10.4}{71}{Środowisko HDRI}{subsection.3.10.4}{}}
-\@writefile{toc}{\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{73}{chapter.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7.3}Porównanie algorytmów}{70}{subsection.3.7.3}\protected@file@percent }
+\newlabel{subsec:sort_comparison}{{3.7.3}{70}{Porównanie algorytmów}{subsection.3.7.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3.8}{\ignorespaces Porównanie własności sortowania bitonicznego i radix}}{71}{table.caption.38}\protected@file@percent }
+\newlabel{tab:sort_comparison}{{3.8}{71}{Porównanie własności sortowania bitonicznego i radix}{table.caption.38}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.5}{\ignorespaces Czas sortowania bufora \texttt  {grid\_entries} jako funkcja liczby elementów $N$, w skali logarytmicznej na obu osiach. Punkty odpowiadają medianie z piętnastu przebiegów dla danego $N$ \newline  Źródło: Opracowanie własne}}{71}{figure.caption.39}\protected@file@percent }
+\newlabel{fig:sort_benchmark}{{3.5}{71}{Czas sortowania bufora \texttt {grid\_entries} jako funkcja liczby elementów $N$, w skali logarytmicznej na obu osiach. Punkty odpowiadają medianie z piętnastu przebiegów dla danego $N$ \newline Źródło: Opracowanie własne}{figure.caption.39}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.6}{\ignorespaces Profil Tracy dla wariantu z sortowaniem bitonicznym, $N=25\,000$ cząstek. Wiersz \texttt  {neighbor\_search\_post\_integrate} pokazuje średni czas $3{,}64$~ms na wywołanie \newline  Źródło: Opracowanie własne}}{72}{figure.caption.40}\protected@file@percent }
+\newlabel{fig:tracy_bitonic}{{3.6}{72}{Profil Tracy dla wariantu z sortowaniem bitonicznym, $N=25\,000$ cząstek. Wiersz \texttt {neighbor\_search\_post\_integrate} pokazuje średni czas $3{,}64$~ms na wywołanie \newline Źródło: Opracowanie własne}{figure.caption.40}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.7}{\ignorespaces Profil Tracy dla wariantu z sortowaniem radix w tym samym scenariuszu. Średni czas tego samego zakresu spada do $616{,}3$~µs \newline  Źródło: Opracowanie własne}}{73}{figure.caption.41}\protected@file@percent }
+\newlabel{fig:tracy_radix}{{3.7}{73}{Profil Tracy dla wariantu z sortowaniem radix w tym samym scenariuszu. Średni czas tego samego zakresu spada do $616{,}3$~µs \newline Źródło: Opracowanie własne}{figure.caption.41}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.8}Solver DFSPH}{73}{section.3.8}\protected@file@percent }
+\newlabel{sec:dfsph}{{3.8}{73}{Solver DFSPH}{section.3.8}{}}
+\@writefile{loa}{\contentsline {algocf}{\numberline {3.2}{\ignorespaces Wspólny wzorzec iteracji po sąsiadach w shaderach SPH}}{74}{algocf.3.2}\protected@file@percent }
+\newlabel{alg:neighbor_iter}{{3.2}{74}{Solver DFSPH}{algocf.3.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3.9}{\ignorespaces Odwzorowanie wielkości teoretycznych DFSPH na bufory GPU}}{75}{table.caption.43}\protected@file@percent }
+\newlabel{tab:dfsph_variable_mapping}{{3.9}{75}{Odwzorowanie wielkości teoretycznych DFSPH na bufory GPU}{table.caption.43}{}}
+\citation{bender2015divergence}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{76}{subsection.3.8.1}\protected@file@percent }
+\newlabel{subsec:substep_loop}{{3.8.1}{76}{Pętla substepów}{subsection.3.8.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{76}{subsection.3.8.2}\protected@file@percent }
+\newlabel{subsec:density}{{3.8.2}{76}{Obliczanie gęstości}{subsection.3.8.2}{}}
+\newlabel{lst:density_alpha}{{3.4}{76}{Szader \texttt {density\_and\_alpha.comp} --- logika akumulacji}{lstlisting.3.4}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3.4}{\ignorespaces Szader \texttt  {density\_and\_alpha.comp} --- logika akumulacji}}{76}{lstlisting.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{77}{subsection.3.8.3}\protected@file@percent }
+\newlabel{subsec:density_correction}{{3.8.3}{77}{Korekcja gęstości}{subsection.3.8.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{77}{subsection.3.8.4}\protected@file@percent }
+\newlabel{subsec:divergence_correction}{{3.8.4}{77}{Korekcja dywergencji}{subsection.3.8.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{77}{subsection.3.8.5}\protected@file@percent }
+\newlabel{subsec:cfl}{{3.8.5}{77}{Warunek CFL i dobór \(\Delta t\)}{subsection.3.8.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.9}Siły fizyczne}{77}{section.3.9}\protected@file@percent }
+\newlabel{sec:forces}{{3.9}{77}{Siły fizyczne}{section.3.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{77}{subsection.3.9.1}\protected@file@percent }
+\newlabel{subsec:xsph}{{3.9.1}{77}{Lepkość XSPH}{subsection.3.9.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{77}{subsection.3.9.2}\protected@file@percent }
+\newlabel{subsec:collision}{{3.9.2}{77}{Obsługa kolizji}{subsection.3.9.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.10}Wizualizacja}{77}{section.3.10}\protected@file@percent }
+\newlabel{sec:visualization}{{3.10}{77}{Wizualizacja}{section.3.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{77}{subsection.3.10.1}\protected@file@percent }
+\newlabel{subsec:density_splat}{{3.10.1}{77}{Splatowanie gęstości do tekstury 3D}{subsection.3.10.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{77}{subsection.3.10.2}\protected@file@percent }
+\newlabel{subsec:raymarching}{{3.10.2}{77}{Ray Marching}{subsection.3.10.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{77}{subsection.3.10.3}\protected@file@percent }
+\newlabel{subsec:shading}{{3.10.3}{77}{Model oświetlenia}{subsection.3.10.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{77}{subsection.3.10.4}\protected@file@percent }
+\newlabel{subsec:hdri}{{3.10.4}{77}{Środowisko HDRI}{subsection.3.10.4}{}}
+\@writefile{toc}{\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{79}{chapter.4}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
 \@writefile{loa}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {chapter}{Podsumowanie}{75}{chapter*.38}\protected@file@percent }
-\@writefile{toc}{\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{77}{appendix.A}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{Podsumowanie}{81}{chapter*.44}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{83}{appendix.A}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
 \@writefile{loa}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {chapter}{\numberline {B}Specyfikacja API}{79}{appendix.B}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {B}Specyfikacja API}{85}{appendix.B}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
 \@writefile{loa}{\addvspace {10\p@ }}
@@ -339,7 +355,7 @@
 \citation{vulkan-spec}
 \citation{vulkan-spec}
 \citation{vulkan-spec}
-\@writefile{toc}{\contentsline {chapter}{Spis rysunków}{81}{appendix.B}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{Spis rysunków}{87}{appendix.B}\protected@file@percent }
 \citation{koschier2020smoothed}
 \citation{wendland1995piecewise}
 \citation{green2010particle}
@@ -361,7 +377,7 @@
 \bibcite{braley2010fluid}{10}
 \bibcite{christensen2021bitonic}{11}
 \bibcite{de2006reflections}{12}
-\@writefile{toc}{\contentsline {chapter}{Bibliografia}{85}{appendix*.39}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{Bibliografia}{91}{appendix*.45}\protected@file@percent }
 \bibcite{egui-winit-vulkano}{13}
 \bibcite{ue5fluids}{14}
 \bibcite{egui}{15}
@@ -404,4 +420,4 @@
 \bibcite{wendland1995piecewise}{52}
 \bibcite{winit}{53}
 \bibcite{tracy-profiler}{54}
-\gdef \@abspage@last{89}
+\gdef \@abspage@last{95}

@@ -19,6 +19,9 @@
 \contentsline {figure}{\numberline {3.2}{\ignorespaces Czterostopniowy potok wyszukiwania sąsiadów}}{66}{figure.caption.35}%
 \contentsline {figure}{\numberline {3.3}{\ignorespaces Sieć sortowania bitonicznego dla $N=16$: dziesięć przebiegów pogrupowanych w cztery zewnętrzne etapy ($k=1,2,3,4$). Każdy wiersz odpowiada jednemu elementowi, każda pionowa kreska --- komparatorowi obsługiwanemu przez osobny wątek GPU; zagnieżdżone prostokąty zaznaczają granice kolejnych etapów zewnętrznych~\cite {christensen2021bitonic}}}{68}{figure.caption.36}%
 \contentsline {figure}{\numberline {3.4}{\ignorespaces Przepływ danych w jednym przebiegu sortowania radix. Shadery zliczania i reorganizacji uruchamiane są z $m = \lceil N/2048\rceil $ grupami roboczymi; skan prefiksowy zawsze w pojedynczej grupie roboczej (dispatch $[1,1,1]$) \newline Źródło: Opracowanie własne na podstawie~\cite {harada2011introduction}}}{69}{figure.caption.37}%
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Czas sortowania bufora \texttt {grid\_entries} jako funkcja liczby elementów $N$, w skali logarytmicznej na obu osiach. Punkty odpowiadają medianie z piętnastu przebiegów dla danego $N$ \newline Źródło: Opracowanie własne}}{71}{figure.caption.39}%
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Profil Tracy dla wariantu z sortowaniem bitonicznym, $N=25\,000$ cząstek. Wiersz \texttt {neighbor\_search\_post\_integrate} pokazuje średni czas $3{,}64$~ms na wywołanie \newline Źródło: Opracowanie własne}}{72}{figure.caption.40}%
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Profil Tracy dla wariantu z sortowaniem radix w tym samym scenariuszu. Średni czas tego samego zakresu spada do $616{,}3$~µs \newline Źródło: Opracowanie własne}}{73}{figure.caption.41}%
 \addvspace {10\p@ }
 \addvspace {10\p@ }
 \addvspace {10\p@ }

@@ -663,8 +663,9 @@ i wykorzystuje do regulacji kroku czasowego CFL.
 \label{sec:neighbor_search}
 
 Złożoność naiwnego wyszukiwania par w metodzie SPH oraz wynikające z niej
-ograniczenia omówiono w podrozdziale~\ref{sec:neighbor_search_theory}; 
-Tutaj jest opis implementacji, która umożliwia efektywne wyszukiwanie sąsiadów.
+ograniczenia omówiono w podrozdziale~\ref{sec:neighbor_search_theory};
+niniejsza sekcja przedstawia implementację rozwiązania, które umożliwia
+efektywne wyszukiwanie sąsiadów w czasie stałym.
 Zastosowane rozwiązanie opiera się na technice haszowania przestrzennego
 opisanej przez Greena~\cite{green2010particle} i zrealizowanej jako
 czterostopniowy potok shaderów obliczeniowych, który przekształca nieuporządkowany
@@ -940,26 +941,319 @@ bitonicznego stają się odczuwalne.
 
 \subsection{Porównanie algorytmów}
 \label{subsec:sort_comparison}
-% TODO: decision table (complexity / branch divergence / memory passes / best N range)
-%       benchmark graph from sort_benchmark.csv (Bitonic vs Radix, N = 1k..200k)
-%       final verdict
+
+Mając zaimplementowane oba algorytmy sortowania, można je porównać
+zarówno pod kątem właściwości strukturalnych, jak i rzeczywistej wydajności
+na GPU. Tabela~\ref{tab:sort_comparison} zestawia najważniejsze cechy obu
+metod, podkreślając te różnice, które bezpośrednio wpływają na koszt
+wykonania w potoku obliczeniowym.
+
+\begin{table}[htbp]
+\centering
+\caption{Porównanie własności sortowania bitonicznego i radix}
+\label{tab:sort_comparison}
+\begin{tabular}{p{4.5cm}p{4.5cm}p{4.5cm}}
+\toprule
+\textbf{Cecha} & \textbf{Bitonic sort} & \textbf{Radix sort} \\
+\midrule
+Złożoność czasowa & $O(N \log^2 N)$ & $O(kN)$, $k=4$ \\[3pt]
+Liczba dispatchów dla $N=2^{15}$ & 120 & 12 \\[3pt]
+Rozbieżność wątków & Zerowa & Zerowa \\[3pt]
+Pamięć pomocnicza & Brak (sort. w miejscu) & Bufor \texttt{entries\_tmp} ($8N$~B) i bufor liczników \\[3pt]
+Stabilność sortowania & Niestabilna & Stabilna \\[3pt]
+Wymóg na $N$ & Potęga dwójki & Dowolne \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bezpośredni pomiar czasu sortowania w funkcji liczby elementów $N$
+przeprowadzono w środowisku testowym opartym na bezokienkowym kontekście
+Vulkan, z buforem wypełnianym pseudolosowymi kluczami
+przed każdym uruchomieniem. Czas dla każdego punktu pomiaru wyznaczono jako
+medianę z piętnastu niezależnych przebiegów, poprzedzonych trzema przebiegami
+rozgrzewkowymi pokrywającymi koszt kompilacji shaderów przez sterownik.
+Wyniki, dla $N$ rosnącego od $2^{10}$ do $2^{22}$, przedstawia
+rysunek~\ref{fig:sort_benchmark}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/sort_benchmark.png}
+\caption{Czas sortowania bufora \texttt{grid\_entries} jako funkcja liczby
+elementów $N$, w skali logarytmicznej na obu osiach. Punkty odpowiadają
+medianie z piętnastu przebiegów dla danego $N$
+\newline Źródło: Opracowanie własne}
+\label{fig:sort_benchmark}
+\end{figure}
+
+Dla małej liczby elementów ($N \lesssim 2^{18}$) sortowanie bitoniczne jest
+szybsze mimo asymptotycznie gorszej złożoności. Wynika to z bardzo niskiego
+stałego narzutu pojedynczego komparatora: każdy przebieg bitoniczny składa się
+wyłącznie z odczytu pary elementów, porównania i warunkowej zamiany, podczas
+gdy każdy przebieg radix wymaga trzech kolejnych dispatchów ze wzajemną
+synchronizacją barierami pamięci. Przy $N \le 2^{14}$ cała praca obliczeniowa
+sortowania mieści się w czasie porównywalnym z kosztem wprowadzenia poleceń
+do kolejki GPU --- pomiar jest zdominowany przez ten stały narzut, a różnica
+między algorytmami pochodzi głównie z liczby dispatchów składowych.
+
+Punkt równowagi obserwuje się między $N = 2^{18}$ a $N = 2^{19}$. Powyżej tego
+progu logarytmiczny czynnik bitonicznego $O(N \log^2 N)$ zaczyna dominować nad
+stałą liczbą dwunastu dispatchów radix. Dla $N = 2^{22}$ (ponad cztery miliony
+elementów) sortowanie radix jest niemal trzykrotnie szybsze: $30{,}5$~ms
+względem $82{,}6$~ms dla bitonicznego.
+
+Pomiar wyizolowanego sortowania nie odzwierciedla jednak w pełni zachowania
+algorytmu w pełnym potoku obliczeniowym, w którym dispatche sortowania są
+przeplatane innymi etapami solvera DFSPH wraz z wymaganymi między nimi
+barierami pamięci. Profil Tracy zarejestrowany dla symulacji z 25\,000 cząstek
+(rysunki~\ref{fig:tracy_bitonic} i~\ref{fig:tracy_radix}) pokazuje, że średni
+czas wykonania etapu \texttt{neighbor\_search\_post\_integrate} ---
+obejmującego haszowanie, sortowanie, wyznaczenie przesunięć i reorganizację
+buforów --- wynosi $3{,}64$~ms dla wariantu bitonicznego i $616{,}3$~µs
+dla wariantu radix. Oba pomiary dotyczą tej samej konfiguracji symulacji,
+więc niemal sześciokrotna różnica wynika wyłącznie z wyboru algorytmu
+sortowania.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/bitonic_tracy_profile.png}
+\caption{Profil Tracy dla wariantu z sortowaniem bitonicznym, $N=25\,000$
+cząstek. Wiersz \texttt{neighbor\_search\_post\_integrate} pokazuje średni
+czas $3{,}64$~ms na wywołanie
+\newline Źródło: Opracowanie własne}
+\label{fig:tracy_bitonic}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figures/radix_tracy_profile.png}
+\caption{Profil Tracy dla wariantu z sortowaniem radix w tym samym
+scenariuszu. Średni czas tego samego zakresu spada do $616{,}3$~µs
+\newline Źródło: Opracowanie własne}
+\label{fig:tracy_radix}
+\end{figure}
+
+Rozbieżność między izolowanym benchmarkiem (gdzie radix dla $N = 2^{15}$ jest
+nieznacznie wolniejszy) a pomiarem produkcyjnym (gdzie ten sam $N$ daje
+sześciokrotne przyspieszenie) ma uzasadnienie strukturalne. Sortowanie
+bitoniczne $32\,768$ elementów ($\lceil 25\,000 \rceil_2$) wymaga
+$\frac{\log_2^2 32768 + \log_2 32768}{2} = 120$ dispatchów, z których każdy
+w pełnym potoku jest oddzielony od kolejnego barierą pamięci wstawioną przez
+\texttt{AutoCommandBufferBuilder}; radix wymaga ich jedynie dwunastu. W teście
+izolowanym, gdzie GPU wykonuje wyłącznie sortowanie, koszt pojedynczej bariery
+jest amortyzowany przez wysoką zajętość jednostek obliczeniowych. W pełnym
+potoku DFSPH bariera staje się jawnym punktem synchronizacji, ponieważ
+poprzedza ją zapis innego shadera obliczeniowego --- a sumaryczny koszt skaluje
+się z liczbą dispatchów algorytmu sortowania.
+
+Łączny obraz prowadzi do jednoznacznego wyboru: dla każdego rozmiaru symulacji
+od kilku tysięcy cząstek wzwyż radix sort jest szybszym wariantem, a jego
+przewaga rośnie zarówno z $N$, jak i z liczbą innych etapów obliczeniowych
+dzielących GPU. Sortowanie bitoniczne pozostaje w kodzie jako alternatywa
+dostępna do przełączenia w czasie wykonania przez wariant
+\texttt{SortAlgorithm::Bitonic}, użyteczna w celach porównawczych oraz
+w scenariuszach, w których prostota sieci komparatorów ma znaczenie większe
+niż mierzona wydajność.
 
 % ------------------------------------------------------------
 \section{Solver DFSPH}
 \label{sec:dfsph}
 
+Wszystkie wcześniejsze sekcje tej części pracy --- organizacja pamięci
+w układzie SOA z parami buforów dla pozycji i prędkości, haszowanie
+przestrzenne wraz z sortowaniem i reorganizacją buforów oraz autorska
+cecha \texttt{ComputeStep} unifikująca cykl życia potoków obliczeniowych
+--- istnieją wyłącznie po to, by w tym miejscu mogła zostać zrealizowana
+sama symulacja dynamiki cieczy. Dyskretyzacja jądrowa metody SPH
+wprowadzona w podrozdziale~\ref{subsec:kernel-interpolation},
+dwuetapowa korekcja DFSPH zdefiniowana algorytmami~\ref{alg:density_source}
+i~\ref{alg:div_source} oraz konkretne struktury danych z sekcji~\ref{sec:data_structures}
+zbiegają się tutaj w jeden spójny potok obliczeniowy. Każdy z jego etapów
+jest osobnym implementatorem cechy \texttt{ComputeStep} i odpowiada
+konkretnemu fragmentowi matematycznego sformułowania metody; ich kolejność
+oraz wzajemne zależności określają, w jaki sposób abstrakcyjne równania
+teoretyczne odwzorowują się na rzeczywiste shadery obliczeniowe wykonywane
+na GPU.
+
+Z implementacyjnego punktu widzenia kluczowa jest asymetria między obydwoma
+poziomami korekcji: \textit{korekcja gęstości} kończy się adwekcją pozycji
+$\mathbf{p}_i \leftarrow \mathbf{p}_i + \Delta t\,\mathbf{v}_i$,
+natomiast \textit{korekcja dywergencji} działa wyłącznie na buforze
+prędkości i nie modyfikuje pozycji cząstek.
+Ta różnica determinuje kolejność shaderów w pętli substepów.
+Poza nią oba poziomy współdzielą identyczną strukturę: iteracyjna pętla
+ciśnienia z tym samym wzorcem dostępu do sąsiedztwa, różniąca się
+wyłącznie wyrazem źródłowym i finalnym krokiem integracji.
+
+Wszystkie shadery realizujące fizykę SPH dzielą jeden fundamentalny wzorzec
+dostępu do danych. Niezależnie od tego, czy obliczają gęstość, wyraz
+źródłowy, siłę ciśnienia czy korekcję lepkościową, każdy z nich akumuluje
+sumę po geometrycznym sąsiedztwie cząstki~$i$, ważoną jądrem~$W$ lub jego
+gradientem~$\nabla W$. Konkretna postać akumulowanej wielkości różni się
+między etapami, lecz struktura pętli pozostaje niezmiennikiem całego potoku.
+Wykorzystując bufor \texttt{grid\_start} przygotowany przez potok
+wyszukiwania sąsiadów (sekcja~\ref{sec:neighbor_search}), każdy shader
+wyznacza komórkę przestrzenną swojej cząstki i iteruje po
+$3 \times 3 \times 3 = 27$ komórkach sąsiednich, używając ich skrótów jako
+indeksów wejścia do listy posortowanych wpisów.
+Jądro $W(\|\mathbf{r}\|, h)$ zwraca skalarną wagę, malejącą z odległością;
+jego gradient $\nabla W(\mathbf{r}, h)$ jest wektorem wskazującym kierunek
+i tempo zmian tej wagi.
+W obliczeniach SPH $W$ pojawia się wszędzie tam, gdzie sumujemy wielkości
+skalarne --- jak gęstość --- natomiast $\nabla W$ wszędzie tam, gdzie
+potrzebna jest siła lub przyspieszenie.
+Algorytm~\ref{alg:neighbor_iter} przedstawia ten uniwersalny wzorzec.
+
+\begin{algorithm}[htbp]
+\caption{Wspólny wzorzec iteracji po sąsiadach w shaderach SPH}
+\label{alg:neighbor_iter}
+$\mathbf{c}_i \leftarrow \lfloor \mathbf{p}_i / h \rfloor$\;
+\For{$dz \in \{-1,\,0,\,+1\}$}{
+  \For{$dy \in \{-1,\,0,\,+1\}$}{
+    \For{$dx \in \{-1,\,0,\,+1\}$}{
+      $k \leftarrow \mathrm{hash}(\mathbf{c}_i + (dx, dy, dz))$\;
+      $s \leftarrow \texttt{grid\_start}[k]$\;
+      \While{$s < M$ \upshape \textnormal{i} $\texttt{grid\_entries}[s].\texttt{hash} = k$}{
+        $j \leftarrow \texttt{grid\_entries}[s].\texttt{index}$\;
+        $\mathbf{r}_{ij} \leftarrow \mathbf{p}_i - \mathbf{p}_j$\;
+        \If{$\|\mathbf{r}_{ij}\| < h$}{
+          akumulacja wkładu pary $(i, j)$ z wagą $W(\|\mathbf{r}_{ij}\|,\,h)$ lub $\nabla W(\mathbf{r}_{ij},\,h)$\;
+        }
+        $s \leftarrow s + 1$\;
+      }
+    }
+  }
+}
+\end{algorithm}
+
+Identyczna pętla iteracji po sąsiadach występuje we wszystkich shaderach solvera DFSPH
+--- różni je wyłącznie wyrażenie pod sumą
+oraz atrybut, do którego trafia wynik akumulacji. Dzięki przepisaniu pozycji
+i prędkości na bufory \texttt{\_b} przez etap \texttt{reorder}
+(\ref{subsec:neighbor_pipeline}), kolejne wpisy danej komórki leżą gęsto
+w pamięci, a odczyt całego 27-elementowego sąsiedztwa wykonuje się
+w niewielkiej liczbie skoalescowanych transakcji pamięci globalnej GPU.
+
+Tabela~\ref{tab:dfsph_variable_mapping} odwzorowuje wielkości figurujące
+w sformułowaniu matematycznym DFSPH na konkretne bufory struktury
+\texttt{GpuPhysicsData} oraz na shadery odpowiedzialne za ich zapis.
+Ze względu na podwójne buforowanie cząstek (\ref{subsec:gpu_buffers}),
+pozycje i prędkości występują w dwóch wariantach: bufor \texttt{\_a}
+przechowuje stabilny stan wejściowy, na podstawie którego haszowanie
+przestrzenne wyznacza komórki cząstek; bufor \texttt{\_b}, do którego
+\texttt{reorder} przepisuje dane w kolejności sprzyjającej lokalności
+odczytu, stanowi wejście dla wszystkich kolejnych etapów solvera.
+Pozostałe wielkości to jednowymiarowe tablice indeksowane numerem cząstki.
+
+\begin{table}[H]
+\centering
+\caption{Odwzorowanie wielkości teoretycznych DFSPH na bufory GPU}
+\label{tab:dfsph_variable_mapping}
+\begin{tabular}{p{4.8cm}p{4.5cm}p{4.5cm}}
+\toprule
+\textbf{Wielkość} & \textbf{Bufor} & \textbf{Etap zapisujący} \\
+\midrule
+$\mathbf{p}_i$ --- pozycja                  & \texttt{position\_a}, \texttt{position\_b}    & \texttt{reorder}, \texttt{pressure\_integration} \\[3pt]
+$\mathbf{v}_i$ --- prędkość                 & \texttt{velocity\_a}, \texttt{velocity\_b}    & \texttt{reorder}, \texttt{viscosity}, korekcje ciśnienia \\[3pt]
+$\rho_i$ --- gęstość                        & \texttt{densities}                            & \texttt{density\_alpha} \\[3pt]
+$\alpha_i$ --- współczynnik DFSPH           & \texttt{factors}                              & \texttt{density\_alpha} \\[3pt]
+$s_i$ --- wyraz źródłowy                    & \texttt{source\_terms}                        & \texttt{density\_source\_term}, \texttt{divergence\_source\_term} \\[3pt]
+$p_i$ --- ciśnienie                         & \texttt{pressures}                            & \texttt{pressure\_update} \\[3pt]
+$\mathbf{a}_i^{p}$ --- przysp. ciśnienia    & \texttt{pressure\_accelerations}              & \texttt{pressure\_force} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Pozostałe podrozdziały tej sekcji szczegółowo omawiają poszczególne
+komponenty solvera. Podrozdział~\ref{subsec:substep_loop} przedstawia
+pełną pętlę substepów ustalającą kolejność wszystkich etapów wewnątrz
+pojedynczej klatki. Podrozdział~\ref{subsec:density} opisuje obliczanie
+gęstości $\rho_i$ oraz współczynnika $\alpha_i$, pełniącego rolę
+prekondycjonera w solverze ciśnienia.
+Podrozdziały~\ref{subsec:density_correction}
+i~\ref{subsec:divergence_correction} analizują kolejno korekcję gęstości
+i korekcję dywergencji --- dwie iteracyjne pętle ciśnienia, które łącznie
+wymuszają nieściśliwość pola prędkości. Podrozdział~\ref{subsec:cfl}
+omawia warunek CFL i strategię doboru kroku czasowego $\Delta t$.
+
 \subsection{Pętla substepów}
 \label{subsec:substep_loop}
-% TODO: substep flowchart from step() in renderer/mod.rs:
-%       viscosity -> density source -> density solver (N iters) -> pressure integrate
-%       -> re-neighbour-search -> density alpha
-%       -> divergence source -> divergence solver (N iters) -> divergence integrate
-%       Note: neighbour search runs twice per substep
+
+Pełna sekwencja wywołań shaderów w obrębie substepu ukazana jest
+w Algorytmie~\ref{alg:frame_loop}.
+Bezpośrednio po adwekcji następuje przebudowa struktury wyszukiwania
+sąsiadów. To drugie wywołanie \texttt{neighbor\_search} w obrębie jednego
+substepu nie jest redundancją --- jest koniecznością wynikającą z fizycznego
+przemieszczenia cząstek.
+Tablica \texttt{grid\_start}, zbudowana przed substepem, indeksuje pozycje
+sprzed adwekcji; korekcja dywergencji oparta na nieaktualnej strukturze
+obliczałaby gradient prędkości $\nabla \cdot \mathbf{v}$ względem błędnych
+sąsiadów, co prowadziłoby do narastających błędów kompresji szczególnie
+widocznych przy dużych prędkościach cząstek.
+Po przebudowie sąsiedztwa i ponownym wyznaczeniu $\rho_i$, $\alpha_i$
+faza dywergencji przebiega analogicznie: iteracyjna pętla $N_\nabla$ razy
+uruchamia ten sam \texttt{pressure\_force} i \texttt{pressure\_update}
+z wyrazem źródłowym opartym na dywergencji pola prędkości,
+po czym \texttt{divergence\_integration} aktualizuje prędkości
+bez modyfikowania pozycji.
+
+Iteracyjny charakter obu solwerów wynika z natury problemu.
+Zmiana ciśnienia cząstki~$i$ generuje przyspieszenie oddziałujące na
+jej sąsiadów, które z kolei wymagają korekty swoich ciśnień ---
+i tak dalej.
+Jedno przejście pętli realizuje krok analogiczny do iteracji Jacobiego:
+wyznacza lokalną poprawkę przy założeniu, że ciśnienia sąsiadów pozostają
+chwilowo zamrożone.
+Kilka takich kroków ($N_\rho = 2$--$5$, $N_\nabla = 1$--$3$)
+zazwyczaj wystarcza do sprowadzenia średniego błędu poniżej zadanego progu;
+strategię doboru tych liczb omówiono w podrozdziale~\ref{subsec:cfl}.
 
 \subsection{Obliczanie gęstości}
 \label{subsec:density}
-% TODO: SPH density formula, cubic spline kernel curve (W vs r),
-%       alpha coefficient for DFSPH preconditioner
+
+Szader \texttt{density\_and\_alpha.comp} oblicza w jednym przebiegu dwie
+wielkości: gęstość $\rho_i$ oraz współczynnik $\alpha_i$~\cite{bender2015divergence}.
+Listing~\ref{lst:density_alpha} przedstawia funkcję \texttt{main()} shadera.
+
+\begin{lstlisting}[caption={Szader \texttt{density\_and\_alpha.comp} --- logika akumulacji},
+                   label=lst:density_alpha,]
+void main() {
+    uint i = gl_GlobalInvocationID.x;
+    if (i >= uint(positions.length())) return;
+
+    float density     = 0.0;
+    float sum_grad_sq = 0.0;
+    vec3  grad_sum    = vec3(0.0);
+
+    // iteracja po 27 sąsiednich komórkach
+    float r = sqrt(dot(r_vec, r_vec));
+    density += mass * kernel_w(r, h);
+    if (r > 1e-6) {
+        vec3 mass_grad  = mass * kernel_grad(r_vec, r, h);
+        grad_sum       += mass_grad;
+        sum_grad_sq    += dot(mass_grad, mass_grad);
+    }
+    // koniec petli
+
+    densities[i] = density;
+    float alpha = sum_grad_sq + dot(grad_sum, grad_sum);
+    if (alpha > 1e-6) { factors[i] = alpha; }
+    else              { factors[i] = 0.0;   }
+}
+\end{lstlisting}
+
+Każda invokacja odpowiada jednej cząstce~$i$.
+Zmienna \texttt{density} akumuluje skalarne wkłady jądra \texttt{kernel\_w}
+po 27 sąsiednich komórkach --- jest to bezpośrednia realizacja wzorca
+z Algorytmu~\ref{alg:neighbor_iter}.
+Zmienne \texttt{grad\_sum} i \texttt{sum\_grad\_sq} akumulują jednocześnie
+składniki współczynnika $\alpha_i$: odpowiednio sumę gradientów
+$\sum_j m\nabla W_{ij}$ oraz sumę ich kwadratów $\sum_j |m\nabla W_{ij}|^2$;
+wynikowe $\alpha_i = |\texttt{grad\_sum}|^2 + \texttt{sum\_grad\_sq}$
+stanowi mianownik korekcji ciśnienia w każdym kroku iteracyjnym solvera.
+Obliczenie obu wielkości w jednej pętli zamiast dwóch oddzielnych
+przebiegów redukuje o połowę liczbę odczytów z pamięci globalnej GPU.
+
+
 
 \subsection{Korekcja gęstości}
 \label{subsec:density_correction}

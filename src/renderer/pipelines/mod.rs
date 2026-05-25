@@ -46,6 +46,9 @@ mod density_texture;
 mod water_pipeline;
 mod stats_pipeline;
 
+#[cfg(test)]
+mod convergence_benchmark;
+
 pub trait ComputeStep: Sized {
     fn load_shader_module(device: Arc<Device>) -> EntryPoint;
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self;

@@ -64,24 +64,24 @@
 \contentsline {section}{\numberline {3.7}Sortowanie na GPU}{67}{section.3.7}%
 \contentsline {subsection}{\numberline {3.7.1}Bitonic Sort}{67}{subsection.3.7.1}%
 \contentsline {subsection}{\numberline {3.7.2}Radix Sort}{68}{subsection.3.7.2}%
-\contentsline {subsection}{\numberline {3.7.3}Porównanie algorytmów}{71}{subsection.3.7.3}%
-\contentsline {section}{\numberline {3.8}Solver DFSPH}{71}{section.3.8}%
-\contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{71}{subsection.3.8.1}%
-\contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{71}{subsection.3.8.2}%
-\contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{71}{subsection.3.8.3}%
-\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{71}{subsection.3.8.4}%
-\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{71}{subsection.3.8.5}%
-\contentsline {section}{\numberline {3.9}Siły fizyczne}{71}{section.3.9}%
-\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{71}{subsection.3.9.1}%
-\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{71}{subsection.3.9.2}%
-\contentsline {section}{\numberline {3.10}Wizualizacja}{71}{section.3.10}%
-\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{71}{subsection.3.10.1}%
-\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{71}{subsection.3.10.2}%
-\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{71}{subsection.3.10.3}%
-\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{71}{subsection.3.10.4}%
-\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{73}{chapter.4}%
-\contentsline {chapter}{Podsumowanie}{75}{chapter*.38}%
-\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{77}{appendix.A}%
-\contentsline {chapter}{\numberline {B}Specyfikacja API}{79}{appendix.B}%
-\contentsline {chapter}{Spis rysunków}{81}{appendix.B}%
-\contentsline {chapter}{Bibliografia}{85}{appendix*.39}%
+\contentsline {subsection}{\numberline {3.7.3}Porównanie algorytmów}{70}{subsection.3.7.3}%
+\contentsline {section}{\numberline {3.8}Solver DFSPH}{73}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{76}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{76}{subsection.3.8.2}%
+\contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{77}{subsection.3.8.3}%
+\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{77}{subsection.3.8.4}%
+\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{77}{subsection.3.8.5}%
+\contentsline {section}{\numberline {3.9}Siły fizyczne}{77}{section.3.9}%
+\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{77}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{77}{subsection.3.9.2}%
+\contentsline {section}{\numberline {3.10}Wizualizacja}{77}{section.3.10}%
+\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{77}{subsection.3.10.1}%
+\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{77}{subsection.3.10.2}%
+\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{77}{subsection.3.10.3}%
+\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{77}{subsection.3.10.4}%
+\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{79}{chapter.4}%
+\contentsline {chapter}{Podsumowanie}{81}{chapter*.44}%
+\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{83}{appendix.A}%
+\contentsline {chapter}{\numberline {B}Specyfikacja API}{85}{appendix.B}%
+\contentsline {chapter}{Spis rysunków}{87}{appendix.B}%
+\contentsline {chapter}{Bibliografia}{91}{appendix*.45}%
