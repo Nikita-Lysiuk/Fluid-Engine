@@ -212,7 +212,7 @@ impl GpuPhysicsData {
         let pressures = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER,
+                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
                 ..Default::default()
             },
             AllocationCreateInfo {
@@ -235,19 +235,19 @@ impl GpuPhysicsData {
         );
 
         let densities = Self::create_buffer::<f32>(
-            BufferUsage::STORAGE_BUFFER,
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
             count as u64
         );
 
         let factors = Self::create_buffer::<f32>(
-            BufferUsage::STORAGE_BUFFER,
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
             count as u64
         );
 
         let source_terms = Self::create_buffer::<f32>(
-            BufferUsage::STORAGE_BUFFER,
+            BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
             count as u64
         );

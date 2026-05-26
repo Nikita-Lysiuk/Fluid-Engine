@@ -189,6 +189,13 @@ Alexandre Lavrov, Paal Skjetne, Bj{\o}rnar Lund, Erik~W. Bj{\o}nnes, Finn~Olav
   dimensions.
 \newblock {\em Procedia IUTAM}, 18:85--95, 2015.
 
+\bibitem{lax2013stability}
+Peter~D. Lax.
+\newblock Stability of difference schemes.
+\newblock In Carlos~A. de~Moura and Carlos~S. Kubrusly, editors, {\em The
+  Courant--Friedrichs--Lewy ({CFL}) Condition: 80 Years After Its Discovery},
+  pages 1--7. Birkh{\"a}user, Boston, MA, 2013.
+
 \bibitem{levoy1988volume}
 Marc Levoy.
 \newblock Volume rendering.

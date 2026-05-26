@@ -132,7 +132,7 @@ $\Delta t_{\text{bezp}} \leftarrow \min(\Delta t,\ 0{,}1\,\text{s})$\;
 }
 \tcp{Faza fizyki --- GPU}
 odczytanie statystyk z poprzedniej klatki ($v_{\max}$, błąd gęstości, błąd dywergencji)\;
-\If{\upshape tryb CFL włączony \upshape \textnormal{i} $v_{\max} > 0{,}01$}{
+\If{\upshape tryb CFL\footnotemark{} włączony \upshape \textnormal{i} $v_{\max} > 0{,}01$}{
     $dt \leftarrow \mathrm{clamp}(0{,}4 \cdot h / v_{\max},\ 0{,}001,\ 0{,}05)$\;
     $dt \leftarrow \min(dt,\ dt_{\text{poprzedni}} \cdot 1{,}1)$\;
 }
@@ -162,6 +162,9 @@ narysowanie nieba, wody (lub cząstek), granic kolizji\;
 nałożenie interfejsu użytkownika (egui)\;
 zaprezentowanie klatki\;
 \end{algorithm}
+\footnotetext{CFL --- warunek Couranta–Friedrichsa–Lewy'ego
+(ang.~\textit{Courant--Friedrichs--Lewy condition})~\cite{lax2013stability};
+szczegóły w podrozdz.~\ref{subsec:cfl}}
 
 W implementacji zastosowano cztery wzorce projektowe.
 \textit{ApplicationHandler} odwraca kontrolę nad pętlą zdarzeń --- zamiast
@@ -1032,7 +1035,7 @@ scenariuszu. Średni czas tego samego zakresu spada do $616{,}3$~µs
 \label{fig:tracy_radix}
 \end{figure}
 
-Rozbieżność między izolowanym benchmarkiem (gdzie radix dla $N = 2^{15}$ jest
+Rozbieżność między izolowanym testem porównawczym (gdzie radix dla $N = 2^{15}$ jest
 nieznacznie wolniejszy) a pomiarem produkcyjnym (gdzie ten sam $N$ daje
 sześciokrotne przyspieszenie) ma uzasadnienie strukturalne. Sortowanie
 bitoniczne $32\,768$ elementów ($\lceil 25\,000 \rceil_2$) wymaga
@@ -1210,11 +1213,11 @@ strategię doboru tych liczb omówiono w podrozdziale~\ref{subsec:cfl}.
 \subsection{Obliczanie gęstości}
 \label{subsec:density}
 
-Szader \texttt{density\_and\_alpha.comp} oblicza w jednym przebiegu dwie
+Szader \texttt{density\_and\_alpha} oblicza w jednym przebiegu dwie
 wielkości: gęstość $\rho_i$ oraz współczynnik $\alpha_i$~\cite{bender2015divergence}.
 Listing~\ref{lst:density_alpha} przedstawia funkcję \texttt{main()} shadera.
 
-\begin{lstlisting}[caption={Szader \texttt{density\_and\_alpha.comp} --- logika akumulacji},
+\begin{lstlisting}[caption={Szader \texttt{density\_and\_alpha} --- logika akumulacji},
                    label=lst:density_alpha,]
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -1257,60 +1260,487 @@ przebiegów redukuje o połowę liczbę odczytów z pamięci globalnej GPU.
 
 \subsection{Korekcja gęstości}
 \label{subsec:density_correction}
-% TODO: source term s_i = (rho_0 - rho_i) / dt,
-%       iterative pressure loop, convergence graph from convergence.csv
+
+Faza korekcji gęstości wymusza nieściśliwość, wyznaczając ciśnienia redukujące 
+odchylenia $\rho_i$ od wartości docelowej $\rho_0$.
+Szader \texttt{density\_source\_term} oblicza dla każdej cząstki~$i$
+człon źródłowy łączący chwilowy deficyt gęstości z prognozą jego narastania
+na podstawie prędkości adwekcyjnych wyznaczonych po fazie lepkości:
+
+\begin{lstlisting}[caption={Szader \texttt{density\_source\_term} --- człon źródłowy solvera gęstości},
+                   label=lst:density_source,]
+float divergence_sum = 0.0;
+// dla kazdego sasiada j w promieniu h:
+vec3 vel_diff = vel_i - vel_j;
+divergence_sum += mass * dot(vel_diff, grad);
+// koniec petli
+
+float source = ((rho_0 - rho_i) / dt) - divergence_sum;
+source_terms[i] = source;
+pressures[i] = 0.0;
+\end{lstlisting}
+
+Składnik \texttt{(rho\_0 - rho\_i) / dt} mierzy bieżący błąd gęstości 
+skalowany krokiem czasowym; \texttt{divergence\_sum} aproksymuje metodą SPH dywergencję 
+pola prędkości adwekcyjnych, przewidując jak ten błąd będzie dalej narastał. 
+Tablica \texttt{pressures} jest zerowana na wejściu każdego wywołania,
+gwarantując start iteracji ze świeżym wektorem ciśnień.
+
+Iteracja Jacobiego przebiega przez naprzemienne wywołania \texttt{pressure\_force} i \texttt{pressure\_update}. 
+Pierwszy szader wyznacza dla każdej cząstki przyspieszenie ciśnieniowe
+będące iloczynem macierzy układu i wektora ciśnień; drugi aktualizuje ciśnienie:
+
+\begin{lstlisting}[caption={Szader \texttt{pressure\_update} --- krok Jacobiego},
+                   label=lst:pressure_update,]
+float a_ii       = -(dt / (rho_i * rho_i)) * alpha_i;
+float error      = source_i - Ap_i;
+float correction = (relax_factor * error) / a_ii;
+pressures[i]     = max(p_i + correction, 0.0);
+\end{lstlisting}
+
+Zmienna \texttt{a\_ii} to przekątny element operatora ciśnieniowego 
+obliczony bezpośrednio z $\alpha_i$ wyznaczonego przez \texttt{density\_and\_alpha}; 
+\texttt{relax\_factor} ($\omega = 0{,}5$) ogranicza oscylacje typowe dla niezrelaksowanej iteracji 
+Jacobiego. Wywołanie \texttt{max(\ldots, 0.0)} 
+eliminuje ujemne ciśnienia: bez niego cząstki przy swobodnej
+powierzchni, których gęstość spełnia $\rho_i < \rho_0$, generowałyby siły
+przyciągające, prowadząc do niestabilności tensylnej.
+
+Test \texttt{rest\_density\_diagnostic} ujawnił 
+wyraźną dwumodalność rozkładu gęstości (Rys.~\ref{fig:rest_density}): 
+cząstki wewnętrzne osiągają $\rho_i \approx \rho_0$, natomiast cząstki przy swobodnej 
+powierzchni wykazują systematyczny deficyt wynikający z niepełnej sumy jądra SPH. 
+Właśnie ten deficyt powoduje plateau widoczne w teście zbieżności (Rys.~\ref{fig:convergence}, panel lewy) --- błąd $\overline{|\rho_i - \rho_0|}$ 
+utrzymuje się na poziomie $\sim\!200~\mathrm{kg/m^3}$ niezależnie od liczby iteracji, 
+ponieważ solver poprawnie zeruje ciśnienie dla pod-gęstych cząstek brzegowych, 
+nie próbując korygować efektu wynikającego z geometrii.
+Właściwa obsługa brzegu za pomocą cząstek-duchów~\cite{schechter2012ghost} wykracza poza zakres niniejszej pracy.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/rest_density.png}
+    \caption{Histogram gęstości w konfiguracji spoczynkowej ($n = 4800$ cząstek, bez kroku symulacji). Cząstki wewnętrzne skupiają się przy $\rho_0 = 1000~\mathrm{kg/m^3}$; cząstki przy swobodnej powierzchni wykazują deficyt będący ograniczeniem standardowego SPH bez obsługi brzegu. Źródło: opracowanie własne}
+    \label{fig:rest_density}
+\end{figure}
 
 \subsection{Korekcja dywergencji}
 \label{subsec:divergence_correction}
-% TODO: divergence source term, same iterative loop,
-%       why div(v)=0 prevents clumping, convergence graph
+
+Faza korekcji dywergencji działa na prędkościach cząstek po przesunięciu ich przez solver gęstości.
+Jej celem jest wyzerowanie dywergencji pola prędkości $\nabla \cdot \mathbf{v} = 0$, eliminując pozostałą składową kompresji.
+Szader \texttt{divergence\_source\_term} oblicza człon źródłowy z prędkości bezpośrednio po całkowaniu ciśnień:
+
+\begin{lstlisting}[caption={Szader \texttt{divergence\_source\_term} --- człon źródłowy solvera dywergencji},
+                   label=lst:divergence_source,]
+float divergence_sum = 0.0;
+// dla kazdego sasiada j w promieniu h:
+vec3 vel_diff = vel_i - vel_j;
+divergence_sum += mass * dot(vel_diff, grad);
+// koniec petli
+
+source_terms[i] = -divergence_sum;
+\end{lstlisting}
+
+W odróżnieniu od solvera gęstości, człon źródłowy nie zawiera składnika $(\rho_0 - \rho_i)/\Delta t$ --- celem jest wyłącznie zerowanie dywergencji.
+Pętla Jacobiego jest identyczna (\texttt{pressure\_force} i \texttt{pressure\_update}), natomiast szader \texttt{divergence\_integration} stosuje wynikowe ciśnienia jako korekty prędkości, nie pozycji:
+
+\begin{lstlisting}[caption={Szader \texttt{divergence\_integration} --- całkowanie prędkości},
+                   label=lst:divergence_integration,]
+vec3 new_vel = vel + ap * dt;
+velocities[i] = vec4(new_vel, 0.0);
+\end{lstlisting}
+
+Prawy panel Rys.~\ref{fig:convergence} ujawnia odwrotną zależność:
+błąd dywergencji wzrasta wraz z liczbą iteracji i formuje symetryczne plateau od góry.
+Jest to bezpośrednie sprzężenie z solverem gęstości: jedna iteracja ledwo koryguje gęstość
+i nieznacznie przesuwa cząstki, pozostawiając pole prędkości prawie bezrozbieżne;
+dwie i więcej iteracji skutecznie redukuje $\rho_i - \rho_0$ drogą dużych przesunięć,
+które indukują proporcjonalnie silniejszą dywergencję prędkości.
+Oba wykresy tworzą zatem lustrzany obraz: plateau błędu gęstości od dołu
+odpowiada plateau błędu dywergencji od góry, wyznaczonemu przez skalę przesunięć
+generowanych przez solver gęstości w stanie nasycenia.
+Ponieważ błąd gęstości nigdy nie spada do zera z powodu deficytu jądra na brzegu,
+solver gęstości stale generuje impulsy ciśnieniowe, a solver dywergencji nie ma szans
+ustabilizować pola prędkości --- stąd trwałe plateau po obu stronach wykresu.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{figures/convergence.png}
+    \caption{Zbieżność solvera DFSPH: uśredniony błąd gęstości (lewy panel) i błąd dywergencji (prawy panel) w funkcji liczby iteracji Jacobiego. Każdy punkt to uśrednienie 40~kroków symulacji po 50~krokach rozgrzewki ($n = 4800$ cząstek). Plateau błędu gęstości wynika z deficytu jądra SPH na brzegu; plateau błędu dywergencji wynika ze sprzężenia z solverem gęstości. Źródło: opracowanie własne}
+    \label{fig:convergence}
+\end{figure}
 
 \subsection{Warunek CFL i dobór \(\Delta t\)}
 \label{subsec:cfl}
-% TODO: CFL formula (lambda * h / v_max), intuition diagram
-%       Trap 1: v_max->0, dt->inf, instability
-%       Trap 2: large dt + dynamic iters -> 100+ iterations -> FPS collapse
-%       Static dt: mostly stable but error accumulation crashes
-%       Decision table from cfl_comparison.csv: static vs adaptive
-%       Final choice: static dt, fixed iteration count
+
+Dobór kroku czasowego $\Delta t$ kształtował się przez kilka etapów prób i korekt,
+z których każdy ujawniał kolejną warstwę ograniczeń implementacji.
+
+\paragraph{Etap 1 --- stały \(\Delta t\) i stała liczba iteracji.}
+Pierwsza wersja symulatora operowała stałym krokiem $\Delta t = 5~\mathrm{ms}$
+i czterema iteracjami Jacobiego per solver per krok symulacji.
+Wynik był akceptowalny: symulacja przebiegała stabilnie przez większość czasu,
+lecz sporadycznie załamywała się wskutek kumulacji błędu numerycznego.
+Niska liczba klatek na sekundę skłoniła do poszukiwania optymalizacji.
+
+\paragraph{Etap 2 --- adaptacyjny \(\Delta t\) według warunku CFL.}
+Warunek CFL ogranicza krok czasowy tak,
+aby cząstka nie przemieściła się o więcej niż jeden promień wygładzania $h$:
+\begin{equation}
+  \Delta t \leq \lambda \frac{h}{v_{\max}},
+  \label{eq:cfl}
+\end{equation}
+gdzie $\lambda < 1$ to współczynnik bezpieczeństwa, a $v_{\max}$ to chwilowa prędkość
+maksymalna odczytywana z bufora statystyk GPU (\texttt{stats\_buffer[0]}).
+Gdy symulacja uspokaja się i $v_{\max}$ maleje, $\Delta t$ może wzrosnąć,
+co bezpośrednio przekłada się na wyższą liczbę klatek na sekundę.
+Pojawił się jednak nowy problem: większy $\Delta t$ powoduje szybsze narastanie błędu
+gęstości, przez co cztery iteracje Jacobiego okazały się niewystarczające.
+
+\paragraph{Etap 3 --- kryterium zatrzymania oparte na progu błędu.}
+Naturalnym rozwinięciem było dodanie drugiego warunku zakończenia iteracji:
+kontynuuj, dopóki $\overline{|\rho_i - \rho_0|} > \varepsilon$.
+W założeniu solver miał wykonywać 4--5 iteracji przy spokojnej symulacji
+i więcej przy gwałtownych ruchach, a rosnące $\Delta t$ kompensowało koszt
+dodatkowych iteracji.
+W praktyce każdy solver wykonywał sto iteracji (skonfigurowane maksimum) i nigdy
+nie osiągał progu zbieżności.
+Przyczyna jest dokładnie tą, którą ujawnił test zbieżności
+(podrozdz.~\ref{subsec:density_correction}): deficyt jądra SPH na swobodnej
+powierzchni trwale blokuje błąd gęstości na poziomie $\sim\!200~\mathrm{kg/m^3}$,
+niezależnie od liczby iteracji.
+Nawet milion iteracji nie obniżyłby go poniżej żadnego sensownego progu.
+
+\paragraph{Decyzja końcowa.}
+Jako kompromis powrócono do stałego $\Delta t = 5~\mathrm{ms}$ i stałej liczby
+czterech iteracji per solver.
+Rozwiązanie zapewnia przewidywalny koszt obliczeniowy klatki i eliminuje ryzyko
+zawieszenia symulatora w nieskończonej pętli iteracyjnej.
+Utrzymują się dwa znane ograniczenia: niska liczba klatek na sekundę wynikająca
+z braku adaptacji kroku oraz ryzyko niestabilności numerycznej przy długich sesjach.
+Oba są bezpośrednią konsekwencją braku właściwej obsługi brzegu ---
+bez niej kryterium $\varepsilon$-zbieżności nie może działać poprawnie.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/cfl_comparison.png}
+  \caption{Porównanie strategii statycznego $\Delta t$ (linia ciągła) i adaptacyjnego
+    $\Delta t$ według warunku CFL (linia przerywana) w trakcie 500 klatek symulacji.
+    \textbf{Górny panel:} krok czasowy $\Delta t$ w milisekundach.
+    Wariant statyczny utrzymuje stałe $5~\mathrm{ms}$; wariant adaptacyjny rośnie
+    do $50~\mathrm{ms}$ w chwilach spokoju cieczy, po czym w okolicach klatki~205
+    wywołuje katastrofalną niestabilność ($v_{\max} \approx 1100~\mathrm{m/s}$)
+    i opada do minimalnego $1~\mathrm{ms}$.
+    \textbf{Środkowy panel:} liczba iteracji solvera Jacobiego.
+    Wariant statyczny utrzymuje stałe cztery iteracje; wariant adaptacyjny
+    osiąga limit 100 iteracji w każdej klatce bez wyjątku, ponieważ próg
+    $\varepsilon$ nigdy nie jest spełniony.
+    \textbf{Dolny panel:} maksymalna prędkość cząstki $v_{\max}$.
+    Po eksplozji prędkość stabilizuje się na poziomie $20$--$40~\mathrm{m/s}$,
+    co wskazuje na stan uszkodzonej symulacji.\\
+    Źródło: opracowanie własne}
+  \label{fig:cfl_comparison}
+\end{figure}
 
 % ------------------------------------------------------------
 \section{Siły fizyczne}
 \label{sec:forces}
 
+Podrozdział ten opisuje implementację dwóch mechanizmów siłowych działających
+na cząsteczki poza solverem DFSPH: wygładzenia prędkości metodą XSPH oraz
+odpowiedzi na kolizje z granicą domeny.
+Podstawy teoretyczne obu metod omówiono w podrozdziale~\ref{sec:physical_models_theory};
+poniżej skupiono się na konkretnych wyborach implementacyjnych i stałych
+liczbowych przyjętych w kodzie.
+
 \subsection{Lepkość XSPH}
 \label{subsec:xsph}
-% TODO: XSPH formula (amsmath, not a code listing):
-%       v_i += nu * sum_j (m_j / rho_j) * (v_j - v_i) * W(r, h)
-%       Effect: velocity blending toward neighbour average
-%       Note: gravity applied in same shader pass
-%       Velocity vector diagram (before/after smoothing)
+
+Wygładzenie prędkości XSPH realizowane jest w shaderze \texttt{viscosity}.
+Poniższy listing przedstawia rdzeń obliczeń --- pętlę po sąsiadach
+i końcową aktualizację prędkości:
+
+\begin{lstlisting}[caption={Rdzeń shadera \texttt{viscosity} --- korekcja XSPH i grawitacja},
+                   label=lst:xsph,]
+vec3 sum_viscosity = vec3(0.0);
+// dla kazdego sasiada j w promieniu h:
+vec3 vel_diff = velocities[j].xyz - velocities[i].xyz;
+sum_viscosity += mass / densities[j] * vel_diff * kernel_w(r, h);
+// koniec petli
+
+vec3 vel_visco = velocities[i].xyz
+               + sim_params.viscosity * sum_viscosity;
+new_velocities[i] = vec4(vel_visco + sim_params.gravity.xyz
+                                   * sim_params.dt, 0.0);
+\end{lstlisting}
+
+Bezwymiarowy współczynnik wygładzenia $\nu$ przechowywany jest w polu
+\texttt{viscosity} struktury \texttt{SimulationParams}.
+Wartość $\nu = 0{,}15$ dobrano empirycznie: wartości poniżej $0{,}05$
+dopuszczają widoczne przenikanie cząsteczek przy zderzeniach,
+powyżej $0{,}4$ nadmiernie tłumią ruch i spowalniają opadanie.
+Parametr jest dostępny w czasie wykonania przez suwak interfejsu egui
+bez potrzeby ponownej kompilacji shaderów.
+
+Grawitacja dodawana jest w tej samej przepustce tuż po korekcji XSPH,
+co eliminuje oddzielny dispatch i jedno przejście przez bufor prędkości.
+Wynik trafia do bufora \texttt{new\_velocities}; zapis i odczyt dotyczą
+różnych buforów, więc kolejność wątków nie wpływa na wynik.
 
 \subsection{Obsługa kolizji}
 \label{subsec:collision}
-% TODO: penalty-based boundary (box_min / box_max),
-%       restoring force diagram, velocity reflection
+
+Reakcja na kolizję z ścianą odbywa się na końcu shadera
+\texttt{pressure\_integration}, bezpośrednio po całkowaniu Eulera.
+Listing~\ref{lst:collision} pokazuje obsługę jednej ściany (dolna granica
+osi~$y$); pozostałe pięć ścian realizowane są analogicznie:
+
+\begin{lstlisting}[caption={Fragment \texttt{pressure\_integration} --- odbicie od dolnej sciany},
+                   label=lst:collision,]
+float restitution = 0.5;
+float friction    = 0.95;
+float eps         = 0.001;
+
+if (new_pos.y < min_b.y + r) {
+    new_pos.y  = min_b.y + r + eps;
+    new_vel.y *= -restitution;
+    new_vel.xz *= friction;
+}
+\end{lstlisting}
+
+Stała \texttt{eps} przesuwa cząsteczkę o $1~\mathrm{mm}$ ponad granicę,
+zapobiegając wielokrotnemu wyzwalaniu warunku w kolejnych krokach.
+Współczynnik sprężystości $e = 0{,}5$ pochłania połowę energii normalnej
+przy każdym odbiciu; tarcie styczne $f = 0{,}95$ nieznacznie tłumi
+ruch równoległy do ściany, nie zatrzymując cząsteczki całkowicie.
+
+Podejście to nie koryguje deficytu jądra przy brzegu omówionego
+w~podrozdz.~\ref{subsec:divergence_correction}, lecz skutecznie
+zapobiega ucieczce cząsteczek z domeny i jest wystarczające dla
+wizualnie wiarygodnych scen zamkniętych.
 
 % ------------------------------------------------------------
 \section{Wizualizacja}
 \label{sec:visualization}
 
+Potok wizualizacji przekształca listę pozycji cząsteczek w gotowy kolor piksela
+w trzech etapach: splatowanie gęstości do trójwymiarowej tekstury, przemarsz promienia
+przez tę teksturę do znalezienia powierzchni, oraz model optyczny łączący odbicie,
+załamanie, absorpcję i rozproszenie podpowierzchniowe.
+Podstawy teoretyczne wszystkich etapów omówiono w podrozdziale~\ref{sec:visualization_pipeline_theory};
+poniżej przedstawiono konkretne stałe i fragmenty kodu z implementacji.
+
 \subsection{Splatowanie gęstości do tekstury 3D}
 \label{subsec:density_splat}
-% TODO: splat_density.comp: particle contributions -> R32Uint 3D image,
-%       resolution trade-off graph from splat_benchmark.csv
+
+Shader \texttt{splat\_density} dla każdej cząsteczki wyznacza woksel centralny,
+a następnie iteruje po sześcianie $\pm 8$ wokseli i atomowo dodaje wkład do tekstury:
+
+\begin{lstlisting}[caption={Shader \texttt{splat\_density} --- waga woksela i zapis atomowy},
+                   label=lst:splat,]
+int radius = 8;
+\ dla kazdego woksela (x,y,z) w szescianie [-radius, radius]^3:
+float dist   = length(vec3(x, y, z));
+if (dist < float(radius)) {
+    float x_norm = dist / float(radius);
+    float weight = (1.0 - x_norm * x_norm);
+    weight = weight * weight * weight;
+
+    uint contrib = uint(weight * 200.0);
+    imageAtomicAdd(density_grid, currentVoxel, contrib);
+}
+\end{lstlisting}
+
+Waga jest gładkim wielomianem $(1-q^2)^3$ tożsamym z~eq.~\ref{eq:splat_weight}.
+Mnożnik $200$ skaluje wartość do zakresu liczby całkowitej bez utraty precyzji;
+woksele powietrza osiągają wartości bliskie zeru, woksele wewnątrz cieczy --- rzędu
+setek.
+Tekstura ma format \texttt{R32Uint}; stała \texttt{DENSITY\_OFFSET = 300} odejmowana
+jest przy odczycie w shaderze fragmentów, eliminując szum tła bez progowania binarnego.
 
 \subsection{Ray Marching}
 \label{subsec:raymarching}
-% TODO: ray cast from inv_view_proj, march until density > threshold,
-%       binary search refinement, flowchart
+
+Pętla przemarszu w \texttt{raymarch} składa się z trzech faz: testu AABB,
+grubego kroku oraz bisekcji refinementu.
+
+\paragraph{Test AABB i krok gruby.}
+Przed wejściem w pętlę funkcja \texttt{intersectAABB} wyznacza analitycznie
+przedział $[t_{\min}, t_{\max}]$ wejścia i wyjścia promienia z domeny;
+promienie chybiające domenę odrzucane są natychmiast instrukcją \texttt{discard}.
+
+\begin{lstlisting}[caption={Fragment \texttt{raymarch} --- test AABB i petla przemarszu},
+                   label=lst:march_loop,]
+const int   MAX_STEPS = 96;
+const float STEP_SIZE = 0.007;
+
+vec2 tHit = intersectAABB(rayOrigin, rayDir, boxMin, boxMax);
+if (tHit.x > tHit.y || tHit.y < 0.0) discard;
+
+float stepWorld = STEP_SIZE
+                * max(max(boxScale.x, boxScale.y), boxScale.z);
+float tCurrent  = max(tHit.x, 0.0);
+
+for (int i = 0; i < MAX_STEPS; i++) {
+    if (tCurrent > tHit.y) break;
+    if (getDensity(rayOrigin + rayDir * tCurrent, ...) > 0.01) {
+        hit = true; break;
+    }
+    tCurrent += stepWorld;
+}
+if (!hit) discard;
+\end{lstlisting}
+
+Krok \texttt{stepWorld} skalowany jest rozmiarem sceny, dzięki czemu ta sama stała
+\texttt{STEP\_SIZE} działa poprawnie niezależnie od proporcji domeny.
+Promienie, które nie trafią w żaden woksel powyżej progu w 96 krokach, są odrzucane
+instrukcją \texttt{discard} jeszcze na etapie shadera fragmentów.
+
+\paragraph{Bisekcja i normalna.}
+Po wykryciu pierwszego przekroczenia progu przedział $[t_0, t_1]$ zawężany
+jest ośmiokrotną bisekcją, a normalna wyznaczana jest różnicami skończonymi
+na polu gęstości.
+
+\begin{lstlisting}[caption={Fragment \texttt{raymarch.frag} --- bisekcja i normalna},
+                   label=lst:bisect,]
+float t0 = tCurrent - stepWorld, t1 = tCurrent;
+for (int i = 0; i < 8; i++) {
+    float m = (t0 + t1) * 0.5;
+    if (getDensity(rayOrigin + rayDir * m, ...) > 0.01)
+        t1 = m;
+    else
+        t0 = m;
+}
+vec3 surfacePos = rayOrigin + rayDir * t1;
+vec3 N = -calcNormal(surfacePos, boxMin, boxMax);
+if (dot(N, N) < 0.5) N = vec3(0.0, 1.0, 0.0);
+\end{lstlisting}
+
+Osiem iteracji bisekcji zawęża punkt trafiania do dokładności
+$\Delta t / 2^8 \approx 0{,}4\%$ kroku bez zmniejszania globalnego
+\texttt{STEP\_SIZE}.
+Normalna wyznaczana jest sześcioma próbkami pola gęstości metodą różnic skończonych
+(\texttt{eps = 0.018}); warunek \texttt{dot(N,N) < 0.5} zastępuje normalną wektorem
+pionowym w miejscach, gdzie gradient zanika (płaskie dno).
+
+\paragraph{Interpolacja trójliniowa.}
+Próbkowanie tekstury \texttt{R32Uint} realizowane jest ręcznie, ponieważ format
+całkowitoliczbowy nie obsługuje sprzętowej interpolacji:
+
+\begin{lstlisting}[caption={Funkcja \texttt{getDensity} --- interpolacja trojliniowa},
+                   label=lst:trilinear,]
+vec3 gridPos = uvw * vec3(sim_params.grid_res.xyz) - 0.5;
+ivec3 iobase = ivec3(floor(gridPos));
+vec3  f      = fract(gridPos);
+\ 8 wywolan texelFetch dla wierzcholkow kostki (v000..v111)
+float v0 = mix(mix(v000, v100, f.x), mix(v010, v110, f.x), f.y);
+float v1 = mix(mix(v001, v101, f.x), mix(v011, v111, f.x), f.y);
+return max(0.0, (mix(v0, v1, f.z) - DENSITY_OFFSET) 
+                    * DENSITY_MULTIPLIER);
+\end{lstlisting}
+
+Odjęcie \texttt{DENSITY\_OFFSET = 300} zeruje szum tła; \texttt{max(0.0, ...)}
+zapobiega ujemnym wartościom gęstości w wokselach powietrza.
 
 \subsection{Model oświetlenia}
 \label{subsec:shading}
-% TODO: Fresnel (Schlick), Snell's law (IOR=1.33), SSS (exponential absorption),
-%       foam (second density threshold), GGX specular, light path diagram
+
+Cały model optyczny zamknięty jest w funkcji \texttt{main()} shadera
+\texttt{raymarch.frag} i wykonywany po znalezieniu punktu powierzchni.
+
+\paragraph{Fresnel, odbicie i załamanie.}
+Współczynnik odbicia $F_0$ wyznaczany jest ze wzoru Fresnela, a promienie
+odbitego i załamanego kierunku próbkują skybox:
+
+\begin{lstlisting}[caption={Fragment \texttt{raymarch.frag} --- Fresnel, odbicie, zalamania},
+                   label=lst:fresnel,]
+const float IOR_WATER = 1.333;
+const float IOR_AIR   = 1.0;
+
+float F0 = pow((IOR_AIR - IOR_WATER) / (IOR_AIR + IOR_WATER), 2.0);
+float F  = fresnel(NdotV, F0);  // przyblizenie Schlicka
+
+vec3 reflDir    = reflect(rayDir, N);
+vec3 reflection = sampleSkybox(reflDir);
+reflection += SUN_COLOR * clamp(ggxD(NdotH, 0.04) 
+                * NdotL * 0.15, 0.0, 3.0);
+
+vec3 refrDir    = refract(rayDir, N, IOR_AIR / IOR_WATER);
+if (dot(refrDir, refrDir) < 0.01) refrDir = rayDir;
+vec3 background = sampleSkybox(normalize(refrDir));
+\end{lstlisting}
+
+Wartość $F_0 \approx 0{,}02$ obliczana jest ze wzoru Fresnela dla granicy
+woda--powietrze; przy kącie ślizgowym wzrasta do jedności zgodnie z przybliżeniem
+Schlicka.
+W przypadku całkowitego wewnętrznego odbicia \texttt{refract} zwraca wektor zerowy;
+kierunek zastępowany jest wówczas oryginalnym promieniem.
+
+\paragraph{Absorpcja, SSS i piana.}
+Grubość cieczy wzdłuż promienia steruje absorpcją Beer-Lamberta,
+rozproszeniem podpowierzchniowym i maską piany; wynik składany jest
+operatorem Reinharda do zakresu $[0,\,1]$:
+
+\begin{lstlisting}[caption={Fragment \texttt{raymarch.frag} --- absorpcja, SSS, piana, tonowanie},
+                   label=lst:sss,]
+const vec3 ABSORPTION_COEFF = vec3(0.45, 0.085, 0.025);
+const vec3 SCATTER_COLOR    = vec3(0.04, 0.18,  0.28);
+
+float thickness  = calcThickness(
+    surfacePos, 
+    rayDir, 
+    tHit.y - t1, ...);
+vec3  absorption = exp(-ABSORPTION_COEFF * thickness * 8.0);
+
+float sssWrapped = max(0.0, dot(N,  L) * 0.5 + 0.5);
+float sssBack    = max(0.0, dot(-N, L));
+float sssFactor  = (sssWrapped * 0.6 + sssBack * 0.4)
+                 * (1.0 - exp(-thickness * 3.0));
+vec3 sss = SCATTER_COLOR * SUN_COLOR * sssFactor * SCATTER_STRENGTH;
+
+float foamMask = smoothstep(0.0, 0.3, thickness)
+               * smoothstep(0.5, 0.95, N.y);
+
+vec3 refracted  = background * absorption + sss;
+vec3 waterColor = mix(refracted, reflection, F);
+waterColor = mix(
+    waterColor, 
+    FOAM_COLOR * (NdotL * 0.7 + 0.3), 
+    foamMask * 0.7);
+waterColor = waterColor / (waterColor + vec3(1.0));
+\end{lstlisting}
+
+Grubość \texttt{thickness} mierzona jest osobnym przelotem 32 próbek od punktu
+powierzchni do tylnej ściany AABB (\texttt{calcThickness}).
+Silna absorpcja kanału czerwonego ($\mu_R = 0{,}45$) przy słabej niebieskiego
+($\mu_B = 0{,}025$) daje wodzie charakterystyczną niebieskozieloną barwę.
+Maska piany aktywuje się tam, gdzie normalna jest prawie pionowa
+(\texttt{N.y} bliskie $1$) i ciecz jest cienka --- naśladując bąble
+na grzbietach fali.
+Ostatnia linia to operator Reinharda sprowadzający zakres HDR do $[0,\,1]$.
 
 \subsection{Środowisko HDRI}
 \label{subsec:hdri}
-% TODO: .exr loading, skybox sphere (r=500, inverted normals),
-%       dual use: background render + reflection samples in raymarch.frag
+
+Otoczenie sceny reprezentuje sferyczna mapa w formacie równokątnym ładowana
+z pliku \texttt{.exr} przy starcie aplikacji.
+Funkcja \texttt{sampleSkybox} przelicza dowolny kierunek przestrzenny na
+współrzędne UV tej tekstury:
+
+\begin{lstlisting}[caption={Funkcja \texttt{sampleSkybox} --- odwzorowanie rownokatne},
+                   label=lst:skybox,]
+vec3 sampleSkybox(vec3 dir) {
+    dir = normalize(dir);
+    vec2 uv = vec2(atan(dir.z, dir.x) * 0.15915 + 0.5,
+                   asin(clamp(dir.y, -1.0, 1.0)) * 0.31831 + 0.5);
+    return texture(skyboxTex, uv).rgb;
+}
+\end{lstlisting}
+
+Stałe $\tfrac{1}{2\pi} \approx 0{,}15915$ i $\tfrac{1}{\pi} \approx 0{,}31831$
+normalizują kąty azymutowy i elewacji do przedziału $[0,\,1]$.
+Ta sama funkcja wywoływana jest zarówno dla promienia odbitego, jak i załamanego,
+zapewniając spójność oświetlenia między powierzchnią cieczy a tłem.
+Skybox renderowany jest osobnym shaderem \texttt{sky.frag} na sferze
+o promieniu $500$ ze odwróconymi normalami, tak by kamera zawsze znajdowała
+się w jej środku.

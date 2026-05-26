@@ -69,19 +69,25 @@
 \contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{76}{subsection.3.8.1}%
 \contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{76}{subsection.3.8.2}%
 \contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{77}{subsection.3.8.3}%
-\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{77}{subsection.3.8.4}%
-\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{77}{subsection.3.8.5}%
-\contentsline {section}{\numberline {3.9}Siły fizyczne}{77}{section.3.9}%
-\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{77}{subsection.3.9.1}%
-\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{77}{subsection.3.9.2}%
-\contentsline {section}{\numberline {3.10}Wizualizacja}{77}{section.3.10}%
-\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{77}{subsection.3.10.1}%
-\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{77}{subsection.3.10.2}%
-\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{77}{subsection.3.10.3}%
-\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{77}{subsection.3.10.4}%
-\contentsline {chapter}{\numberline {4}Analiza wydajności i weryfikacja systemu}{79}{chapter.4}%
-\contentsline {chapter}{Podsumowanie}{81}{chapter*.44}%
-\contentsline {chapter}{\numberline {A}Instrukcja użytkowania}{83}{appendix.A}%
-\contentsline {chapter}{\numberline {B}Specyfikacja API}{85}{appendix.B}%
-\contentsline {chapter}{Spis rysunków}{87}{appendix.B}%
-\contentsline {chapter}{Bibliografia}{91}{appendix*.45}%
+\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{78}{subsection.3.8.4}%
+\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{80}{subsection.3.8.5}%
+\contentsline {paragraph}{Etap 1 --- stały \(\Delta t\) i stała liczba iteracji.}{80}{section*.46}%
+\contentsline {paragraph}{Etap 2 --- adaptacyjny \(\Delta t\) według warunku CFL.}{80}{section*.47}%
+\contentsline {paragraph}{Etap 3 --- kryterium zatrzymania oparte na progu błędu.}{81}{section*.48}%
+\contentsline {paragraph}{Decyzja końcowa.}{81}{section*.49}%
+\contentsline {section}{\numberline {3.9}Siły fizyczne}{83}{section.3.9}%
+\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{83}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{83}{subsection.3.9.2}%
+\contentsline {section}{\numberline {3.10}Wizualizacja}{84}{section.3.10}%
+\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{84}{subsection.3.10.1}%
+\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{85}{subsection.3.10.2}%
+\contentsline {paragraph}{Test AABB i krok gruby.}{85}{section*.51}%
+\contentsline {paragraph}{Bisekcja i normalna.}{86}{section*.52}%
+\contentsline {paragraph}{Interpolacja trójliniowa.}{86}{section*.53}%
+\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{87}{subsection.3.10.3}%
+\contentsline {paragraph}{Fresnel, odbicie i załamanie.}{87}{section*.54}%
+\contentsline {paragraph}{Absorpcja, SSS i piana.}{87}{section*.55}%
+\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{88}{subsection.3.10.4}%
+\contentsline {chapter}{Podsumowanie}{89}{chapter*.56}%
+\contentsline {chapter}{Spis rysunków}{91}{chapter*.56}%
+\contentsline {chapter}{Bibliografia}{95}{chapter*.57}%
