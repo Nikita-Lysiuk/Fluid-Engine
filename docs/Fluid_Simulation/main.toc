@@ -26,68 +26,69 @@
 \contentsline {subsection}{\numberline {2.3.4}Zasoby: bufory, obrazy i deskryptory}{30}{subsection.2.3.4}%
 \contentsline {subsection}{\numberline {2.3.5}Potok obliczeniowy i graficzny}{32}{subsection.2.3.5}%
 \contentsline {section}{\numberline {2.4}Biblioteka Vulkano}{35}{section.2.4}%
-\contentsline {section}{\numberline {2.5}Narzędzia programistyczne}{37}{section.2.5}%
+\contentsline {section}{\numberline {2.5}Narzędzia programistyczne}{36}{section.2.5}%
 \contentsline {subsection}{\numberline {2.5.1}Tracy Profiler}{37}{subsection.2.5.1}%
 \contentsline {subsection}{\numberline {2.5.2}RenderDoc}{38}{subsection.2.5.2}%
-\contentsline {section}{\numberline {2.6}Wybór funkcji wygładzającej}{39}{section.2.6}%
+\contentsline {section}{\numberline {2.6}Wybór funkcji wygładzającej}{38}{section.2.6}%
 \contentsline {subsection}{\numberline {2.6.1}Sześcienna funkcja sklejana}{39}{subsection.2.6.1}%
-\contentsline {subsection}{\numberline {2.6.2}Funkcja Wendlanda C2}{39}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.2}Funkcja Wendlanda C2}{40}{subsection.2.6.2}%
 \contentsline {subsection}{\numberline {2.6.3}Dobór jądra dla solvera DFSPH}{40}{subsection.2.6.3}%
 \contentsline {section}{\numberline {2.7}Wyszukiwanie sąsiedztwa cząsteczek}{42}{section.2.7}%
-\contentsline {subsection}{\numberline {2.7.1}Siatka haszująca według Simona Greena}{43}{subsection.2.7.1}%
-\contentsline {subsection}{\numberline {2.7.2}Skompresowane listy sąsiedztwa jako alternatywa}{44}{subsection.2.7.2}%
-\contentsline {section}{\numberline {2.8}Modelowanie zjawisk fizycznych}{45}{section.2.8}%
-\contentsline {subsection}{\numberline {2.8.1}Lepkość}{45}{subsection.2.8.1}%
-\contentsline {subsection}{\numberline {2.8.2}Napięcie powierzchniowe}{46}{subsection.2.8.2}%
-\contentsline {subsection}{\numberline {2.8.3}Warunki brzegowe}{46}{subsection.2.8.3}%
-\contentsline {section}{\numberline {2.9}Potok wizualizacji}{47}{section.2.9}%
-\contentsline {subsection}{\numberline {2.9.1}Rekonstrukcja pola gęstości}{48}{subsection.2.9.1}%
-\contentsline {subsection}{\numberline {2.9.2}Raymarching izopowierzchni}{48}{subsection.2.9.2}%
-\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{49}{subsection.2.9.3}%
+\contentsline {subsection}{\numberline {2.7.1}Siatka haszująca według Simona Greena}{42}{subsection.2.7.1}%
+\contentsline {subsection}{\numberline {2.7.2}Skompresowane listy sąsiedztwa jako alternatywa}{43}{subsection.2.7.2}%
+\contentsline {section}{\numberline {2.8}Modelowanie zjawisk fizycznych}{44}{section.2.8}%
+\contentsline {subsection}{\numberline {2.8.1}Lepkość}{44}{subsection.2.8.1}%
+\contentsline {subsection}{\numberline {2.8.2}Napięcie powierzchniowe}{45}{subsection.2.8.2}%
+\contentsline {subsection}{\numberline {2.8.3}Warunki brzegowe}{45}{subsection.2.8.3}%
+\contentsline {section}{\numberline {2.9}Potok wizualizacji}{46}{section.2.9}%
+\contentsline {subsection}{\numberline {2.9.1}Rekonstrukcja pola gęstości}{47}{subsection.2.9.1}%
+\contentsline {subsection}{\numberline {2.9.2}Raymarching izopowierzchni}{47}{subsection.2.9.2}%
+\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{48}{subsection.2.9.3}%
 \contentsline {chapter}{\numberline {3}Implementacja i oryginalne rozwiązania techniczne}{51}{chapter.3}%
 \contentsline {section}{\numberline {3.1}Założenia projektowe}{52}{section.3.1}%
-\contentsline {section}{\numberline {3.2}Architektura systemu}{53}{section.3.2}%
-\contentsline {section}{\numberline {3.3}Warstwa aplikacji}{55}{section.3.3}%
-\contentsline {subsection}{\numberline {3.3.1}Zarządzanie oknem}{55}{subsection.3.3.1}%
-\contentsline {subsection}{\numberline {3.3.2}Kamera}{56}{subsection.3.3.2}%
-\contentsline {subsection}{\numberline {3.3.3}Scena i parametry symulacji}{58}{subsection.3.3.3}%
-\contentsline {section}{\numberline {3.4}Inicjalizacja GPU z Vulkano}{59}{section.3.4}%
-\contentsline {subsection}{\numberline {3.4.1}Kontekst Vulkan}{59}{subsection.3.4.1}%
-\contentsline {subsection}{\numberline {3.4.2}Wzorzec ComputeStep}{60}{subsection.3.4.2}%
-\contentsline {subsection}{\numberline {3.4.3}Deskryptory i synchronizacja}{61}{subsection.3.4.3}%
-\contentsline {section}{\numberline {3.5}Struktury danych cząstek}{63}{section.3.5}%
-\contentsline {subsection}{\numberline {3.5.1}Organizacja danych: AOS i SOA}{63}{subsection.3.5.1}%
-\contentsline {subsection}{\numberline {3.5.2}Bufory cząstek na GPU}{64}{subsection.3.5.2}%
-\contentsline {section}{\numberline {3.6}Wyszukiwanie sąsiadów}{65}{section.3.6}%
-\contentsline {subsection}{\numberline {3.6.1}Haszowanie przestrzenne}{65}{subsection.3.6.1}%
-\contentsline {subsection}{\numberline {3.6.2}Potok wyszukiwania}{66}{subsection.3.6.2}%
-\contentsline {section}{\numberline {3.7}Sortowanie na GPU}{67}{section.3.7}%
-\contentsline {subsection}{\numberline {3.7.1}Bitonic Sort}{67}{subsection.3.7.1}%
-\contentsline {subsection}{\numberline {3.7.2}Radix Sort}{68}{subsection.3.7.2}%
-\contentsline {subsection}{\numberline {3.7.3}Porównanie algorytmów}{70}{subsection.3.7.3}%
-\contentsline {section}{\numberline {3.8}Solver DFSPH}{73}{section.3.8}%
-\contentsline {subsection}{\numberline {3.8.1}Pętla substepów}{76}{subsection.3.8.1}%
-\contentsline {subsection}{\numberline {3.8.2}Obliczanie gęstości}{76}{subsection.3.8.2}%
-\contentsline {subsection}{\numberline {3.8.3}Korekcja gęstości}{77}{subsection.3.8.3}%
-\contentsline {subsection}{\numberline {3.8.4}Korekcja dywergencji}{78}{subsection.3.8.4}%
-\contentsline {subsection}{\numberline {3.8.5}Warunek CFL i dobór \(\Delta t\)}{80}{subsection.3.8.5}%
-\contentsline {paragraph}{Etap 1 --- stały \(\Delta t\) i stała liczba iteracji.}{80}{section*.46}%
-\contentsline {paragraph}{Etap 2 --- adaptacyjny \(\Delta t\) według warunku CFL.}{80}{section*.47}%
-\contentsline {paragraph}{Etap 3 --- kryterium zatrzymania oparte na progu błędu.}{81}{section*.48}%
-\contentsline {paragraph}{Decyzja końcowa.}{81}{section*.49}%
-\contentsline {section}{\numberline {3.9}Siły fizyczne}{83}{section.3.9}%
-\contentsline {subsection}{\numberline {3.9.1}Lepkość XSPH}{83}{subsection.3.9.1}%
-\contentsline {subsection}{\numberline {3.9.2}Obsługa kolizji}{83}{subsection.3.9.2}%
-\contentsline {section}{\numberline {3.10}Wizualizacja}{84}{section.3.10}%
-\contentsline {subsection}{\numberline {3.10.1}Splatowanie gęstości do tekstury 3D}{84}{subsection.3.10.1}%
-\contentsline {subsection}{\numberline {3.10.2}Ray Marching}{85}{subsection.3.10.2}%
-\contentsline {paragraph}{Test AABB i krok gruby.}{85}{section*.51}%
-\contentsline {paragraph}{Bisekcja i normalna.}{86}{section*.52}%
-\contentsline {paragraph}{Interpolacja trójliniowa.}{86}{section*.53}%
-\contentsline {subsection}{\numberline {3.10.3}Model oświetlenia}{87}{subsection.3.10.3}%
-\contentsline {paragraph}{Fresnel, odbicie i załamanie.}{87}{section*.54}%
-\contentsline {paragraph}{Absorpcja, SSS i piana.}{87}{section*.55}%
-\contentsline {subsection}{\numberline {3.10.4}Środowisko HDRI}{88}{subsection.3.10.4}%
-\contentsline {chapter}{Podsumowanie}{89}{chapter*.56}%
-\contentsline {chapter}{Spis rysunków}{91}{chapter*.56}%
-\contentsline {chapter}{Bibliografia}{95}{chapter*.57}%
+\contentsline {section}{\numberline {3.2}Prezentacja aplikacji}{53}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Architektura systemu}{54}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Warstwa aplikacji}{56}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Zarządzanie oknem}{56}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Kamera}{57}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Scena i parametry symulacji}{59}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Inicjalizacja GPU z Vulkano}{60}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Kontekst Vulkan}{60}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Wzorzec ComputeStep}{61}{subsection.3.5.2}%
+\contentsline {subsection}{\numberline {3.5.3}Deskryptory i synchronizacja}{62}{subsection.3.5.3}%
+\contentsline {section}{\numberline {3.6}Struktury danych cząstek}{64}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}Organizacja danych: AOS i SOA}{64}{subsection.3.6.1}%
+\contentsline {subsection}{\numberline {3.6.2}Bufory cząstek na GPU}{66}{subsection.3.6.2}%
+\contentsline {section}{\numberline {3.7}Wyszukiwanie sąsiadów}{66}{section.3.7}%
+\contentsline {subsection}{\numberline {3.7.1}Haszowanie przestrzenne}{67}{subsection.3.7.1}%
+\contentsline {subsection}{\numberline {3.7.2}Potok wyszukiwania}{67}{subsection.3.7.2}%
+\contentsline {section}{\numberline {3.8}Sortowanie na GPU}{68}{section.3.8}%
+\contentsline {subsection}{\numberline {3.8.1}Sortowanie bitoniczne}{68}{subsection.3.8.1}%
+\contentsline {subsection}{\numberline {3.8.2}Sortowanie pozycyjne}{70}{subsection.3.8.2}%
+\contentsline {subsection}{\numberline {3.8.3}Porównanie algorytmów}{71}{subsection.3.8.3}%
+\contentsline {section}{\numberline {3.9}Solver DFSPH}{75}{section.3.9}%
+\contentsline {subsection}{\numberline {3.9.1}Pętla substepów}{77}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.2}Obliczanie gęstości}{78}{subsection.3.9.2}%
+\contentsline {subsection}{\numberline {3.9.3}Korekcja gęstości}{79}{subsection.3.9.3}%
+\contentsline {subsection}{\numberline {3.9.4}Korekcja dywergencji}{80}{subsection.3.9.4}%
+\contentsline {subsection}{\numberline {3.9.5}Warunek CFL i dobór $\Delta t$}{81}{subsection.3.9.5}%
+\contentsline {paragraph}{Etap 1 --- stały \(\Delta t\) i stała liczba iteracji.}{82}{section*.48}%
+\contentsline {paragraph}{Etap 2 --- adaptacyjny \(\Delta t\) według warunku CFL.}{82}{section*.49}%
+\contentsline {paragraph}{Etap 3 --- kryterium zatrzymania oparte na progu błędu.}{82}{section*.50}%
+\contentsline {paragraph}{Decyzja końcowa.}{82}{section*.51}%
+\contentsline {section}{\numberline {3.10}Siły fizyczne}{84}{section.3.10}%
+\contentsline {subsection}{\numberline {3.10.1}Lepkość XSPH}{84}{subsection.3.10.1}%
+\contentsline {subsection}{\numberline {3.10.2}Obsługa kolizji}{84}{subsection.3.10.2}%
+\contentsline {section}{\numberline {3.11}Wizualizacja}{85}{section.3.11}%
+\contentsline {subsection}{\numberline {3.11.1}Splatowanie gęstości do tekstury 3D}{85}{subsection.3.11.1}%
+\contentsline {subsection}{\numberline {3.11.2}Ray Marching}{86}{subsection.3.11.2}%
+\contentsline {paragraph}{Test AABB i krok gruby.}{86}{section*.53}%
+\contentsline {paragraph}{Bisekcja i normalna.}{87}{section*.54}%
+\contentsline {paragraph}{Interpolacja trójliniowa.}{88}{section*.56}%
+\contentsline {subsection}{\numberline {3.11.3}Model oświetlenia}{89}{subsection.3.11.3}%
+\contentsline {paragraph}{Fresnel, odbicie i załamanie.}{89}{section*.58}%
+\contentsline {paragraph}{Absorpcja, SSS i piana.}{89}{section*.60}%
+\contentsline {subsection}{\numberline {3.11.4}Środowisko HDRI}{91}{subsection.3.11.4}%
+\contentsline {chapter}{Podsumowanie}{93}{chapter*.63}%
+\contentsline {chapter}{Spis rysunków}{95}{chapter*.63}%
+\contentsline {chapter}{Bibliografia}{99}{chapter*.64}%

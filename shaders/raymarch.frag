@@ -37,6 +37,9 @@ const vec3  SUN_COLOR        = vec3(1.0, 0.95, 0.85);
 
 const vec3  FOAM_COLOR       = vec3(0.92, 0.96, 1.0);
 
+// 0=normal  2=normals  3=thickness  4=reflection  5=refraction+SSS+foam
+const int   DEBUG_MODE       = 0;
+
 // ============================================================
 // UTILITY
 // ============================================================
@@ -94,14 +97,14 @@ vec3 sampleSkybox(vec3 dir) {
 
 float calcThickness(vec3 startP, vec3 dir, float tMax, vec3 bMin, vec3 bMax) {
     float thickness = 0.0;
-    float dStep = 0.06;
+    float dStep = 0.015;
     float t = 0.0;
 
-    for (int i = 0; i < 32 && t < tMax; i++, t += dStep) {
-if (getDensity(startP + dir * t, bMin, bMax) > DENSITY_THRESHOLD)
-thickness += dStep;
-}
-return thickness;
+    for (int i = 0; i < 64 && t < tMax; i++, t += dStep) {
+        if (getDensity(startP + dir * t, bMin, bMax) > DENSITY_THRESHOLD)
+        thickness += dStep;
+    }
+    return thickness;
 }
 
 float ggxD(float NdotH, float roughness) {
@@ -150,6 +153,8 @@ void main() {
     N = normalize(N);
     if (dot(N, N) < 0.5) N = vec3(0.0, 1.0, 0.0);
 
+    if (DEBUG_MODE == 2) { outColor = vec4(N * 0.5 + 0.5, 1.0); return; }
+
     vec3 V = -rayDir;
     vec3 L = SUN_DIR;
     vec3 H = normalize(L + V);
@@ -167,8 +172,10 @@ void main() {
     float specGGX = ggxD(NdotH, 0.04) * NdotL;
     reflection += SUN_COLOR * clamp(specGGX * 0.15, 0.0, 3.0);
 
+    if (DEBUG_MODE == 4) { outColor = vec4(reflection, 1.0); return; }
 
     float thickness  = calcThickness(surfacePos, rayDir, tHit.y - t1, boxMin, boxMax);
+    if (DEBUG_MODE == 3) { outColor = vec4(vec3(clamp(thickness * 1.5, 0.0, 1.0)), 1.0); return; }
     vec3  absorption = exp(-ABSORPTION_COEFF * thickness * 8.0);
 
     vec3 refrDir = refract(rayDir, N, IOR_AIR / IOR_WATER);
@@ -186,6 +193,14 @@ void main() {
 
 
     vec3 refracted = background * absorption + sss;
+
+    if (DEBUG_MODE == 5) {
+        vec3 c = refracted;
+        c = mix(c, FOAM_COLOR * (NdotL * 0.7 + 0.3), foamMask * 0.7);
+        c += SCATTER_COLOR * 0.04;
+        outColor = vec4(c / (c + vec3(1.0)), 1.0);
+        return;
+    }
 
     vec3 waterColor = mix(refracted, reflection, F);
 

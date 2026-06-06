@@ -34,7 +34,7 @@ ax.plot(static['frame'],   static['dt']   * 1000, color='black',
 ax.plot(adaptive['frame'], adaptive['dt'] * 1000, color='gray',
         linestyle='--', label='Adaptacyjny CFL')
 ax.set_ylabel(r'$\Delta t$ [ms]')
-ax.set_title('Krok czasowy')
+ax.set_title('(a) Krok czasowy')
 ax.legend()
 ax.grid(True, linestyle=':', alpha=0.7)
 
@@ -45,7 +45,7 @@ ax.plot(static['frame'],   static['iters'],   color='black',
 ax.plot(adaptive['frame'], adaptive['iters'], color='gray',
         linestyle='--', label='Adaptacyjny CFL')
 ax.set_ylabel('Iteracje Jacobiego')
-ax.set_title('Liczba iteracji solvera gęstości')
+ax.set_title('(b) Liczba iteracji solvera gęstości')
 ax.legend()
 ax.grid(True, linestyle=':', alpha=0.7)
 
@@ -57,7 +57,7 @@ ax.plot(adaptive['frame'], adaptive['max_speed'], color='gray',
         linestyle='--', label='Adaptacyjny CFL')
 ax.set_xlabel('Klatka symulacji')
 ax.set_ylabel(r'$v_{\max}$ [m/s]')
-ax.set_title('Maksymalna prędkość cząstki')
+ax.set_title('(c) Maksymalna prędkość cząstki')
 ax.legend()
 ax.grid(True, linestyle=':', alpha=0.7)
 

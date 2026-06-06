@@ -49,7 +49,7 @@ rzeczywistym. Typowy widok interfejsu konfiguracji domeny i podglądu pola ciecz
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/blender_flip.png}
-    \caption{Interfejs symulacji FLIP w programie Blender z widocznym panelem konfiguracji domeny i podglądem cieczy \newline Źródło: Własne opracowanie na podstawie dokumentacji \cite{blenderdocs2023}}
+    \caption{Interfejs symulacji FLIP w programie Blender z widocznym panelem konfiguracji domeny i podglądem cieczy. Źródło: Własne opracowanie na podstawie dokumentacji \cite{blenderdocs2023}}
     \label{fig:blender_flip}
 \end{figure}
 
@@ -74,7 +74,7 @@ własnych modułów obliczeniowych i modyfikowania wewnętrznej logiki solvera.
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/ue5_flip.png}
-    \caption{Interfejs edytora Niagara w silniku Unreal Engine 5 z aktywną symulacją 3D FLIP zrealizowaną przy użyciu wtyczki NiagaraFluids \newline Źródło: Własne opracowanie na podstawie dokumentacji \cite{ue5fluids}}
+    \caption{Interfejs edytora Niagara w silniku Unreal Engine 5 z aktywną symulacją 3D FLIP zrealizowaną przy użyciu wtyczki NiagaraFluids. Źródło: Własne opracowanie na podstawie dokumentacji \cite{ue5fluids}}
     \label{fig:ue5_flip}
 \end{figure}
 
@@ -99,7 +99,7 @@ porównywania nowych algorytmów SPH \cite{koschier2020smoothed}.
 \begin{figure}[ht]
     \centering
     \includegraphics[width=0.85\textwidth]{figures/splishsplash.png}
-    \caption{Symulacja cieczy w bibliotece SPlisHSPlasH z aktywnym solverem DFSPH i panelem konfiguracji parametrów fizycznych \newline Źródło: Własne opracowanie na podstawie dokumentacji biblioteki \cite{SPlisHSPlasH_Library}}
+    \caption{Symulacja cieczy w bibliotece SPlisHSPlasH z aktywnym solverem DFSPH i panelem konfiguracji parametrów fizycznych. Źródło: Własne opracowanie na podstawie dokumentacji biblioteki \cite{SPlisHSPlasH_Library}}
 
     \label{fig:splishsplash}
 \end{figure}
@@ -305,10 +305,7 @@ Relację między trzema warstwami inicjalizacyjnymi ilustruje rysunek~\ref{fig:v
   \draw[arr]   (dev)   -- (res);
   \draw[arr]   (dev)   -- (pipe);
 \end{tikzpicture}
-\caption{Hierarchia inicjalizacyjna Vulkana. Instancja daje dostęp do urządzeń fizycznych,
-z których jedno wybierane jest do utworzenia urządzenia logicznego \texttt{VkDevice}, będącego
-punktem zaczepu wszystkich pozostałych obiektów API. Szary węzeł oznacza niewybrany układ fizyczny
-\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
+\caption{Hierarchia inicjalizacyjna Vulkana. Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:vulkan_hierarchy}
 \end{figure}
 
@@ -431,10 +428,7 @@ Oba podejścia, tradycyjne i dynamiczne, zestawia rysunek~\ref{fig:vulkan_render
   \draw[arr] (rd) -- (rc);
   \draw[arr] (rc) -- (rm);
 \end{tikzpicture}
-\caption{Porównanie ścieżek renderowania w Vulkanie. Zacienione pola w modelu tradycyjnym
-(\texttt{VkRenderPass} i \texttt{VkFramebuffer}) są zbędne w dynamicznym renderowaniu,
-które deklaruje załączniki bezpośrednio w buforze poleceń
-\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
+\caption{Porównanie ścieżek renderowania w Vulkanie. Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:vulkan_rendering_path}
 \end{figure}
 
@@ -544,11 +538,7 @@ Zależności między wymienionymi obiektami ilustruje rysunek~\ref{fig:vulkan_re
   \draw[refarr] (buf)  to[bend right=15] (dset);
   \draw[refarr] (view) to[bend left=15]  (dset);
 \end{tikzpicture}
-\caption{Schemat zarządzania zasobami i powiązań deskryptorowych w Vulkanie.
-Górna warstwa przedstawia alokację zasobów przez VMA; dolna warstwa pokazuje
-mechanizm deskryptorów. Przerywane strzałki oznaczają referencje
-\texttt{VkDescriptorSet} do konkretnych buforów i widoków obrazów
-\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
+\caption{Schemat zarządzania zasobami i powiązań deskryptorowych w Vulkanie. Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:vulkan_resources}
 \end{figure}
 
@@ -638,8 +628,7 @@ rysunek~\ref{fig:graphics_pipeline}.
 \caption{Etapy potoku graficznego Vulkana. Etapy z przerywaną ramką są opcjonalne
 i mogą być pominięte przy tworzeniu potoku; etapy szare są stałofunkcyjne
 i konfigurowane strukturami opisowymi; etapy białe z ciągłą ramką są programowalne
-przez shadery SPIR-V
-\newline Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
+przez shadery SPIR-V. Źródło: Opracowanie własne na podstawie specyfikacji \cite{vulkan-spec}}
 \label{fig:graphics_pipeline}
 \end{figure}
 
@@ -878,8 +867,7 @@ co zapewnia gładkie zanikanie wpływu odległych cząsteczek.
     \centering
     \includegraphics[width=0.72\textwidth]{figures/kernel_cubic_bw.png}
     \caption{Wartość $W(q)$ oraz pochodna radialna $\partial W/\partial q$ sześciennej
-    funkcji sklejanej w~funkcji znormalizowanej odległości $q = r/h$
-    \newline Źródło: Opracowanie własne na podstawie \cite{koschier2020smoothed}}
+    funkcji sklejanej w~funkcji znormalizowanej odległości $q = r/h$. Źródło: Opracowanie własne na podstawie \cite{koschier2020smoothed}}
     \label{fig:kernel_cubic}
 \end{figure}
 
@@ -919,8 +907,7 @@ nośnika, co ilustruje rysunek~\ref{fig:kernel_wendland}.
     \centering
     \includegraphics[width=0.72\textwidth]{figures/kernel_wendland_bw.png}
     \caption{Wartość $W(q)$ oraz pochodna radialna $\partial W/\partial q$ jądra
-    Wendlanda C2 w funkcji znormalizowanej odległości $q = r/h$
-    \newline Źródło: Opracowanie własne na podstawie \cite{wendland1995piecewise}}
+    Wendlanda C2 w funkcji znormalizowanej odległości $q = r/h$. Źródło: Opracowanie własne na podstawie \cite{wendland1995piecewise}}
     \label{fig:kernel_wendland}
 \end{figure}
 
@@ -1009,7 +996,7 @@ przez funkcję haszującą, co pozwala uniknąć jawnego przechowywania całej s
 w~pamięci. Tablica haszująca przechowuje dla każdej komórki zakres indeksów
 cząsteczek posortowanej tablicy cząsteczek. Budowa struktury sprowadza się do
 posortowania cząsteczek według ich indeksu komórki, co na GPU realizowane jest
-przez szybkie sortowanie radixowe \cite{green2010particle}.
+przez szybkie sortowanie pozycyjne \cite{green2010particle}.
 
 Wyszukiwanie sąsiadów dla cząsteczki $i$ przebiega przez iterację po wszystkich
 $27$ komórkach sąsiednich w trójwymiarowej siatce, pobranie odpowiednich zakresów
@@ -1074,12 +1061,7 @@ dla każdego kandydata. Schemat tej procedury ilustruje rysunek~\ref{fig:hashgri
     (0.55, -0.6) -- (3.85, -0.6)
     node[midway, below=6pt, font=\scriptsize\sffamily] {27 komórek w 3D};
 \end{tikzpicture}
-\caption{Schemat wyszukiwania sąsiedztwa metodą siatki haszującej w 2D. Szare komórki
-stanowią obszar przeszukiwania (w 3D odpowiada mu $3\times3\times3 = 27$ komórek).
-Przerywane kółko oznacza promień wygładzania $h$; cząsteczka zapytania zaznaczona
-jest w~komórce centralnej. Jedynie cząsteczki z wyróżnionych komórek są sprawdzane
-pod kątem warunku $\|\mathbf{r}_i - \mathbf{r}_j\| < h$
-\newline Źródło: Opracowanie własne na podstawie \cite{green2010particle}}
+\caption{Schemat wyszukiwania sąsiedztwa metodą siatki haszującej w 2D. Źródło: Opracowanie własne na podstawie \cite{green2010particle}}
 \label{fig:hashgrid}
 \end{figure}
 
@@ -1158,13 +1140,7 @@ rysunek~\ref{fig:cll}.
   \node[lbl, font=\scriptsize\itshape] at (3.4, -0.65)
     {format: indeks\_komórki : pierwszy\_indeks\_cząsteczki};
 \end{tikzpicture}
-\caption{Schemat struktury CLL z kompaktową tablicą komórek. Górny wiersz zawiera
-indeksy cząsteczek posortowane według indeksu komórki (wyznaczonego krzywą Mortona);
-środkowy wiersz pokazuje odpowiadające indeksy komórek; dolny wiersz przedstawia
-zwartą tablicę komórek przechowującą wyłącznie niepuste komórki z odniesieniem do
-pierwszej cząsteczki w posortowanej tablicy. Wyróżnione (szare) pola odpowiadają
-przykładowym komórkom 3 i 7
-\newline Źródło: Opracowanie własne na podstawie \cite{band2019compressed}}
+\caption{Schemat struktury CLL z kompaktową tablicą komórek. Źródło: Opracowanie własne na podstawie \cite{band2019compressed}}
 \label{fig:cll}
 \end{figure}
 
@@ -1302,11 +1278,7 @@ cząsteczek. Sytuację tę ilustruje rysunek~\ref{fig:boundary_support}.
   \node[font=\scriptsize\sffamily, black!50] at (-0.1, 0.4)
     {\textit{duch}};
 \end{tikzpicture}
-\caption{Problem niepełnego sąsiedztwa przy granicy domeny. Sfera wsparcia
-cząsteczki $i$ przecina ścianę; brak sąsiadów po lewej stronie prowadzi do
-zaniżenia oszacowania gęstości i błędu gradientu ciśnienia. Cząsteczki-duchy
-(szare, przerywane) uzupełniają brakujący obszar wsparcia
-\newline Źródło: Opracowanie własne na podstawie \cite{schechter2012ghost}}
+\caption{Problem niepełnego sąsiedztwa przy granicy domeny. Źródło: Opracowanie własne na podstawie \cite{schechter2012ghost}}
 \label{fig:boundary_support}
 \end{figure}
 
@@ -1361,8 +1333,7 @@ rysunek~\ref{fig:vis_pipeline}.
   \draw[arr] (ray) -- (shd);
   \draw[arr] (shd) -- (px);
 \end{tikzpicture}
-\caption{Potok wizualizacji: od listy cząsteczek SPH do końcowego koloru piksela
-\newline Źródło: Opracowanie własne}
+\caption{Potok wizualizacji: od listy cząsteczek SPH do końcowego koloru piksela. Źródło: Opracowanie własne}
 \label{fig:vis_pipeline}
 \end{figure}
 
@@ -1465,10 +1436,9 @@ rysunek~\ref{fig:raymarching}.
     node[above left, font=\scriptsize\sffamily] {$\mathbf{N}$};
 \end{tikzpicture}
 \caption{Schemat raymarchingu z~binarnym zawężaniem. Białe kółka to próbki poniżej
-         progu gęstości (powietrze), szare kółko to pierwsza próbka powyżej progu
+         progu gęstości, szare kółko to pierwsza próbka powyżej progu
          (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni
-         $\mathbf{p}_s$ z~dokładnością $\Delta t / 2^8$
-         \newline Źródło: Opracowanie własne na podstawie \cite{quilez2013advancing}}
+         $\mathbf{p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite{quilez2013advancing}}
 \label{fig:raymarching}
 \end{figure}
 

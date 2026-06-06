@@ -53,10 +53,6 @@ ax.axvline(avg, color='blue', linestyle='-', linewidth=2,
 
 ax.set_xlabel(r'Gęstość $\rho_i$ [kg/m$^3$]')
 ax.set_ylabel('Liczba cząstek')
-ax.set_title(
-    f'Rozkład gęstości w konfiguracji początkowej '
-    f'(n={len(densities)}, błąd średniej {rel_err:+.2f}%)'
-)
 ax.legend(loc='upper right')
 ax.grid(True, linestyle=':', alpha=0.7)
 

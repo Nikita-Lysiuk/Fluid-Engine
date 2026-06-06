@@ -101,6 +101,11 @@ Leonhard Euler.
 \newblock {\em Novi Commentarii Academiae Scientiarum Petropolitanae}, pages
   271--311, 1761.
 
+\bibitem{gamma1994design}
+Erich Gamma, Richard Helm, Ralph Johnson, and John Vlissides.
+\newblock {\em Design Patterns: Elements of Reusable Object-Oriented Software}.
+\newblock Addison-Wesley Professional, 1994.
+
 \bibitem{gingold1977smoothed}
 Robert~A Gingold and Joseph~J Monaghan.
 \newblock Smoothed particle hydrodynamics: theory and application to
@@ -254,6 +259,13 @@ Hagit Schechter and Robert Bridson.
   output format.
 \newblock \url{https://docs.rs/simple_logger/latest/simple_logger/}.
 \newblock Dostęp: 2026.
+
+\bibitem{teschner2003optimized}
+Matthias Teschner, Bruno Heidelberger, Matthias M{\"u}ller, Danat Pomerantes,
+  and Markus~H Gross.
+\newblock Optimized spatial hashing for collision detection of deformable
+  objects.
+\newblock In {\em Vmv}, volume~3, pages 47--54, 2003.
 
 \bibitem{vulkan-spec}
 {The Khronos Group}.

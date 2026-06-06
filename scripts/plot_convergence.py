@@ -11,7 +11,6 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-
 script_dir = os.path.dirname(__file__)
 csv_path = os.path.join(script_dir, 'convergence.csv')
 out_dir = os.path.join(script_dir, '..', 'docs', 'Fluid_Simulation', 'figures')
@@ -28,13 +27,14 @@ df = pd.read_csv(csv_path).sort_values('iters')
 
 fig, (ax_density, ax_divergence) = plt.subplots(1, 2, figsize=(12, 5))
 
+
 ax_density.plot(
     df['iters'], df['density_error'],
     color='black', marker='o', linestyle='-', markersize=7,
 )
+ax_density.set_title('(a)', loc='left', fontweight='bold') 
 ax_density.set_xlabel(r'Liczba iteracji solvera $N_\rho$')
 ax_density.set_ylabel(r'Średni błąd gęstości [kg/m$^3$]')
-ax_density.set_title('Zbieżność solvera gęstości')
 ax_density.set_yscale('log')
 ax_density.grid(True, which='both', linestyle=':', alpha=0.7)
 
@@ -42,9 +42,9 @@ ax_divergence.plot(
     df['iters'], df['divergence_error'],
     color='gray', marker='s', linestyle='--', markersize=7,
 )
+ax_divergence.set_title('(b)', loc='left', fontweight='bold') 
 ax_divergence.set_xlabel(r'Liczba iteracji solvera $N_{\nabla}$')
 ax_divergence.set_ylabel(r'Średni błąd dywergencji [kg/(m$^3\cdot$s)]')
-ax_divergence.set_title('Zbieżność solvera dywergencji')
 ax_divergence.set_yscale('log')
 ax_divergence.grid(True, which='both', linestyle=':', alpha=0.7)
 

@@ -88,6 +88,39 @@ Silnik oczekuje obecności następujących plików w katalogu projektu:
 \end{itemize}
 
 % ------------------------------------------------------------
+\section{Prezentacja aplikacji}
+\label{sec:app_presentation}
+
+Aplikacja stanowi interaktywny silnik symulacji cieczy działający w czasie rzeczywistym,
+łączący metodę DFSPH z wolumetrycznym renderowaniem na GPU.
+Po uruchomieniu użytkownik widzi scenę 3D z prostopadłościennym obszarem symulacji,
+wewnątrz którego odbywa się symulacja cieczy, oraz panel konfiguracyjny
+umożliwiający modyfikację parametrów w czasie rzeczywistym
+(rysunek~\ref{fig:app_window}).
+
+Motywacją do stworzenia projektu była chęć głębszego zrozumienia sposobu, w jaki
+współczesne silniki gier i aplikacji realizują symulacje cząsteczkowe --- symulacja
+cieczy metodą SPH stanowi pod tym względem szczególnie reprezentatywny przypadek,
+ponieważ łączy w sobie wszystkie kluczowe wyzwania obliczeń równoległych:
+nieregularny dostęp do danych sąsiedztwa, iteracyjne solvery zbieżnościowe
+i konieczność ścisłej synchronizacji między setkami tysięcy wątków GPU.
+Realizacja projektu pozwoliła na praktyczne opanowanie programowania równoległego
+w modelu GPGPU oraz pracy z nowoczesnym interfejsem graficznym Vulkan,
+który wymaga jawnego zarządzania synchronizacją, pamięcią i potokami poleceń ---
+w odróżnieniu od bardziej abstrakcyjnych API jak OpenGL czy DirectX 11.
+
+Silnik może służyć jako platforma badawcza do testowania algorytmów symulacji cieczy,
+demonstracyjna aplikacja edukacyjna lub punkt wyjścia do integracji fizyki cieczy
+z systemem renderowania w czasie rzeczywistym.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/app_window.png}
+\caption{Okno aplikacji podczas symulacji. Źródło: Opracowanie własne}
+\label{fig:app_window}
+\end{figure}
+
+% ------------------------------------------------------------
 \section{Architektura systemu}
 \label{sec:architecture}
 
@@ -106,7 +139,7 @@ przedstawia tabela~\ref{tab:subsystems}.
 \toprule
 \textbf{Moduł} & \textbf{Platforma} & \textbf{Rola} \\
 \midrule
-\texttt{Engine}            & CPU          & Pętla zdarzeń winit, timing, zarządzanie sceną i wejściem \\[3pt]
+\texttt{Engine}            & CPU          & Pętla zdarzeń \texttt{winit}, timing, zarządzanie sceną i wejściem \\[3pt]
 \texttt{Scene}             & CPU          & Parametry symulacji, pozycje startowe cząstek, kamera, granice kolizji \\[3pt]
 \texttt{Controller}        & CPU          & Odwzorowanie klawiatury i myszy na obiekty komend \\[3pt]
 \texttt{Renderer}          & CPU          & Budowanie buforów komend Vulkan, synchronizacja faz fizyki i renderowania \\[3pt]
@@ -118,7 +151,7 @@ przedstawia tabela~\ref{tab:subsystems}.
 \end{table}
 
 Pętla ramki jest sterowana zdarzeniem \texttt{RedrawRequested} biblioteki
-winit i wykonuje się w trybie \texttt{ControlFlow::Poll}, co oznacza brak
+\texttt{winit} i wykonuje się w trybie \texttt{ControlFlow::Poll}, co oznacza brak
 ograniczenia liczby klatek przez system operacyjny. Algorytm~\ref{alg:frame_loop}
 przedstawia kolejność operacji w obrębie jednej klatki.
 
@@ -166,18 +199,20 @@ zaprezentowanie klatki\;
 (ang.~\textit{Courant--Friedrichs--Lewy condition})~\cite{lax2013stability};
 szczegóły w podrozdz.~\ref{subsec:cfl}}
 
-W implementacji zastosowano cztery wzorce projektowe.
-\textit{ApplicationHandler} odwraca kontrolę nad pętlą zdarzeń --- zamiast
-silnik samodzielnie odpytywał kolejkę komunikatów, to system operacyjny
-wywołuje jego metody w odpowiedzi na zdarzenia okna i urządzeń wejściowych.
-\textit{ComputeStep} nadaje wszystkim potokom obliczeniowym GPU jednolity
-interfejs, rozdzielając jednorazową inicjalizację zasobów od wielokrotnie
-powtarzanego zapisu poleceń do bufora komend.
-\textit{Command} oddziela detekcję wejścia od modyfikacji stanu --- każde
-naciśnięcie klawisza lub ruch myszy przekładane są na obiekt komendy, który
-wie, jak zmienić scenę, ale nie wie, skąd pochodzi sygnał.
-\textit{Actor} abstrahuje przemieszczanie i obrót w przestrzeni 3D
-w sposób niezależny od konkretnego obiektu sceny.
+Architektura silnika opiera się na kilku abstrakcjach rozdzielających odpowiedzialności między komponentami.
+\textit{ApplicationHandler} --- cecha biblioteki \texttt{winit} --- realizuje
+odwrócenie kontroli nad pętlą zdarzeń, omówione szczegółowo
+w podrozdziale~\ref{subsec:window}.
+\textit{ComputeStep} jest autorską abstrakcją nadającą wszystkim potokom
+obliczeniowym GPU jednolity interfejs, rozdzielającą jednorazową inicjalizację
+zasobów od wielokrotnie powtarzanego zapisu poleceń do bufora komend.
+Do obsługi wejścia zastosowano wzorzec projektowy \textit{Command}~\cite{gamma1994design}:
+każde naciśnięcie klawisza lub ruch myszy przekładane są na obiekt komendy,
+który wie, jak zmienić scenę, ale nie wie, skąd pochodzi sygnał.
+\textit{Actor} to uproszczona koncepcja popularna w społeczności twórców gier
+--- stosowana m.in.\ w Unreal Engine~5~\cite{ue5fluids} ---
+abstrahująca przemieszczanie i obrót obiektu w przestrzeni 3D niezależnie
+od jego konkretnego typu.
 
 % ------------------------------------------------------------
 \section{Warstwa aplikacji}
@@ -186,14 +221,14 @@ w sposób niezależny od konkretnego obiektu sceny.
 Zanim GPU wykona choćby jeden krok symulacji, warstwa CPU musi otworzyć
 okno, przetworzyć wejście użytkownika i zsynchronizować parametry sceny
 z pamięcią karty graficznej. Trzy moduły odpowiadają za te zadania:
-biblioteka winit zarządzająca oknem i pętlą zdarzeń, model kamery
+biblioteka \texttt{winit} zarządzająca oknem i pętlą zdarzeń, model kamery
 przekształcający ruch myszy w macierze widoku, oraz struktura sceny,
 która stanowi jedyne źródło parametrów przekazywanych do każdego shadera.
 
 \subsection{Zarządzanie oknem}
 \label{subsec:window}
 
-Okno i pętla zdarzeń są obsługiwane przez bibliotekę winit za pośrednictwem
+Okno i pętla zdarzeń są obsługiwane przez bibliotekę \texttt{winit} za pośrednictwem
 cechy \textit{ApplicationHandler}. Zamiast samodzielnej pętli \texttt{while},
 silnik implementuje tę cechę i przekazuje sterowanie systemowi zdarzeń ---
 jest to wzorzec odwrócenia kontroli, w którym to system operacyjny wywołuje
@@ -205,7 +240,7 @@ zawieszonego do aktywnego. Na platformach bez jawnego cyklu zawieszania,
 takich jak Windows, zdarzenie to jest emitowane jednorazowo po inicjalizacji
 i pełni rolę sygnału startu. Na platformach mobilnych może być wywoływana
 wielokrotnie --- na Androidzie tworzenie powierzchni renderowania
-przed tym zdarzeniem jest niemożliwe. Winit zaleca\cite{winit} więc inicjalizację okna
+przed tym zdarzeniem jest niemożliwe. \texttt{Winit} zaleca\cite{winit} więc inicjalizację okna
 i kontekstu graficznego dopiero w odpowiedzi na pierwsze \texttt{Resumed},
 co w kodzie przekłada się na tworzenie obiektów \texttt{Window}
 i \texttt{Renderer} wewnątrz tej metody. Metoda \texttt{window\_event()} obsługuje wszystkie
@@ -303,7 +338,7 @@ Rysunek~\ref{fig:camera_chain} ilustruje kolejność tych obliczeń.
   \draw[->] (proj)  -- (inv);
   \draw[->] (inv)   -- (buf);
 \end{tikzpicture}
-\caption{Łańcuch obliczeń kamery\newline Źródło: Opracowanie własne}
+\caption{Łańcuch obliczeń kamery. Źródło: Opracowanie własne}
 \label{fig:camera_chain}
 \end{figure}
 
@@ -333,7 +368,9 @@ kolizji (\texttt{CollisionBox}). Jest jedynym źródłem danych konfiguracyjnych
 wywołaniem \texttt{sync\_with\_scene()}.
 
 Tabela~\ref{tab:sim_params} zestawia parametry struktury \texttt{SimulationParams}
-wraz z wartościami domyślnymi ustawionymi w konstruktorze \texttt{Scene::new()}.
+wraz z wartościami domyślnymi ustawionymi w konstruktorze \texttt{Scene::new()};
+rysunek~\ref{fig:egui_params} przedstawia wygląd panelu konfiguracyjnego
+w interfejsie \texttt{egui} podczas działania aplikacji.
 
 \begin{table}[H]
 \centering
@@ -357,11 +394,18 @@ wraz z wartościami domyślnymi ustawionymi w konstruktorze \texttt{Scene::new()
 \end{tabular}
 \end{table}
 
+\begin{figure}[H]
+\centering
+\includegraphics[angle=90, width=0.75\linewidth]{figures/egui_params.png}
+\caption{Panel parametrów symulacji w interfejsie \texttt{egui}. Źródło: Opracowanie własne}
+\label{fig:egui_params}
+\end{figure}
+
 % ------------------------------------------------------------
 \section{Inicjalizacja GPU z Vulkano}
 \label{sec:gpu_init}
 
-Konfiguracja Vulkan silnika skupia się wokół dwóch elementów:
+Konfiguracja silnika Vulkan skupia się wokół dwóch elementów:
 doboru minimalnego zestawu funkcji urządzenia wymaganych przez solver
 DFSPH oraz autorskiej cechy \texttt{ComputeStep} --- oryginalnej warstwy
 abstrakcji, która nadaje wszystkim potokom obliczeniowym jednolity
@@ -541,7 +585,7 @@ danych w całym potoku obliczeniowym.
 \section{Struktury danych cząstek}
 \label{sec:data_structures}
 
-Zanim możliwe jest zbudowanie potoku obliczeniowego, konieczne jest podjęcie
+Zanim zbudowany zostanie potok obliczeniowy, konieczne jest podjęcie
 decyzji dotyczącej organizacji danych cząstek w pamięci GPU.
 Wybór ten determinuje zarówno poprawność symulacji --- ze względu na model
 pamięci Vulkan --- jak i wydajność obliczeniową, poprzez wpływ na wzorzec
@@ -691,7 +735,7 @@ pojedynczy indeks tablicy funkcją haszującą:
     \bmod M,
 \end{equation}
 gdzie $p_1 = 73856093$, $p_2 = 19349663$, $p_3 = 83492791$ to trzy wzajemnie
-pierwsze stałe redukujące kolizje przy typowych rozkładach cząstek,
+pierwsze stałe redukujące kolizje przy typowych rozkładach cząstek~\cite{teschner2003optimized},
 a $M$ jest rozmiar tablicy równy potędze dwójki.
 
 Wynikiem tej operacji dla każdej cząstki jest rekord \texttt{Entry}, złożony
@@ -738,7 +782,7 @@ Wyszukiwanie sąsiadów realizowane jest przez cztery kolejne etapy
 \node[lbl, below=0.35cm of reorder]
     {\texttt{pos\_b}, \texttt{vel\_b}\\(przestawione)};
 \end{tikzpicture}
-\caption{Czterostopniowy potok wyszukiwania sąsiadów}
+\caption{Czterostopniowy potok wyszukiwania sąsiadów. Źródło: Opracowanie własne}
 \label{fig:neighbor_pipeline}
 \end{figure}
 
@@ -778,21 +822,21 @@ transakcji z całą linią pamięci podręcznej.
 \label{sec:sorting}
 
 Sortowanie bufora \texttt{grid\_entries} jest najkosztowniejszą operacją
-potoku wyszukiwania sąsiadów i wywiera bezpośredni wpływ na czas klatki.
-Pierwszą zaimplementowaną metodą był bitonic sort --- algorytm oparty na
+potoku wyszukiwania sąsiadów i wywiera bezpośredni wpływ na czas wykonania klatki.
+Pierwszą zaimplementowaną metodą było sortowanie bitoniczne --- algorytm oparty na
 sieci porównań, który dobrze nadaje się na GPU ze względu na zerową
 dywergencję wątków i prostą strukturę sterowania.
 W praktyce okazało się jednak, że przy dużej liczbie cząstek czas
 sortowania dominuje całkowity koszt kroku fizyki: złożoność $O(N \log^2 N)$
 sprawia, że każde podwojenie liczby cząstek niemal czterokrotnie wydłuża
 sortowanie.
-Skłoniło to do implementacji radix sort --- algorytmu liniowego
+Skłoniło to do implementacji sortowania pozycyjnego --- algorytmu liniowego
 $O(kN)$ o stałej liczbie przebiegów niezależnej od $N$ --- jako
 alternatywy dostępnej do przełączenia w czasie działania programu.
 Oba algorytmy omówiono poniżej, a ich porównanie ilościowe przedstawiono
 w podrozdziale~\ref{subsec:sort_comparison}.
 
-\subsection{Bitonic Sort}
+\subsection{Sortowanie bitoniczne}
 \label{subsec:bitonic}
 
 Sieć sortowania bitonicznego~\cite{jain2015bitonic} jest deterministycznym grafem komparatorów,
@@ -840,10 +884,10 @@ cząstek. Złożoność $O(N \log^2 N)$ staje się jednak coraz mniej korzystna 
 $N$, co skłoniło do zbadania alternatywy opartej na zliczaniu, omówionej w kolejnym
 podrozdziale.
 
-\subsection{Radix Sort}
+\subsection{Sortowanie pozycyjne}
 \label{subsec:radix}
 
-Radix sort jest algorytmem sortowania przez zliczanie, a nie przez porównywanie, co stanowi
+Sortowanie pozycyjne jest algorytmem sortowania przez zliczanie, a nie przez porównywanie, co stanowi
 fundamentalną różnicę w stosunku do sortowania bitonicznego. Zamiast parować elementy,
 każdy przebieg algorytmu zlicza, ile razy w danych pojawia się każda z $2^b$ możliwych
 wartości wybranego $b$-bitowego fragmentu klucza, i na tej podstawie oblicza adresy docelowe
@@ -886,17 +930,14 @@ ilustruje rysunek~\ref{fig:radix_one_pass}.
   \draw[arr] (obuf.south) |- (ror.east);
   \draw[arr] (ror)  -- (out);
 \end{tikzpicture}
-\caption{Przepływ danych w jednym przebiegu sortowania radix. Shadery zliczania
-i reorganizacji uruchamiane są z $m = \lceil N/2048\rceil$ grupami roboczymi;
-skan prefiksowy zawsze w pojedynczej grupie roboczej (dispatch $[1,1,1]$)
-\newline Źródło: Opracowanie własne na podstawie~\cite{harada2011introduction}}
+\caption{Przepływ danych w jednym przebiegu sortowania pozycyjnego. Źródło: Opracowanie własne na podstawie~\cite{harada2011introduction}}
 \label{fig:radix_one_pass}
 \end{figure}
 
 Shader \textit{zliczanie} jest wywoływany z $m = \lceil N/2048 \rceil$ grupami roboczymi,
 gdzie każda przetwarza dokładnie $256 \times 8 = 2048$ elementów --- wynik przyjętego
 rozmiaru grupy roboczej wynoszącego 256 wątków przy ośmiu elementach na wątek (stała
-\texttt{ELEMENTS\_PER\_INVOCATION}). Każdy wątek wyodrębnia $b$-bitową cyfrę radix z
+\texttt{ELEMENTS\_PER\_INVOCATION}). Każdy wątek wyodrębnia $b$-bitową cyfrę z
 każdego ze swoich ośmiu elementów przez przesunięcie bitowe i maskowanie, a następnie
 zlicza jej wystąpienia operacją atomową \texttt{atomicAdd} na tablicy
 \texttt{local\_counts[256]} przechowywanej w pamięci dzielonej grupy roboczej. Koszt
@@ -905,7 +946,7 @@ GPU --- bez tego kroku wszystkie wątki wszystkich grup roboczych konkurowałyby
 256 globalnych liczników, co skutkowałoby serializacją i niwelowałoby zyski z równoległości.
 Po przetworzeniu całego segmentu bariera synchronizuje lokalne liczniki w obrębie grupy,
 a jeden wątek zapisuje 256 wartości do globalnego bufora liczników pod indeksem
-$d \cdot m + \mathrm{wg}$, gdzie $d$ to wartość cyfry radix, a $\mathrm{wg}$ --- numer
+$d \cdot m + \mathrm{wg}$, gdzie $d$ to wartość cyfry, a $\mathrm{wg}$ --- numer
 grupy roboczej. Ten kolumnowy układ bufora jest nieprzypadkowy: podczas skanowania
 kolejne wątki odczytują wartości tego samego kubełka $d$ z kolejnych segmentów pod
 kolejnymi adresami pamięci, co zapewnia koalescencję dostępów do pamięci globalnej.
@@ -928,17 +969,17 @@ roboczymi przetwarzającymi po 2048 elementów każda. Dla każdego elementu wą
 adres docelowy jako sumę globalnego przesunięcia odczytanego z tablicy przesunięć oraz
 lokalnego indeksu tego elementu w obrębie grupy roboczej i kubełka, po czym zapisuje
 go pod ten adres w buforze wyjściowym. Operacja ta jest stabilnym scatterem ---
-zachowuje wzajemną kolejność elementów o tej samej wartości cyfry radix, co jest
+zachowuje wzajemną kolejność elementów o tej samej wartości cyfry, co jest
 warunkiem koniecznym poprawności całego algorytmu: przebiegi od najmniej znaczących
 bitów (ang.~\textit{LSB first}) ku najbardziej znaczącym zachowują poprawną kolejność
 z poprzednich przebiegów wyłącznie wtedy, gdy każdy bieżący przebieg jest stabilny.
 
 Implementacja korzysta z dwóch buforów sortowania: głównego \texttt{grid\_entries}
 oraz pomocniczego \texttt{entries\_tmp}, wewnętrznego do struktury \texttt{RadixSorter}.
-Parzyste przebiegi (0 i~2) kierują dane z \texttt{grid\_entries} do \texttt{entries\_tmp},
-nieparzyste (1 i~3) --- w odwrotnym kierunku; po czterech przebiegach wynik jest zawsze
+Parzyste przebiegi kierują dane z \texttt{grid\_entries} do \texttt{entries\_tmp},
+nieparzyste --- w odwrotnym kierunku; po czterech przebiegach wynik jest zawsze
 z powrotem w \texttt{grid\_entries}. Złożoność $O(kN)$ ze stałym $k=4$
-sprawia, że koszt sortowania rośnie liniowo z liczbą cząstek, co czyni radix sort
+sprawia, że koszt sortowania rośnie liniowo z liczbą cząstek, co czyni sortowanie pozycyjne
 algorytmem z wyboru dla dużych symulacji, gdzie logarytmiczne czynniki sortowania
 bitonicznego stają się odczuwalne.
 
@@ -953,16 +994,16 @@ wykonania w potoku obliczeniowym.
 
 \begin{table}[htbp]
 \centering
-\caption{Porównanie własności sortowania bitonicznego i radix}
+\caption{Porównanie własności sortowania bitonicznego i pozycyjnego}
 \label{tab:sort_comparison}
 \begin{tabular}{p{4.5cm}p{4.5cm}p{4.5cm}}
 \toprule
-\textbf{Cecha} & \textbf{Bitonic sort} & \textbf{Radix sort} \\
+\textbf{Cecha} & \textbf{Sortowanie bitoniczne} & \textbf{Sortowanie pozycyjne} \\
 \midrule
 Złożoność czasowa & $O(N \log^2 N)$ & $O(kN)$, $k=4$ \\[3pt]
 Liczba dispatchów dla $N=2^{15}$ & 120 & 12 \\[3pt]
 Rozbieżność wątków & Zerowa & Zerowa \\[3pt]
-Pamięć pomocnicza & Brak (sort. w miejscu) & Bufor \texttt{entries\_tmp} ($8N$~B) i bufor liczników \\[3pt]
+Pamięć pomocnicza & Brak (sort. w miejscu) & Bufor \texttt{entries\_tmp} i bufor liczników \\[3pt]
 Stabilność sortowania & Niestabilna & Stabilna \\[3pt]
 Wymóg na $N$ & Potęga dwójki & Dowolne \\
 \bottomrule
@@ -982,9 +1023,7 @@ rysunek~\ref{fig:sort_benchmark}.
 \centering
 \includegraphics[width=0.85\textwidth]{figures/sort_benchmark.png}
 \caption{Czas sortowania bufora \texttt{grid\_entries} jako funkcja liczby
-elementów $N$, w skali logarytmicznej na obu osiach. Punkty odpowiadają
-medianie z piętnastu przebiegów dla danego $N$
-\newline Źródło: Opracowanie własne}
+elementów $N$, w skali logarytmicznej na obu osiach. Źródło: Opracowanie własne}
 \label{fig:sort_benchmark}
 \end{figure}
 
@@ -992,7 +1031,7 @@ Dla małej liczby elementów ($N \lesssim 2^{18}$) sortowanie bitoniczne jest
 szybsze mimo asymptotycznie gorszej złożoności. Wynika to z bardzo niskiego
 stałego narzutu pojedynczego komparatora: każdy przebieg bitoniczny składa się
 wyłącznie z odczytu pary elementów, porównania i warunkowej zamiany, podczas
-gdy każdy przebieg radix wymaga trzech kolejnych dispatchów ze wzajemną
+gdy każdy przebieg sortowania pozycyjnego wymaga trzech kolejnych dispatchów ze wzajemną
 synchronizacją barierami pamięci. Przy $N \le 2^{14}$ cała praca obliczeniowa
 sortowania mieści się w czasie porównywalnym z kosztem wprowadzenia poleceń
 do kolejki GPU --- pomiar jest zdominowany przez ten stały narzut, a różnica
@@ -1000,40 +1039,77 @@ między algorytmami pochodzi głównie z liczby dispatchów składowych.
 
 Punkt równowagi obserwuje się między $N = 2^{18}$ a $N = 2^{19}$. Powyżej tego
 progu logarytmiczny czynnik bitonicznego $O(N \log^2 N)$ zaczyna dominować nad
-stałą liczbą dwunastu dispatchów radix. Dla $N = 2^{22}$ (ponad cztery miliony
-elementów) sortowanie radix jest niemal trzykrotnie szybsze: $30{,}5$~ms
+stałą liczbą dwunastu wywołań sortowania pozycyjnego. Dla $N = 2^{22}$ (ponad cztery miliony
+elementów) sortowanie pozycyjne jest niemal trzykrotnie szybsze: $30{,}5$~ms
 względem $82{,}6$~ms dla bitonicznego.
 
 Pomiar wyizolowanego sortowania nie odzwierciedla jednak w pełni zachowania
 algorytmu w pełnym potoku obliczeniowym, w którym dispatche sortowania są
 przeplatane innymi etapami solvera DFSPH wraz z wymaganymi między nimi
 barierami pamięci. Profil Tracy zarejestrowany dla symulacji z 25\,000 cząstek
-(rysunki~\ref{fig:tracy_bitonic} i~\ref{fig:tracy_radix}) pokazuje, że średni
+(tabele~\ref{tab:tracy_bitonic} i~\ref{tab:tracy_radix}) pokazuje, że średni
 czas wykonania etapu \texttt{neighbor\_search\_post\_integrate} ---
 obejmującego haszowanie, sortowanie, wyznaczenie przesunięć i reorganizację
 buforów --- wynosi $3{,}64$~ms dla wariantu bitonicznego i $616{,}3$~µs
-dla wariantu radix. Oba pomiary dotyczą tej samej konfiguracji symulacji,
+dla wariantu sortowania pozycyjnego. Oba pomiary dotyczą tej samej konfiguracji symulacji,
 więc niemal sześciokrotna różnica wynika wyłącznie z wyboru algorytmu
 sortowania.
 
-\begin{figure}[htbp]
+\begin{table}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/bitonic_tracy_profile.png}
-\caption{Profil Tracy dla wariantu z sortowaniem bitonicznym, $N=25\,000$
-cząstek. Wiersz \texttt{neighbor\_search\_post\_integrate} pokazuje średni
-czas $3{,}64$~ms na wywołanie
-\newline Źródło: Opracowanie własne}
-\label{fig:tracy_bitonic}
-\end{figure}
+\caption{Profil wydajności dla wariantu z sortowaniem bitonicznym ($N=25\,000$ cząstek)}
+\label{tab:tracy_bitonic}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{llrrr}
+\toprule
+\textbf{Nazwa etapu} & \textbf{Czas całkowity} & \textbf{Wywołania} & \textbf{Średni czas} \\
+\midrule
+\texttt{neighbor\_search\_post\_integrate}  & 37,40 s (14,24\%)  & 10\,276 & 3,64 ms \\
+\texttt{neighbor\_search\_init}             & 5,69 s (2,17\%)    & 1\,468  & 3,88 ms \\
+\texttt{divergence\_solver}                 & 3,48 s (1,32\%)    & 10\,276 & 338,46 $\mu$s \\
+\texttt{density\_solver}                    & 3,43 s (1,31\%)    & 10\,276 & 333,98 $\mu$s \\
+\texttt{density\_alpha\_post\_integrate}    & 477,31 ms (0,18\%) & 10\,276 & 46,45 $\mu$s \\
+\texttt{divergence\_source\_term}           & 425,08 ms (0,16\%) & 10\,276 & 41,37 $\mu$s \\
+\texttt{density\_source\_term}              & 421,67 ms (0,16\%) & 10\,276 & 41,03 $\mu$s \\
+\texttt{viscosity}                          & 412,09 ms (0,16\%) & 10\,276 & 40,10 $\mu$s \\
+\texttt{pressure\_integration}              & 391,08 ms (0,15\%) & 10\,276 & 38,06 $\mu$s \\
+\texttt{divergence\_integration}            & 294,14 ms (0,11\%) & 10\,276 & 28,62 $\mu$s \\
+\texttt{density\_alpha\_init}               & 63,68 ms (0,02\%)  & 1\,468  & 43,38 $\mu$s \\
+\texttt{stats}                              & 58,12 ms (0,02\%)  & 1\,468  & 39,59 $\mu$s \\
+\texttt{substep}                            & 12,80 ms (0,00\%)  & 10\,276 & 1,25 $\mu$s \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{1ex} \\
+\end{table}
 
-\begin{figure}[htbp]
+\begin{table}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figures/radix_tracy_profile.png}
-\caption{Profil Tracy dla wariantu z sortowaniem radix w tym samym
-scenariuszu. Średni czas tego samego zakresu spada do $616{,}3$~µs
-\newline Źródło: Opracowanie własne}
-\label{fig:tracy_radix}
-\end{figure}
+\caption{Profil wydajności dla wariantu z sortowaniem pozycyjnym ($N=25\,000$ cząstek)}
+\label{tab:tracy_radix}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Nazwa etapu} & \textbf{Czas całkowity} & \textbf{Wywołania} & \textbf{Średni czas} \\
+\midrule
+\texttt{neighbor\_search\_post\_integrate}  & 1,21 s (4,95\%)    & 1\,960 & 616,30 $\mu$s \\
+\texttt{divergence\_solver}                 & 634,15 ms (2,60\%) & 1\,960 & 323,54 $\mu$s \\
+\texttt{density\_solver}                    & 624,33 ms (2,56\%) & 1\,960 & 318,54 $\mu$s \\
+\texttt{neighbor\_search\_init}             & 78,88 ms (0,32\%)  & 98     & 804,93 $\mu$s \\
+\texttt{density\_source\_term}              & 70,83 ms (0,29\%)  & 1\,960 & 36,14 $\mu$s \\
+\texttt{density\_alpha\_post\_integrate}    & 70,20 ms (0,29\%)  & 1\,960 & 35,82 $\mu$s \\
+\texttt{divergence\_source\_term}           & 70,08 ms (0,29\%)  & 1\,960 & 35,75 $\mu$s \\
+\texttt{pressure\_integration}              & 68,99 ms (0,28\%)  & 1\,960 & 35,20 $\mu$s \\
+\texttt{viscosity}                          & 67,89 ms (0,28\%)  & 1\,960 & 34,64 $\mu$s \\
+\texttt{divergence\_integration}            & 52,44 ms (0,21\%)  & 1\,960 & 26,76 $\mu$s \\
+\texttt{stats}                              & 5,16 ms (0,02\%)   & 98     & 52,65 $\mu$s \\
+\texttt{density\_alpha\_init}               & 3,78 ms (0,02\%)   & 98     & 38,54 $\mu$s \\
+\texttt{substep}                            & 1,01 ms (0,00\%)   & 1\,960 & 514 ns \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{1ex} \\
+\end{table}
 
 Rozbieżność między izolowanym testem porównawczym (gdzie radix dla $N = 2^{15}$ jest
 nieznacznie wolniejszy) a pomiarem produkcyjnym (gdzie ten sam $N$ daje
@@ -1244,7 +1320,7 @@ void main() {
 }
 \end{lstlisting}
 
-Każda invokacja odpowiada jednej cząstce~$i$.
+Każda wywołanie odpowiada jednej cząstce~$i$.
 Zmienna \texttt{density} akumuluje skalarne wkłady jądra \texttt{kernel\_w}
 po 27 sąsiednich komórkach --- jest to bezpośrednia realizacja wzorca
 z Algorytmu~\ref{alg:neighbor_iter}.
@@ -1307,10 +1383,10 @@ powierzchni, których gęstość spełnia $\rho_i < \rho_0$, generowałyby siły
 przyciągające, prowadząc do niestabilności tensylnej.
 
 Test \texttt{rest\_density\_diagnostic} ujawnił 
-wyraźną dwumodalność rozkładu gęstości (Rys.~\ref{fig:rest_density}): 
+wyraźną dwumodalność rozkładu gęstości (rysunek~\ref{fig:rest_density}): 
 cząstki wewnętrzne osiągają $\rho_i \approx \rho_0$, natomiast cząstki przy swobodnej 
 powierzchni wykazują systematyczny deficyt wynikający z niepełnej sumy jądra SPH. 
-Właśnie ten deficyt powoduje plateau widoczne w teście zbieżności (Rys.~\ref{fig:convergence}, panel lewy) --- błąd $\overline{|\rho_i - \rho_0|}$ 
+Właśnie ten deficyt powoduje plateau widoczne w teście zbieżności (rysunek~\ref{fig:convergence}a) --- błąd $\overline{|\rho_i - \rho_0|}$ 
 utrzymuje się na poziomie $\sim\!200~\mathrm{kg/m^3}$ niezależnie od liczby iteracji, 
 ponieważ solver poprawnie zeruje ciśnienie dla pod-gęstych cząstek brzegowych, 
 nie próbując korygować efektu wynikającego z geometrii.
@@ -1319,7 +1395,7 @@ Właściwa obsługa brzegu za pomocą cząstek-duchów~\cite{schechter2012ghost}
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\linewidth]{figures/rest_density.png}
-    \caption{Histogram gęstości w konfiguracji spoczynkowej ($n = 4800$ cząstek, bez kroku symulacji). Cząstki wewnętrzne skupiają się przy $\rho_0 = 1000~\mathrm{kg/m^3}$; cząstki przy swobodnej powierzchni wykazują deficyt będący ograniczeniem standardowego SPH bez obsługi brzegu. Źródło: opracowanie własne}
+    \caption{Histogram gęstości w konfiguracji spoczynkowej ($n = 4800$ cząstek, bez kroku symulacji). Źródło: opracowanie własne}
     \label{fig:rest_density}
 \end{figure}
 
@@ -1337,7 +1413,6 @@ float divergence_sum = 0.0;
 vec3 vel_diff = vel_i - vel_j;
 divergence_sum += mass * dot(vel_diff, grad);
 // koniec petli
-
 source_terms[i] = -divergence_sum;
 \end{lstlisting}
 
@@ -1350,7 +1425,7 @@ vec3 new_vel = vel + ap * dt;
 velocities[i] = vec4(new_vel, 0.0);
 \end{lstlisting}
 
-Prawy panel Rys.~\ref{fig:convergence} ujawnia odwrotną zależność:
+Rysunek~\ref{fig:convergence}b ujawnia odwrotną zależność:
 błąd dywergencji wzrasta wraz z liczbą iteracji i formuje symetryczne plateau od góry.
 Jest to bezpośrednie sprzężenie z solverem gęstości: jedna iteracja ledwo koryguje gęstość
 i nieznacznie przesuwa cząstki, pozostawiając pole prędkości prawie bezrozbieżne;
@@ -1366,11 +1441,12 @@ ustabilizować pola prędkości --- stąd trwałe plateau po obu stronach wykres
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\linewidth]{figures/convergence.png}
-    \caption{Zbieżność solvera DFSPH: uśredniony błąd gęstości (lewy panel) i błąd dywergencji (prawy panel) w funkcji liczby iteracji Jacobiego. Każdy punkt to uśrednienie 40~kroków symulacji po 50~krokach rozgrzewki ($n = 4800$ cząstek). Plateau błędu gęstości wynika z deficytu jądra SPH na brzegu; plateau błędu dywergencji wynika ze sprzężenia z solverem gęstości. Źródło: opracowanie własne}
+    \caption{Zbieżność solvera DFSPH: uśredniony błąd gęstości~(a) i błąd dywergencji~(b)
+             w funkcji liczby iteracji Jacobiego. Źródło: Opracowanie własne}
     \label{fig:convergence}
 \end{figure}
 
-\subsection{Warunek CFL i dobór \(\Delta t\)}
+\subsection{Warunek CFL i dobór \texorpdfstring{$\Delta t$}{Delta t}}
 \label{subsec:cfl}
 
 Dobór kroku czasowego $\Delta t$ kształtował się przez kilka etapów prób i korekt,
@@ -1409,36 +1485,30 @@ Przyczyna jest dokładnie tą, którą ujawnił test zbieżności
 (podrozdz.~\ref{subsec:density_correction}): deficyt jądra SPH na swobodnej
 powierzchni trwale blokuje błąd gęstości na poziomie $\sim\!200~\mathrm{kg/m^3}$,
 niezależnie od liczby iteracji.
-Nawet milion iteracji nie obniżyłby go poniżej żadnego sensownego progu.
 
 \paragraph{Decyzja końcowa.}
 Jako kompromis powrócono do stałego $\Delta t = 5~\mathrm{ms}$ i stałej liczby
-czterech iteracji per solver.
+czterech iteracji na solver.
 Rozwiązanie zapewnia przewidywalny koszt obliczeniowy klatki i eliminuje ryzyko
 zawieszenia symulatora w nieskończonej pętli iteracyjnej.
 Utrzymują się dwa znane ograniczenia: niska liczba klatek na sekundę wynikająca
 z braku adaptacji kroku oraz ryzyko niestabilności numerycznej przy długich sesjach.
 Oba są bezpośrednią konsekwencją braku właściwej obsługi brzegu ---
 bez niej kryterium $\varepsilon$-zbieżności nie może działać poprawnie.
+Rysunek~\ref{fig:cfl_comparison} zestawia obie strategie: panel~(a) pokazuje krok
+czasowy --- wariant adaptacyjny rośnie do $50~\mathrm{ms}$, po czym w okolicach
+klatki~205 wywołuje katastrofalną niestabilność ($v_{\max} \approx 1100~\mathrm{m/s}$);
+panel~(b) pokazuje liczbę iteracji solvera --- wariant adaptacyjny osiąga limit
+100 iteracji w każdej klatce bez wyjątku; panel~(c) pokazuje $v_{\max}$ ---
+po eksplozji prędkość stabilizuje się na poziomie $20$--$40~\mathrm{m/s}$,
+co wskazuje na stan uszkodzonej symulacji.
 
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\textwidth]{figures/cfl_comparison.png}
-  \caption{Porównanie strategii statycznego $\Delta t$ (linia ciągła) i adaptacyjnego
-    $\Delta t$ według warunku CFL (linia przerywana) w trakcie 500 klatek symulacji.
-    \textbf{Górny panel:} krok czasowy $\Delta t$ w milisekundach.
-    Wariant statyczny utrzymuje stałe $5~\mathrm{ms}$; wariant adaptacyjny rośnie
-    do $50~\mathrm{ms}$ w chwilach spokoju cieczy, po czym w okolicach klatki~205
-    wywołuje katastrofalną niestabilność ($v_{\max} \approx 1100~\mathrm{m/s}$)
-    i opada do minimalnego $1~\mathrm{ms}$.
-    \textbf{Środkowy panel:} liczba iteracji solvera Jacobiego.
-    Wariant statyczny utrzymuje stałe cztery iteracje; wariant adaptacyjny
-    osiąga limit 100 iteracji w każdej klatce bez wyjątku, ponieważ próg
-    $\varepsilon$ nigdy nie jest spełniony.
-    \textbf{Dolny panel:} maksymalna prędkość cząstki $v_{\max}$.
-    Po eksplozji prędkość stabilizuje się na poziomie $20$--$40~\mathrm{m/s}$,
-    co wskazuje na stan uszkodzonej symulacji.\\
-    Źródło: opracowanie własne}
+  \caption{Porównanie strategii statycznego i adaptacyjnego $\Delta t$
+    w trakcie 500 klatek symulacji: krok czasowy~(a),
+    liczba iteracji solvera Jacobiego~(b), maksymalna prędkość cząstki~(c). Źródło: Opracowanie własne}
   \label{fig:cfl_comparison}
 \end{figure}
 
@@ -1448,7 +1518,7 @@ bez niej kryterium $\varepsilon$-zbieżności nie może działać poprawnie.
 
 Podrozdział ten opisuje implementację dwóch mechanizmów siłowych działających
 na cząsteczki poza solverem DFSPH: wygładzenia prędkości metodą XSPH oraz
-odpowiedzi na kolizje z granicą domeny.
+odpowiedzi na kolizje ze ścianami sześcianu symulacji.
 Podstawy teoretyczne obu metod omówiono w podrozdziale~\ref{sec:physical_models_theory};
 poniżej skupiono się na konkretnych wyborach implementacyjnych i stałych
 liczbowych przyjętych w kodzie.
@@ -1516,7 +1586,7 @@ ruch równoległy do ściany, nie zatrzymując cząsteczki całkowicie.
 
 Podejście to nie koryguje deficytu jądra przy brzegu omówionego
 w~podrozdz.~\ref{subsec:divergence_correction}, lecz skutecznie
-zapobiega ucieczce cząsteczek z domeny i jest wystarczające dla
+zapobiega ucieczce cząsteczek poza granice sześcianu symulacji i jest wystarczające dla
 wizualnie wiarygodnych scen zamkniętych.
 
 % ------------------------------------------------------------
@@ -1566,8 +1636,8 @@ grubego kroku oraz bisekcji refinementu.
 
 \paragraph{Test AABB i krok gruby.}
 Przed wejściem w pętlę funkcja \texttt{intersectAABB} wyznacza analitycznie
-przedział $[t_{\min}, t_{\max}]$ wejścia i wyjścia promienia z domeny;
-promienie chybiające domenę odrzucane są natychmiast instrukcją \texttt{discard}.
+przedział $[t_{\min}, t_{\max}]$ wejścia i wyjścia promienia z obszaru symulacji;
+jeśli $t_{\min} > t_{\max}$, promień w ogóle nie przecina sześcianu otaczającego i jest odrzucany instrukcją \texttt{discard}.
 
 \begin{lstlisting}[caption={Fragment \texttt{raymarch} --- test AABB i petla przemarszu},
                    label=lst:march_loop,]
@@ -1592,7 +1662,7 @@ if (!hit) discard;
 \end{lstlisting}
 
 Krok \texttt{stepWorld} skalowany jest rozmiarem sceny, dzięki czemu ta sama stała
-\texttt{STEP\_SIZE} działa poprawnie niezależnie od proporcji domeny.
+\texttt{STEP\_SIZE} działa poprawnie niezależnie od wymiarów sześcianu otaczającego.
 Promienie, które nie trafią w żaden woksel powyżej progu w 96 krokach, są odrzucane
 instrukcją \texttt{discard} jeszcze na etapie shadera fragmentów.
 
@@ -1616,12 +1686,20 @@ vec3 N = -calcNormal(surfacePos, boxMin, boxMax);
 if (dot(N, N) < 0.5) N = vec3(0.0, 1.0, 0.0);
 \end{lstlisting}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/debug_normals.png}
+\caption{Wizualizacja normalnych powierzchni cieczy zakodowanych jako kolor RGB. Źródło: Opracowanie własne}
+\label{fig:debug_normals}
+\end{figure}
+
+Rysunek~\ref{fig:debug_normals} ilustruje wyznaczone normalne zakodowane jako kolor RGB.
 Osiem iteracji bisekcji zawęża punkt trafiania do dokładności
 $\Delta t / 2^8 \approx 0{,}4\%$ kroku bez zmniejszania globalnego
 \texttt{STEP\_SIZE}.
 Normalna wyznaczana jest sześcioma próbkami pola gęstości metodą różnic skończonych
 (\texttt{eps = 0.018}); warunek \texttt{dot(N,N) < 0.5} zastępuje normalną wektorem
-pionowym w miejscach, gdzie gradient zanika (płaskie dno).
+pionowym w miejscach, gdzie gradient zanika.
 
 \paragraph{Interpolacja trójliniowa.}
 Próbkowanie tekstury \texttt{R32Uint} realizowane jest ręcznie, ponieważ format
@@ -1635,10 +1713,21 @@ vec3  f      = fract(gridPos);
 \ 8 wywolan texelFetch dla wierzcholkow kostki (v000..v111)
 float v0 = mix(mix(v000, v100, f.x), mix(v010, v110, f.x), f.y);
 float v1 = mix(mix(v001, v101, f.x), mix(v011, v111, f.x), f.y);
-return max(0.0, (mix(v0, v1, f.z) - DENSITY_OFFSET) 
+return max(0.0, (mix(v0, v1, f.z) - DENSITY_OFFSET)
                     * DENSITY_MULTIPLIER);
 \end{lstlisting}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\linewidth]{figures/debug_thickness.png}
+\caption{Wizualizacja grubości cieczy wzdłuż promienia jako skala szarości.
+         Źródło: Opracowanie własne}
+\label{fig:debug_thickness}
+\end{figure}
+
+Na rysunku~\ref{fig:debug_thickness} przedstawiono grubość cieczy jako skalę szarości ---
+ciemniejsze obszary odpowiadają cienkim warstwom przy brzegach, jaśniejsze głębokim
+kolumnom wewnątrz bryły, co bezpośrednio steruje absorpcją Beer-Lamberta.
 Odjęcie \texttt{DENSITY\_OFFSET = 300} zeruje szum tła; \texttt{max(0.0, ...)}
 zapobiega ujemnym wartościom gęstości w wokselach powietrza.
 
@@ -1670,6 +1759,15 @@ if (dot(refrDir, refrDir) < 0.01) refrDir = rayDir;
 vec3 background = sampleSkybox(normalize(refrDir));
 \end{lstlisting}
 
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.80\linewidth]{figures/debug_reflection.png}
+\caption{Wizualizacja składnika odbicia zwierciadlanego powierzchni cieczy.
+         Źródło: Opracowanie własne}
+\label{fig:debug_reflection}
+\end{figure}
+
+Rysunek~\ref{fig:debug_reflection} pokazuje składnik odbicia bez refrakcji.
 Wartość $F_0 \approx 0{,}02$ obliczana jest ze wzoru Fresnela dla granicy
 woda--powietrze; przy kącie ślizgowym wzrasta do jedności zgodnie z przybliżeniem
 Schlicka.
@@ -1710,7 +1808,16 @@ waterColor = mix(
 waterColor = waterColor / (waterColor + vec3(1.0));
 \end{lstlisting}
 
-Grubość \texttt{thickness} mierzona jest osobnym przelotem 32 próbek od punktu
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/debug_refraction.png}
+\caption{Wizualizacja składnika refrakcji z absorpcją i rozproszeniem podpowierzchniowym (SSS).
+         Źródło: Opracowanie własne}
+\label{fig:debug_refraction_sss}
+\end{figure}
+
+Rysunek~\ref{fig:debug_refraction_sss} prezentuje składnik refrakcji z absorpcją i SSS.
+Grubość \texttt{thickness} mierzona jest osobnym przelotem 64 próbek od punktu
 powierzchni do tylnej ściany AABB (\texttt{calcThickness}).
 Silna absorpcja kanału czerwonego ($\mu_R = 0{,}45$) przy słabej niebieskiego
 ($\mu_B = 0{,}025$) daje wodzie charakterystyczną niebieskozieloną barwę.
@@ -1737,6 +1844,15 @@ vec3 sampleSkybox(vec3 dir) {
 }
 \end{lstlisting}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{figures/skybox_hdri.png}
+\caption{Panorama środowiskowa HDRI użyta jako tło i źródło oświetlenia sceny.
+         Źródło: Opracowanie własne}
+\label{fig:skybox_hdri}
+\end{figure}
+
+Użyta panorama HDRI przedstawiona jest na rysunku~\ref{fig:skybox_hdri}.
 Stałe $\tfrac{1}{2\pi} \approx 0{,}15915$ i $\tfrac{1}{\pi} \approx 0{,}31831$
 normalizują kąty azymutowy i elewacji do przedziału $[0,\,1]$.
 Ta sama funkcja wywoływana jest zarówno dla promienia odbitego, jak i załamanego,

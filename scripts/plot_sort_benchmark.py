@@ -48,7 +48,6 @@ ax.set_xscale('log', base=2)
 ax.set_yscale('log')
 ax.set_xlabel(r'Liczba elementów $N$')
 ax.set_ylabel(r'Czas sortowania [ms]')
-ax.set_title('Porównanie wydajności sortowania bitonicznego i radix na GPU')
 ax.grid(True, which='both', linestyle=':', alpha=0.7)
 ax.legend(loc='upper left', framealpha=1.0)
 
