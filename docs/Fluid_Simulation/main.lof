@@ -13,7 +13,7 @@
 \contentsline {figure}{\numberline {2.11}{\ignorespaces Schemat struktury CLL z kompaktową tablicą komórek. Źródło: Opracowanie własne na podstawie \cite {band2019compressed}}}{44}{figure.caption.23}%
 \contentsline {figure}{\numberline {2.12}{\ignorespaces Problem niepełnego sąsiedztwa przy granicy domeny. Źródło: Opracowanie własne na podstawie \cite {schechter2012ghost}}}{46}{figure.caption.24}%
 \contentsline {figure}{\numberline {2.13}{\ignorespaces Potok wizualizacji: od listy cząsteczek SPH do końcowego koloru piksela. Źródło: Opracowanie własne}}{47}{figure.caption.25}%
-\contentsline {figure}{\numberline {2.14}{\ignorespaces Schemat raymarchingu z~binarnym zawężaniem. Białe kółka to próbki poniżej progu gęstości, szare kółko to pierwsza próbka powyżej progu (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni $\mathbf {p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite {quilez2013advancing}}}{48}{figure.caption.26}%
+\contentsline {figure}{\numberline {2.14}{\ignorespaces Schemat przemarszu promienia z~binarnym zawężaniem. Białe kółka to próbki poniżej progu gęstości, szare kółko to pierwsza próbka powyżej progu (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni $\mathbf {p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite {quilez2013advancing}}}{48}{figure.caption.26}%
 \addvspace {10\p@ }
 \contentsline {figure}{\numberline {3.1}{\ignorespaces Okno aplikacji podczas symulacji. Źródło: Opracowanie własne}}{53}{figure.caption.29}%
 \contentsline {figure}{\numberline {3.2}{\ignorespaces Łańcuch obliczeń kamery. Źródło: Opracowanie własne}}{58}{figure.caption.33}%

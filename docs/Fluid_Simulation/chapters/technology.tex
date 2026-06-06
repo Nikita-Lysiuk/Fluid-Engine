@@ -840,7 +840,7 @@ Dla trójwymiarowej przestrzeni jądro przyjmuje postać:
         6q^3 - 6q^2 + 1 & \text{dla } 0 \leq q \leq \tfrac{1}{2}, \\
         2(1-q)^3         & \text{dla } \tfrac{1}{2} < q \leq 1, \\
         0                & \text{dla } q > 1,
-    \end{cases}
+    \end{cases},
     \label{eq:cubic_kernel}
 \end{equation}
 
@@ -882,7 +882,7 @@ przyjmuje postać wielomianu piątego stopnia:
     \begin{cases}
         (1-q)^4(4q+1) & \text{dla } 0 \leq q \leq 1, \\
         0              & \text{dla } q > 1,
-    \end{cases}
+    \end{cases},
     \label{eq:wendland_kernel}
 \end{equation}
 
@@ -1309,7 +1309,7 @@ pozycjami. Cząsteczki stanowią dyskretne punkty masy; same w sobie nie tworzą
 żadnej ciągłej powierzchni, którą mógłby przetworzyć renderer. Aby uzyskać
 fotorealistyczny obraz cieczy, potok wizualizacji wykonuje trzy kolejne etapy:
 rekonstrukcję ciągłego pola gęstości ze zbioru punktów, wyznaczenie niejawnej
-izopowierzchni metodą raymarching oraz obliczenie koloru piksela z~uwzględnieniem
+izopowierzchni metodą przemarszu promienia oraz obliczenie koloru piksela z~uwzględnieniem
 fizycznych właściwości optycznych wody. Ogólną strukturę potoku ilustruje
 rysunek~\ref{fig:vis_pipeline}.
 
@@ -1357,7 +1357,7 @@ gwarantuje ciągłość pola bez nieciągłości widocznych jako artefakty wizua
 Ponieważ każda cząsteczka przetwarzana jest przez osobny wątek GPU, wiele wątków
 może jednocześnie aktualizować ten sam woksel. Konflikty zapisu rozwiązuje
 instrukcja atomowa \texttt{imageAtomicAdd}, która gwarantuje spójność sumy bez
-konieczności synchronizacji. Wynikiem etapu splatting jest trójwymiarowa tekstura
+konieczności synchronizacji. Wynikiem etapu splatting --- rzutowania cząsteczek na siatkę wokseli (ang.~splatting) --- jest trójwymiarowa tekstura
 liczb całkowitych: woksele wewnątrz masy cieczy osiągają wartości rzędu setek,
 woksele powietrza zbliżone są do zera. Granica między tymi obszarami stanowi
 niejawną definicję powierzchni cieczy.
@@ -1369,18 +1369,17 @@ cieczy definiuje się jako izopowierzchnię:
 \begin{equation}
     S = \bigl\{\,\mathbf{p} \in \mathbb{R}^3 : \rho(\mathbf{p}) = \rho_{\mathrm{thr}}\,\bigr\}.
 \end{equation}
-Wyznaczenie przecięcia promienia kamery z~tą powierzchnią realizuje metoda
-raymarching \cite{quilez2008raymarching, tomczak2012gpu}: promień emitowany ze
+Wyznaczenie przecięcia promienia kamery z~tą powierzchnią realizuje przemarsz promienia \cite{quilez2008raymarching, tomczak2012gpu}: promień emitowany ze
 środka projekcji przemieszcza się równomiernymi krokami $\Delta t$ wzdłuż swojego
 kierunku, w każdym punkcie próbkując teksturę, aż wartość gęstości przekroczy próg.
-Przed rozpoczęciem marszowania wykonywany jest test przecięcia promienia
+Przed rozpoczęciem przemarszu promienia wykonywany jest test przecięcia promienia
 z~prostopadłościanem wyrównanym do osi (ang.~\textit{Axis-Aligned Bounding Box}, AABB), czyli
 minimalnym prostopadłościanem wyrównanym do osi układu współrzędnych,
 który szczelnie otacza domenę symulacji. Test ten, oparty na metodzie płaszczyzn
 równoległych, wyznacza w~sposób analityczny zakres
 parametru $t \in [t_{\min},\, t_{\max}]$ odpowiadający wejściu i~wyjściu promienia
 z~domeny; promienie nie trafiające w~AABB odrzucane są na poziomie shadera
-fragmentów, zanim pętla marszowania w~ogóle się rozpocznie.
+fragmentów, zanim pętla przemarszu w~ogóle się rozpocznie.
 
 Próbkowanie tekstury odbywa się z~ręczną interpolacją trójliniową ośmiu sąsiednich
 tekseli, zapewniającą ciągłość sygnału niezbędną do poprawnego wyliczenia normalnych.
@@ -1435,7 +1434,7 @@ rysunek~\ref{fig:raymarching}.
   \draw[->, >=Stealth, thick] (3.9, 0) -- (3.0, 0.75)
     node[above left, font=\scriptsize\sffamily] {$\mathbf{N}$};
 \end{tikzpicture}
-\caption{Schemat raymarchingu z~binarnym zawężaniem. Białe kółka to próbki poniżej
+\caption{Schemat przemarszu promienia z~binarnym zawężaniem. Białe kółka to próbki poniżej
          progu gęstości, szare kółko to pierwsza próbka powyżej progu
          (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni
          $\mathbf{p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite{quilez2013advancing}}
@@ -1471,7 +1470,7 @@ w~przeliczonym kierunku, zapewniając spójność oświetlenia między cieczą a
 padania i~właściwości dielektrycznych ośrodka \cite{de2006reflections}. Dla wody
 o~współczynniku załamania $n = 1{,}333$ odbicie przy normalnym kącie padania wynosi:
 \begin{equation}
-    F_0 = \left(\frac{n_1 - n_2}{n_1 + n_2}\right)^{\!2} \approx 0{,}02
+    F_0 = \left(\frac{n_1 - n_2}{n_1 + n_2}\right)^{\!2} \approx 0{,}02,
 \end{equation}
 i~wzrasta do jedności przy kącie ślizgowym. W~shaderze stosuje się przybliżenie
 Schlicka:

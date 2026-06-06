@@ -9,7 +9,7 @@
 \contentsline {subsection}{\numberline {1.2.3}Algorytm Divergence-Free SPH (DFSPH)}{15}{subsection.1.2.3}%
 \contentsline {paragraph}{Poziom zagęszczenia.}{15}{section*.3}%
 \contentsline {paragraph}{Poziom prędkości.}{15}{section*.5}%
-\contentsline {section}{\numberline {1.3}Wizualizacja objętościowa metodą Ray Marching}{17}{section.1.3}%
+\contentsline {section}{\numberline {1.3}Wizualizacja objętościowa metodą Raymarching}{17}{section.1.3}%
 \contentsline {paragraph}{Rekonstrukcja ciągłego pola skalarnego.}{17}{section*.8}%
 \contentsline {paragraph}{Numeryczna integracja promieni.}{18}{section*.9}%
 \contentsline {chapter}{\numberline {2}Przegląd technologii i środowisko programistyczne}{19}{chapter.2}%
@@ -67,7 +67,7 @@
 \contentsline {subsection}{\numberline {3.8.2}Sortowanie pozycyjne}{70}{subsection.3.8.2}%
 \contentsline {subsection}{\numberline {3.8.3}Porównanie algorytmów}{71}{subsection.3.8.3}%
 \contentsline {section}{\numberline {3.9}Solver DFSPH}{75}{section.3.9}%
-\contentsline {subsection}{\numberline {3.9.1}Pętla substepów}{77}{subsection.3.9.1}%
+\contentsline {subsection}{\numberline {3.9.1}Pętla podkroków}{77}{subsection.3.9.1}%
 \contentsline {subsection}{\numberline {3.9.2}Obliczanie gęstości}{78}{subsection.3.9.2}%
 \contentsline {subsection}{\numberline {3.9.3}Korekcja gęstości}{79}{subsection.3.9.3}%
 \contentsline {subsection}{\numberline {3.9.4}Korekcja dywergencji}{80}{subsection.3.9.4}%
@@ -80,8 +80,8 @@
 \contentsline {subsection}{\numberline {3.10.1}Lepkość XSPH}{84}{subsection.3.10.1}%
 \contentsline {subsection}{\numberline {3.10.2}Obsługa kolizji}{84}{subsection.3.10.2}%
 \contentsline {section}{\numberline {3.11}Wizualizacja}{85}{section.3.11}%
-\contentsline {subsection}{\numberline {3.11.1}Splatowanie gęstości do tekstury 3D}{85}{subsection.3.11.1}%
-\contentsline {subsection}{\numberline {3.11.2}Ray Marching}{86}{subsection.3.11.2}%
+\contentsline {subsection}{\numberline {3.11.1}Splatting gęstości do tekstury 3D}{85}{subsection.3.11.1}%
+\contentsline {subsection}{\numberline {3.11.2}Raymarching}{86}{subsection.3.11.2}%
 \contentsline {paragraph}{Test AABB i krok gruby.}{86}{section*.53}%
 \contentsline {paragraph}{Bisekcja i normalna.}{87}{section*.54}%
 \contentsline {paragraph}{Interpolacja trójliniowa.}{88}{section*.56}%

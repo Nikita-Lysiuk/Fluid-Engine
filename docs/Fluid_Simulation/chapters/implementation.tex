@@ -145,7 +145,7 @@ przedstawia tabela~\ref{tab:subsystems}.
 \texttt{Renderer}          & CPU          & Budowanie buforów komend Vulkan, synchronizacja faz fizyki i renderowania \\[3pt]
 \texttt{GpuSceneResources} & GPU          & Bufory cząstek, parametry symulacji, tekstury, dane kamery \\[3pt]
 \texttt{ComputePipelines}  & GPU          & 11 potoków obliczeniowych realizujących solver DFSPH \\[3pt]
-\texttt{Pipelines}         & GPU          & Potoki graficzne: niebo, cząsteczki, woda (ray marching), granice \\
+\texttt{Pipelines}         & GPU          & Potoki graficzne: niebo, cząsteczki, woda (przemarsz promienia, ang. Raymarching), granice \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -188,7 +188,7 @@ $t \leftarrow 0$\;
 uruchomienie \texttt{stats}\;
 skopiowanie pozycji i kolorów cząstek do bufora renderowania\;
 \tcp{Faza renderowania --- GPU}
-\If{\upshape tryb ray marching}{
+\If{\upshape tryb raymarching}{
     uruchomienie \texttt{density\_texture}\;
 }
 narysowanie nieba, wody (lub cząstek), granic kolizji\;
@@ -297,7 +297,7 @@ tabele~\ref{tab:camera_cpu} i~\ref{tab:camera_gpu}.
 \midrule
 \texttt{view}           & \texttt{Mat4} & Macierz widoku --- przekształca punkty z przestrzeni świata do przestrzeni kamery \\[3pt]
 \texttt{proj}           & \texttt{Mat4} & Macierz projekcji --- odwzorowuje przestrzeń kamery na NDC \\[3pt]
-\texttt{inv\_view\_proj}& \texttt{Mat4} & Odwrotność $(\mathbf{P}\mathbf{V})^{-1}$ --- używana przez ray marching do odtworzenia kierunku promienia \\[3pt]
+\texttt{inv\_view\_proj}& \texttt{Mat4} & Odwrotność $(\mathbf{P}\mathbf{V})^{-1}$ --- używana przez przemarsz promienia do odtworzenia kierunku promienia \\[3pt]
 \texttt{camera\_pos}    & \texttt{Vec3} & Pozycja kamery w przestrzeni świata (+ 4~bajty wyrównania) \\
 \bottomrule
 \end{tabular}
@@ -307,7 +307,7 @@ Obrót kamery stosuje podejście charakterystyczne dla kamer pierwszoosobowych.
 Obrót wokół osi Y {odchylenie} (ang.~\textit{yaw}) jest aplikowany
 w przestrzeni globalnej, a wokół osi X pochylenie (ang.~\textit{pitch}) --- w przestrzeni lokalnej kamery:
 \begin{equation}
-  q_{\text{new}} = q_{\text{yaw}} \cdot q_{\text{current}} \cdot q_{\text{pitch}}
+  q_{\text{new}} = q_{\text{yaw}} \cdot q_{\text{current}} \cdot q_{\text{pitch}}.
   \label{eq:camera_rot}
 \end{equation}
 Dzięki temu linia horyzontu pozostaje zawsze pozioma, a obrót nie kumuluje
@@ -342,7 +342,7 @@ Rysunek~\ref{fig:camera_chain} ilustruje kolejność tych obliczeń.
 \label{fig:camera_chain}
 \end{figure}
 
-Macierz \texttt{inv\_view\_proj} jest potrzebna dla ray marchingu. Shader
+Macierz \texttt{inv\_view\_proj} jest potrzebna dla przemarszu promienia. Shader
 operuje na współrzędnych NDC (ang. \textit{Normalized Device Coordinates}) ---
 układzie, w którym środek ekranu to $(0,\,0)$, a narożniki $(\pm1,\,\pm1)$.
 Aby wyznaczyć kierunek promienia dla danego piksela, shader mnoży jego
@@ -1158,7 +1158,7 @@ poziomami korekcji: \textit{korekcja gęstości} kończy się adwekcją pozycji
 $\mathbf{p}_i \leftarrow \mathbf{p}_i + \Delta t\,\mathbf{v}_i$,
 natomiast \textit{korekcja dywergencji} działa wyłącznie na buforze
 prędkości i nie modyfikuje pozycji cząstek.
-Ta różnica determinuje kolejność shaderów w pętli substepów.
+Ta różnica determinuje kolejność shaderów w pętli podkroków (ang. substep).
 Poza nią oba poziomy współdzielą identyczną strukturę: iteracyjna pętla
 ciśnienia z tym samym wzorcem dostępu do sąsiedztwa, różniąca się
 wyłącznie wyrazem źródłowym i finalnym krokiem integracji.
@@ -1254,7 +1254,7 @@ i korekcję dywergencji --- dwie iteracyjne pętle ciśnienia, które łącznie
 wymuszają nieściśliwość pola prędkości. Podrozdział~\ref{subsec:cfl}
 omawia warunek CFL i strategię doboru kroku czasowego $\Delta t$.
 
-\subsection{Pętla substepów}
+\subsection{Pętla podkroków}
 \label{subsec:substep_loop}
 
 Pełna sekwencja wywołań shaderów w obrębie substepu ukazana jest
@@ -1594,13 +1594,13 @@ wizualnie wiarygodnych scen zamkniętych.
 \label{sec:visualization}
 
 Potok wizualizacji przekształca listę pozycji cząsteczek w gotowy kolor piksela
-w trzech etapach: splatowanie gęstości do trójwymiarowej tekstury, przemarsz promienia
+w trzech etapach: splatting gęstości do trójwymiarowej tekstury, przemarsz promienia
 przez tę teksturę do znalezienia powierzchni, oraz model optyczny łączący odbicie,
 załamanie, absorpcję i rozproszenie podpowierzchniowe.
 Podstawy teoretyczne wszystkich etapów omówiono w podrozdziale~\ref{sec:visualization_pipeline_theory};
 poniżej przedstawiono konkretne stałe i fragmenty kodu z implementacji.
 
-\subsection{Splatowanie gęstości do tekstury 3D}
+\subsection{Splatting gęstości do tekstury 3D}
 \label{subsec:density_splat}
 
 Shader \texttt{splat\_density} dla każdej cząsteczki wyznacza woksel centralny,
@@ -1628,7 +1628,7 @@ setek.
 Tekstura ma format \texttt{R32Uint}; stała \texttt{DENSITY\_OFFSET = 300} odejmowana
 jest przy odczycie w shaderze fragmentów, eliminując szum tła bez progowania binarnego.
 
-\subsection{Ray Marching}
+\subsection{Raymarching}
 \label{subsec:raymarching}
 
 Pętla przemarszu w \texttt{raymarch} składa się z trzech faz: testu AABB,

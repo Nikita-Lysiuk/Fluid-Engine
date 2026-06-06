@@ -48,7 +48,7 @@
 \citation{quilez2008raymarching}
 \@writefile{lot}{\contentsline {table}{\numberline {1.1}{\ignorespaces Porównanie całkowitego czasu obliczeń [s] czterech wariantów SPH w scenariuszu przełamania tamy (125\,tys. cząsteczek, 1\,s symulacji) przy różnych stałych krokach czasowych $\Delta t$. Mniejsza wartość oznacza krótszy czas obliczeń \cite  {bender2015divergence}.}}{17}{table.caption.7}\protected@file@percent }
 \newlabel{tab:performance_comparison}{{1.1}{17}{Porównanie całkowitego czasu obliczeń [s] czterech wariantów SPH w scenariuszu przełamania tamy (125\,tys. cząsteczek, 1\,s symulacji) przy różnych stałych krokach czasowych $\Delta t$. Mniejsza wartość oznacza krótszy czas obliczeń \cite {bender2015divergence}}{table.caption.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {1.3}Wizualizacja objętościowa metodą Ray Marching}{17}{section.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1.3}Wizualizacja objętościowa metodą Raymarching}{17}{section.1.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Rekonstrukcja ciągłego pola skalarnego.}{17}{section*.8}\protected@file@percent }
 \citation{tomczak2012gpu}
 \citation{quilez2013advancing}
@@ -200,8 +200,8 @@
 \citation{quilez2013advancing}
 \citation{tomczak2012gpu}
 \citation{pharr2016physically}
-\@writefile{lof}{\contentsline {figure}{\numberline {2.14}{\ignorespaces Schemat raymarchingu z~binarnym zawężaniem. Białe kółka to próbki poniżej progu gęstości, szare kółko to pierwsza próbka powyżej progu (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni $\mathbf  {p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite  {quilez2013advancing}}}{48}{figure.caption.26}\protected@file@percent }
-\newlabel{fig:raymarching}{{2.14}{48}{Schemat raymarchingu z~binarnym zawężaniem. Białe kółka to próbki poniżej progu gęstości, szare kółko to pierwsza próbka powyżej progu (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni $\mathbf {p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite {quilez2013advancing}}{figure.caption.26}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2.14}{\ignorespaces Schemat przemarszu promienia z~binarnym zawężaniem. Białe kółka to próbki poniżej progu gęstości, szare kółko to pierwsza próbka powyżej progu (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni $\mathbf  {p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite  {quilez2013advancing}}}{48}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:raymarching}{{2.14}{48}{Schemat przemarszu promienia z~binarnym zawężaniem. Białe kółka to próbki poniżej progu gęstości, szare kółko to pierwsza próbka powyżej progu (ciecz). Bisekcja przedziału $[t_4,\, t_5]$ wyznacza punkt powierzchni $\mathbf {p}_s$ z~dokładnością $\Delta t / 2^8$. Źródło: Opracowanie własne na podstawie \cite {quilez2013advancing}}{figure.caption.26}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.9.3}Model optyczny cieczy}{48}{subsection.2.9.3}\protected@file@percent }
 \citation{de2006reflections}
 \citation{walter2007microfacet}
@@ -318,8 +318,8 @@
 \newlabel{alg:neighbor_iter}{{3.2}{76}{Solver DFSPH}{algocf.3.2}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3.11}{\ignorespaces Odwzorowanie wielkości teoretycznych DFSPH na bufory GPU}}{77}{table.caption.45}\protected@file@percent }
 \newlabel{tab:dfsph_variable_mapping}{{3.11}{77}{Odwzorowanie wielkości teoretycznych DFSPH na bufory GPU}{table.caption.45}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.9.1}Pętla substepów}{77}{subsection.3.9.1}\protected@file@percent }
-\newlabel{subsec:substep_loop}{{3.9.1}{77}{Pętla substepów}{subsection.3.9.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.9.1}Pętla podkroków}{77}{subsection.3.9.1}\protected@file@percent }
+\newlabel{subsec:substep_loop}{{3.9.1}{77}{Pętla podkroków}{subsection.3.9.1}{}}
 \citation{bender2015divergence}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.9.2}Obliczanie gęstości}{78}{subsection.3.9.2}\protected@file@percent }
 \newlabel{subsec:density}{{3.9.2}{78}{Obliczanie gęstości}{subsection.3.9.2}{}}
@@ -363,12 +363,12 @@
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {3.10}{\ignorespaces Fragment \texttt  {pressure\_integration} --- odbicie od dolnej sciany}}{85}{lstlisting.3.10}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3.11}Wizualizacja}{85}{section.3.11}\protected@file@percent }
 \newlabel{sec:visualization}{{3.11}{85}{Wizualizacja}{section.3.11}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.11.1}Splatowanie gęstości do tekstury 3D}{85}{subsection.3.11.1}\protected@file@percent }
-\newlabel{subsec:density_splat}{{3.11.1}{85}{Splatowanie gęstości do tekstury 3D}{subsection.3.11.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.11.1}Splatting gęstości do tekstury 3D}{85}{subsection.3.11.1}\protected@file@percent }
+\newlabel{subsec:density_splat}{{3.11.1}{85}{Splatting gęstości do tekstury 3D}{subsection.3.11.1}{}}
 \newlabel{lst:splat}{{3.11}{85}{Shader \texttt {splat\_density} --- waga woksela i zapis atomowy}{lstlisting.3.11}{}}
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {3.11}{\ignorespaces Shader \texttt  {splat\_density} --- waga woksela i zapis atomowy}}{85}{lstlisting.3.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.11.2}Ray Marching}{86}{subsection.3.11.2}\protected@file@percent }
-\newlabel{subsec:raymarching}{{3.11.2}{86}{Ray Marching}{subsection.3.11.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.11.2}Raymarching}{86}{subsection.3.11.2}\protected@file@percent }
+\newlabel{subsec:raymarching}{{3.11.2}{86}{Raymarching}{subsection.3.11.2}{}}
 \@writefile{toc}{\contentsline {paragraph}{Test AABB i krok gruby.}{86}{section*.53}\protected@file@percent }
 \newlabel{lst:march_loop}{{3.12}{86}{Fragment \texttt {raymarch} --- test AABB i petla przemarszu}{lstlisting.3.12}{}}
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {3.12}{\ignorespaces Fragment \texttt  {raymarch} --- test AABB i petla przemarszu}}{86}{lstlisting.3.12}\protected@file@percent }
