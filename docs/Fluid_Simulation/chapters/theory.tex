@@ -1,122 +1,122 @@
-Ciecze stanowią jedno z najbardziej fascynujących, a zarazem złożonych zjawisk fizycznych, 
-których cyfrowa rekonstrukcja od dziesięcioleci pozostaje wyzwaniem na styku informatyki i 
-fizyki obliczeniowej. Historyczne korzenie stosowanych dziś metod sięgają XVIII-wiecznych prac 
-Eulera i Lagrange'a, którzy niezależnie wypracowali dwa odmienne sposoby matematycznego opisu ruchu materii.
+Ciecze stanowią jedno z~najbardziej fascynujących, a~zarazem złożonych zjawisk fizycznych, 
+których cyfrowa rekonstrukcja od dziesięcioleci pozostaje wyzwaniem na styku informatyki
+i~fizyki obliczeniowej. Historyczne korzenie stosowanych dziś metod sięgają XVIII-wiecznych prac 
+Eulera i~Lagrange'a, którzy niezależnie wypracowali dwa odmienne sposoby matematycznego opisu ruchu materii.
 
-\section{Porównanie podejścia Lagrange'owskiego i Eulerowskiego}
+\section{Porównanie podejścia lagrange'owskiego i~eulerowskiego}
 
-Numeryczna symulacja cieczy wymaga w pierwszej kolejności wyboru paradygmatu opisu jej ruchu. 
-Oba dominujące podejścia --- eulerowskie i lagrange'owskie --- stanowią numeryczne przybliżenia 
-rozwiązań równań Naviera-Stokesa: układu równań różniczkowych opisującego ewolucję gęstości i pędu 
-lepkiej cieczy w czasie i przestrzeni. Pierwsze udane próby ich numerycznego rozwiązania dla cieczy o 
-swobodnej powierzchni datuje się na rok 1965, kiedy Francis Harlow i James Eddie Welch z Los Alamos National Laboratory 
-zaproponowali eulerowską metodę znaczników i komórek (ang.~\textit{marker and cell}, MAC)\cite{harlow1965numerical}, 
-opartą na analizie parametrów fizycznych w ustalonych punktach przestrzeni. Chociaż algorytmy siatkowe 
-ewoluowały i są z sukcesami stosowane do dziś, charakteryzują się istotnymi ograniczeniami w obliczu 
+Numeryczna symulacja cieczy wymaga w~pierwszej kolejności wyboru paradygmatu opisu jej ruchu. 
+Oba dominujące podejścia --- eulerowskie i~lagrange'owskie --- stanowią numeryczne przybliżenia 
+rozwiązań równań Naviera-Stokesa: układu równań różniczkowych opisującego ewolucję gęstości i~pędu 
+lepkiej cieczy w~czasie i~przestrzeni. Pierwsze udane próby ich numerycznego rozwiązania dla cieczy
+o~swobodnej powierzchni datuje się na rok 1965, kiedy Francis Harlow i~James Eddie Welch z~Los Alamos National Laboratory 
+zaproponowali eulerowską metodę znaczników i~komórek (ang.~\textit{marker and cell}, MAC)\cite{harlow1965numerical}, 
+opartą na analizie parametrów fizycznych w~ustalonych punktach przestrzeni. Chociaż algorytmy siatkowe 
+ewoluowały i~są z~sukcesami stosowane do dziś, charakteryzują się istotnymi ograniczeniami w~obliczu 
 gwałtownych zjawisk --- silnych rozprysków czy szybkich zmian topologii powierzchni cieczy --- co stało się 
 motywacją do opracowania podejścia lagrange'owskiego.
 
-W odpowiedzi na te trudności, w 1977 roku środowisko astrofizyków zaproponowało alternatywną koncepcję 
+W~odpowiedzi na te trudności, w~1977 roku środowisko astrofizyków zaproponowało alternatywną koncepcję 
 --- wygładzoną hydrodynamikę cząstek (ang.~\textit{smoothed particle hydrodynamics}, SPH)\cite{gingold1977smoothed}. 
-Metoda ta czerpie bezpośrednią inspirację z lagrange'owskiego opisu materii, traktując ciecz jako 
-zbiór dyskretnych elementów masy swobodnie przemieszczających się w przestrzeni. Od czasu publikacji 
+Metoda ta czerpie bezpośrednią inspirację z~lagrange'owskiego opisu materii, traktując ciecz jako 
+zbiór dyskretnych elementów masy swobodnie przemieszczających się w~przestrzeni. Od czasu publikacji 
 prac Gingolda~i~Monaghana, technika SPH doczekała się licznych wariantów optymalizacyjnych, stając się 
-jednym z najchętniej wybieranych narzędzi w grafice komputerowej czasu rzeczywistego.
+jednym z~najchętniej wybieranych narzędzi w~grafice komputerowej czasu rzeczywistego.
 
-Analizując oba podejścia, należy zauważyć, że każde z nich oferuje unikalny zestaw zalet i wad. 
-Metody siatkowe gwarantują wysoką stabilność numeryczną i precyzję obliczeń gradientów ciśnienia. 
-Z kolei metody cząsteczkowe cechują się naturalnym zachowaniem masy oraz brakiem ograniczeń co do 
+Analizując oba podejścia, należy zauważyć, że każde z~nich oferuje unikalny zestaw zalet i~wad. 
+Metody siatkowe gwarantują wysoką stabilność numeryczną i~precyzję obliczeń gradientów ciśnienia. 
+Z~kolei metody cząsteczkowe cechują się naturalnym zachowaniem masy oraz brakiem ograniczeń co do 
 rozmiaru domeny obliczeniowej. Współczesne dążenie do maksymalizacji realizmu przy jednoczesnym zachowaniu 
 wydajności doprowadziło do powstania metod hybrydowych, takich jak FLIP (ang.~\textit{fluid-implicit particle}) 
-\cite{brackbill1986flip}. Stały się one de facto standardem w przemyśle filmowym oraz mediach interaktywnych, 
-łącząc stabilność siatki eulerowskiej z elastycznością cząsteczek lagrange'owskich. Rozwiązania te, 
+\cite{brackbill1986flip}. Stały się one de facto standardem w~przemyśle filmowym oraz mediach interaktywnych, 
+łącząc stabilność siatki eulerowskiej z~elastycznością cząstek lagrange'owskich. Rozwiązania te, 
 choć niezwykle skuteczne, wykraczają poza zakres niniejszej pracy. Skupia się na czystym sformułowaniu 
 cząsteczkowym jako rozwiązaniu najlepiej wykorzystującym architekturę nowoczesnych procesorów graficznych.
 
-\subsection{Istota podejścia Eulerowskiego}
-Podejście Eulerowskie, którego fundamenty położył Leonhard Euler w połowie XVIII wieku \cite{euler1757principes, euler1761principia}, 
-stanowi jeden z dwóch głównych sposobów opisu ruchu materii w mechanice kontinuum. W przeciwieństwie 
-do śledzenia pojedynczych cząstek, koncepcja ta skupia się na stałych punktach w przestrzeni, przez 
+\subsection{Istota podejścia eulerowskiego}
+Podejście eulerowskie, sformułowane przez Leonhard Euler w połowie XVIII wieku \cite{euler1757principes, euler1761principia}, 
+stanowi jeden z~dwóch głównych sposobów opisu ruchu materii w~mechanice kontinuum. W~przeciwieństwie 
+do śledzenia pojedynczych cząstek, koncepcja ta skupia się na stałych punktach w~przestrzeni, przez 
 które przepływa płyn. Zamiast pytać ,,gdzie przemieścił się dany element cieczy?'', analizujemy pytanie 
-,,jaka jest prędkość i ciśnienie w tym konkretnym miejscu w danym momencie?'' \cite{braley2010fluid}. 
+,,jaka jest prędkość i~ciśnienie w~tym konkretnym miejscu w~danym momencie?'' \cite{braley2010fluid}. 
 Matematycznie podejście to opiera się na analizie pól fizycznych. Zmiana dowolnej właściwości płynu 
 $Q$ (np. gęstości lub prędkości) jest opisywana przez tzw. pochodną materiałową, która pozwala połączyć 
-obserwację w stałym punkcie z faktem, że płyn jest w ruchu:
+obserwację w~stałym punkcie z~faktem, że płyn jest w~ruchu:
 
 \begin{equation}
 \frac{DQ}{Dt} = \frac{\partial Q}{\partial t} + \mathbf{u} \cdot \nabla Q.
 \end{equation}
 
-Wzór ten pokazuje, że całkowita zmiana wartości wynika z dwóch czynników: lokalnej zmiany w czasie ($\frac{\partial Q}{\partial t}$) 
+Wzór ten pokazuje, że całkowita zmiana wartości wynika z~dwóch czynników: lokalnej zmiany w~czasie ($\frac{\partial Q}{\partial t}$) 
 oraz efektu transportu tej wartości przez poruszający się płyn ($\mathbf{u} \cdot \nabla Q$). 
 Współczesne techniki komputerowe, opierając się na tych założeniach, wykorzystują metody siatkowe. 
-Jak wspomniano wcześniej, pionierami tego rozwiązania byli Francis Harlow i James Eddie Welch, 
-którzy w 1965 roku wprowadzili metodę MAC\cite{harlow1965numerical}. Ich kluczowym pomysłem było 
-nałożenie na przestrzeń nieruchomej, regularnej siatki obliczeniowej. W takim modelu parametry płynu są 
-obliczane tylko w węzłach lub na ściankach komórek tej siatki, co pozwala na numeryczne rozwiązanie skomplikowanych 
-równań ruchu. Podejście oparte na siatce charakteryzuje się wysoką precyzją matematyczną i stabilnością obliczeń. 
-Stała struktura siatki ułatwia wyznaczanie gradientów ciśnienia, co jest kluczowe dla zachowania realizmu w 
-symulacjach płynów o dużej objętości (np. dymu czy spokojnej wody). Jego największą słabością jest tzw. 
+Jak wspomniano wcześniej, pionierami tego rozwiązania byli Francis Harlow i~James Eddie Welch, 
+którzy w~1965 roku wprowadzili metodę MAC\cite{harlow1965numerical}. Ich kluczowym pomysłem było 
+nałożenie na przestrzeń nieruchomej, regularnej siatki obliczeniowej. W~takim modelu parametry płynu są 
+obliczane tylko w~węzłach lub na ściankach komórek tej siatki, co pozwala na numeryczne rozwiązanie skomplikowanych 
+równań ruchu. Podejście oparte na siatce charakteryzuje się wysoką precyzją matematyczną i~stabilnością obliczeń. 
+Stała struktura siatki ułatwia wyznaczanie gradientów ciśnienia, co jest kluczowe dla zachowania realizmu
+w~symulacjach płynów o~dużej objętości (np. dymu czy spokojnej wody). Jego największą słabością jest tzw. 
 dyfuzja numeryczna, czyli nienaturalne rozmywanie się detali płynu podczas przemieszczania się między komórkami. 
-Ponadto siatki mają trudności z dokładnym śledzeniem swobodnej powierzchni cieczy, co wymaga stosowania dodatkowych 
+Ponadto siatki mają trudności z~dokładnym śledzeniem swobodnej powierzchni cieczy, co wymaga stosowania dodatkowych 
 technik, takich jak \textit{metoda poziomic} (ang.~\textit{Level-Set}) 
-lub \textit{metoda śledzenia objętości} (ang.~\textit{Volume of Fluid}), które przy gwałtownych ruchach i 
-rozpryskach tracą drobne szczegóły, takie jak pojedyncze krople.
+lub \textit{metoda śledzenia objętości} (ang.~\textit{Volume of Fluid}), które przy gwałtownych ruchach
+i~rozpryskach tracą drobne szczegóły, takie jak pojedyncze krople.
 
-Podsumowując, podejście Eulerowskie jest niezwykle skuteczne tam, gdzie płyn wypełnia całą dostępną przestrzeń, jednak 
-staje się mniej wydajne w scenariuszach wymagających symulacji dynamicznych rozprysków i szybkich zmian kształtu cieczy.
+Podsumowując, podejście eulerowskie jest niezwykle skuteczne tam, gdzie płyn wypełnia całą dostępną przestrzeń, jednak 
+staje się mniej wydajne w~scenariuszach wymagających symulacji dynamicznych rozprysków i~szybkich zmian kształtu cieczy.
 
-\subsection{Istota podejścia Lagrange'owskiego}
-Podejście Lagrange'owskie, sformułowane przez Josepha Louisa de Lagrange'a w~jego fundamentalnych pracach nad 
+\subsection{Istota podejścia lagrange'owskiego}
+Podejście lagrange'owskie, sformułowane przez Josepha Louisa de Lagrange'a w~jego fundamentalnych pracach nad 
 teorią ruchu płynów \cite{lagrange1788mecanique}, oferuje zgoła odmienną perspektywę obserwacji materii niż model 
 eulerowski. Zamiast analizować zmiany parametrów w~stałych punktach przestrzeni, badacz podąża za konkretnym 
-elementem masy wzdłuż jego trajektorii. W tym ujęciu współrzędne każdego punktu cieczy są funkcjami czasu oraz 
+elementem masy wzdłuż jego trajektorii. W~tym ujęciu współrzędne każdego punktu cieczy są funkcjami czasu oraz 
 ich pozycji początkowej, co pozwala na bezpośrednie śledzenie historii ruchu poszczególnych fragmentów materii.
 
-Matematycznie ruch w opisie lagrange'owskim wyraża się poprzez funkcję mapowania $\mathbf{x} = \chi(\mathbf{X}, t)$, 
-gdzie $\mathbf{X}$ to pozycja referencyjna cząstki w chwili początkowej, a $\mathbf{x}$ to jej aktualne położenie. 
-Kluczową cechą tej metody jest naturalne zachowanie masy oraz uproszczenie równań adwekcji, które w tym modelu stają 
+Matematycznie ruch w~opisie lagrange'owskim wyraża się poprzez funkcję mapowania $\mathbf{x} = \chi(\mathbf{X}, t)$, 
+gdzie $\mathbf{X}$ to pozycja referencyjna cząstki w~chwili początkowej, a~$\mathbf{x}$ to jej aktualne położenie. 
+Kluczową cechą tej metody jest naturalne zachowanie masy oraz uproszczenie równań adwekcji, które w~tym modelu stają 
 się tożsame z~ruchem samej cząstki. Pozwala to na uniknięcie problemu dyfuzji numerycznej, będącej 
-największą słabością metod siatkowych, oraz umożliwia modelowanie zjawisk o nieskończonym zasięgu bez 
+największą słabością metod siatkowych, oraz umożliwia modelowanie zjawisk o~nieskończonym zasięgu bez 
 konieczności definiowania sztywnej domeny obliczeniowej.
 
 Mimo solidnych fundamentów matematycznych, praktyczne zastosowanie tego podejścia do złożonych symulacji 
-cieczy pojawiło się dopiero w 1977 roku wraz z metodą SPH. Motywacja do jej stworzenia płynęła z potrzeb 
-astrofizyki --- badacze tacy jak Gingold i Monaghan poszukiwali sposobu na modelowanie dynamicznych układów 
-gwiazdowych i procesów formowania się galaktyk, gdzie materia ulega ekstremalnym deformacjom i 
-przemieszczeniom w próżni. Tradycyjne metody oparte na siatce okazywały się całkowicie niewydolne w 
-symulowaniu obiektów, które nie posiadają stałych granic i swobodnie ewoluują w otwartej przestrzeni.
+cieczy pojawiło się dopiero w~1977 roku wraz z~metodą SPH. Motywacja do jej stworzenia płynęła z~potrzeb 
+astrofizyki --- badacze tacy jak Gingold i~Monaghan poszukiwali sposobu na modelowanie dynamicznych układów 
+gwiazdowych i~procesów formowania się galaktyk, gdzie materia ulega ekstremalnym deformacjom
+i~przemieszczeniom w~próżni. Tradycyjne metody oparte na siatce okazywały się całkowicie niewydolne
+w~symulowaniu obiektów, które nie posiadają stałych granic i~swobodnie ewoluują w~otwartej przestrzeni.
 
 Wprowadzenie SPH jako alternatywy dla metod siatkowych było zatem podyktowane koniecznością obsłużenia scenariuszy, 
-w których topologia płynu zmienia się w sposób gwałtowny i nieprzewidywalny. Największym atutem tego podejścia jest 
+w~których topologia płynu zmienia się w~sposób gwałtowny i~nieprzewidywalny. Największym atutem tego podejścia jest 
 brak konieczności stosowania algorytmów śledzenia powierzchni. Ciecz jest definiowana przez samą obecność cząstek, 
-co sprawia, że tworzenie się kropel, łączenie fal czy rozpryski są efektem ubocznym fizyki cząsteczkowej, a nie 
-dodatkowym zadaniem geometrycznym. Metoda wprowadza jednak nowe wyzwania obliczeniowe, z których najistotniejszym 
-jest brak stałych relacji między elementami. W każdym kroku symulacji konieczne jest ponowne wyznaczanie sąsiedztwa 
-cząstek, co wymaga zaawansowanych struktur danych. Ponadto uzyskanie stabilności ciśnienia jest w tym modelu znacznie
+co sprawia, że tworzenie się kropel, łączenie fal czy rozpryski są efektem ubocznym fizyki cząsteczkowej, a~nie 
+dodatkowym zadaniem geometrycznym. Metoda wprowadza jednak nowe wyzwania obliczeniowe, z~których najistotniejszym 
+jest brak stałych relacji między elementami. W~każdym kroku symulacji konieczne jest ponowne wyznaczanie sąsiedztwa 
+cząstek, co wymaga zaawansowanych struktur danych. Ponadto uzyskanie stabilności ciśnienia jest w~tym modelu znacznie
 trudniejsze niż na regularnej siatce, co doprowadziło do powstania złożonych wariantów algorytmu~---
 takich jak bezdywergencyjna hydrodynamika cząstek (ang.~\textit{divergence-free SPH}, DFSPH),
 wymuszająca nieściśliwość poprzez zerowanie dywergencji pola prędkości, czy ciecz oparta na pozycjach
 (ang.~\textit{position based fluids}, PBF), stosująca więzy geometryczne zamiast równań ciśnienia.
 
-Podsumowując, podejście Lagrange'owskie przekształca problem dynamiki cieczy z analizy pól w analizę oddziaływań między 
-elementami dyskretnymi. Jest to koncepcja, która mimo większego skomplikowania w zakresie optymalizacji struktur danych, 
-oferuje niezrównaną elastyczność w wizualizacji dynamicznych i silnie rozproszonych zjawisk wodnych.
+Podsumowując, podejście lagrange'owskie przekształca problem dynamiki cieczy z~analizy pól w~analizę oddziaływań między 
+elementami dyskretnymi. Jest to koncepcja, która mimo większego skomplikowania w~zakresie optymalizacji struktur danych, 
+oferuje niezrównaną elastyczność w~wizualizacji dynamicznych i~silnie rozproszonych zjawisk wodnych.
 
 
-\section{Sformułowanie matematyczne metody cząsteczkowej SPH i jej wariantu DFSPH}
-W celu przejścia od modelu ciągłego do postaci obliczeniowej konieczne jest sformułowanie równań Naviera–Stokesa w sposób umożliwiający ich dyskretyzację w ramach metody cząsteczkowej.
+\section{Sformułowanie matematyczne metody cząsteczkowej SPH i~jej wariantu DFSPH}
+W~celu przejścia od modelu ciągłego do postaci obliczeniowej konieczne jest sformułowanie równań Naviera–Stokesa w~sposób umożliwiający ich dyskretyzację w~ramach metody cząsteczkowej.
 \subsection{Równania Naviera-Stokesa jako fundament teoretyczny} 
-Zarówno metody siatkowe, jak i bezsiatkowe (takie jak SPH), stanowią numeryczne przybliżenia rozwiązań układu różniczkowych równań cząstkowych, nazwanego na cześć Claude'a-Louisa Naviera oraz Sir George'a Gabriela Stokesa. Prace nad tymi równaniami, prowadzone w latach 1822--1850, zdefiniowały sposób, w jaki współczesna fizyka opisuje ruch płynów lepkich \cite{batchelor1967introduction}. Każda analiza z zakresu symulacji cieczy musi opierać się na tym fundamencie, który de facto stanowi sformułowanie podstawowych praw zachowania masy i pędu w mechanice kontinuum \cite{mclean2012continuum}.
+Zarówno metody siatkowe, jak i~bezsiatkowe (takie jak SPH), stanowią numeryczne przybliżenia rozwiązań układu różniczkowych równań cząstkowych, nazwanego na cześć Claude'a-Louisa Naviera oraz Sir George'a Gabriela Stokesa. Prace nad tymi równaniami, prowadzone w~latach 1822--1850, zdefiniowały sposób, w~jaki współczesna fizyka opisuje ruch płynów lepkich \cite{batchelor1967introduction}. Każda analiza z~zakresu symulacji cieczy musi opierać się na tym fundamencie, który de facto stanowi sformułowanie podstawowych praw zachowania masy i~pędu w~mechanice kontinuum \cite{mclean2012continuum}.
 
 Pełny opis dynamiki cieczy wymaga spełnienia dwóch kluczowych warunków:
 \begin{enumerate}
 \item Zachowanie masy (Równanie ciągłości):
-Równanie to opisuje relację między gęstością cieczy a jej przepływem. W formie lagrange'owskiej przyjmuje ono postać:
+Równanie to opisuje relację między gęstością cieczy a~jej przepływem. W~formie lagrange'owskiej przyjmuje ono postać:
 \begin{equation}
 \frac{D\rho}{Dt} = -\rho \nabla \cdot \mathbf{u}.
 \end{equation}
-Informuje ono, że zmiana gęstości elementu masy jest bezpośrednio związana z dywergencją pola prędkości ($\nabla \cdot \mathbf{u}$). W przypadku cieczy nieściśliwych, gęstość powinna pozostać stała ($\frac{D\rho}{Dt} = 0$), co wymusza bezdywergencyjny charakter pola prędkości.
+Informuje ono, że zmiana gęstości elementu masy jest bezpośrednio związana z~dywergencją pola prędkości ($\nabla \cdot \mathbf{u}$). W~przypadku cieczy nieściśliwych, gęstość powinna pozostać stała ($\frac{D\rho}{Dt} = 0$), co wymusza bezdywergencyjny charakter pola prędkości.
 
 \item Zachowanie pędu (Równanie Cauchy’ego):
 Opisuje zachowanie ośrodka ciągłego pod wpływem działających na niego sił \cite{landau1987fluid}:
@@ -133,11 +133,11 @@ Opisuje zachowanie ośrodka ciągłego pod wpływem działających na niego sił
     \end{itemize}
 \end{enumerate}
 
-W kontekście niniejszej pracy, równania te dostarczają ramy analitycznej dla algorytmu SPH. Pokazują one, że ruch cieczy jest wynikiem bilansu sił: wewnętrznego gradientu ciśnienia (powstającego w odpowiedzi na zmiany gęstości), oporu wynikającego z lepkości oraz oddziaływań zewnętrznych. To właśnie sprzężenie między równaniem ciągłości a równaniem pędu pozwala wyznaczyć ciśnienie $p$, które koryguje prędkości cząsteczek tak, aby zachować stałą objętość cieczy. Zadaniem metody SPH jest przekształcenie tych ciągłych zależności w dyskretne interakcje między punktami masy.
+W~kontekście niniejszej pracy, równania te dostarczają ramy analitycznej dla algorytmu SPH. Pokazują one, że ruch cieczy jest wynikiem bilansu sił: wewnętrznego gradientu ciśnienia (powstającego w~odpowiedzi na zmiany gęstości), oporu wynikającego z~lepkości oraz oddziaływań zewnętrznych. To właśnie sprzężenie między równaniem ciągłości a~równaniem pędu pozwala wyznaczyć ciśnienie $p$, które koryguje prędkości cząstek tak, aby zachować stałą objętość cieczy. Zadaniem metody SPH jest przekształcenie tych ciągłych zależności w~dyskretne interakcje między punktami masy.
 
-\subsection{Interpolacja jądrowa i dyskretyzacja SPH}
+\subsection{Interpolacja jądrowa i~dyskretyzacja SPH}
 \label{subsec:kernel-interpolation}
-Istota metody SPH polega na śledzeniu właściwości fizycznych cieczy poprzez analizę dyskretnych punktów masy. Fundamentem tej techniki jest matematyczna koncepcja dystrybucji Diraca $\delta$ oraz powiązana z nią tożsamość Diraca. W ujęciu idealnym, cząsteczkę można traktować jako nieskończenie mały punkt, w którym cała siła skupiona jest w jednym miejscu, a poza nim wynosi zero:
+Istota metody SPH polega na śledzeniu właściwości fizycznych cieczy poprzez analizę dyskretnych punktów masy. Fundamentem tej techniki jest matematyczna koncepcja dystrybucji Diraca $\delta$ oraz powiązana z~nią tożsamość Diraca. W~ujęciu idealnym, cząstkę można traktować jako nieskończenie mały punkt, w~którym cała siła skupiona jest w~jednym miejscu, a~poza nim wynosi zero:
 \begin{equation}
     \delta(r) = \begin{cases} \infty & \text{jeśli } r = 0, \\ 0 & \text{w przeciwnym razie.} \end{cases}.
 \end{equation}
@@ -149,11 +149,11 @@ Dodatkowo, musi zostać spełniony warunek normalizacji, oznaczający, że nieza
 \end{equation}
 
 
-W rzeczywistości komputerowej bezpośrednia implementacja nieskończenie małych punktów nie jest możliwa ze 
+W~rzeczywistości komputerowej bezpośrednia implementacja nieskończenie małych punktów nie jest możliwa ze 
 względu na ograniczoną precyzję maszynową oraz konieczność operowania na skończonych zbiorach danych. 
 Niezbędny jest zatem sposób na dyskretyzację tych założeń. Rozwiązaniem jest wprowadzenie funkcji jądra  
-(lub~funkcji~wygładzającej) $W$. Jej rolą jest ,,rozmycie'' właściwości cząsteczki z punktu do obszaru o określonym 
-promieniu oddziaływania $h$. Gradient tej funkcji opisuje nie tylko siłę wpływu sąsiednich cząsteczek, 
+(lub~funkcji~wygładzającej) $W$. Jej rolą jest ,,rozmycie'' właściwości cząstki z~punktu do obszaru o~określonym 
+promieniu oddziaływania $h$. Gradient tej funkcji opisuje nie tylko siłę wpływu sąsiednich cząstek, 
 ale także kierunek zmian tych oddziaływań \cite{koschier2020smoothed}.
 
 Dzięki temu dowolną właściwość fizyczną $A(\mathbf{x})$ możemy przybliżyć poprzez splot z~funkcją jądra:
@@ -161,86 +161,86 @@ Dzięki temu dowolną właściwość fizyczną $A(\mathbf{x})$ możemy przybliż
     A(\mathbf{x}) \approx (A * W)(\mathbf{x}) = \int A(\mathbf{x}') W(\mathbf{x} - \mathbf{x}', h) \,\mathrm{d}\mathbf{x}'.
 \end{equation}
 
-Ponieważ system komputerowy operuje na skończonej pamięci, nie możemy rozważać całki po bezgranicznej przestrzeni. W procesie dyskretyzacji całka zostaje zastąpiona sumą po skończonej liczbie sąsiadujących cząsteczek \cite{mon92}:
+Ponieważ system komputerowy operuje na skończonej pamięci, nie możemy rozważać całki po bezgranicznej przestrzeni. W~procesie dyskretyzacji całka zostaje zastąpiona sumą po skończonej liczbie sąsiadujących cząstek \cite{mon92}:
 \begin{equation}
     \langle A(\mathbf{x}_i) \rangle \approx \sum_j \frac{m_j}{\rho_j} A(\mathbf{x}_j) W(\mathbf{x}_i - \mathbf{x}_j, h).
 \end{equation}
 
-Aby funkcja jądra była użyteczna w stabilnej symulacji cieczy, musi spełniać szereg rygorystycznych warunków matematycznych \cite{koschier2020smoothed}:
+Aby funkcja jądra była użyteczna w~stabilnej symulacji cieczy, musi spełniać szereg rygorystycznych warunków matematycznych \cite{koschier2020smoothed}:
 \begin{itemize}
     \item \textbf{Warunek normalizacji:} $\int W(r', h) \,\mathrm{d}v' = 1$, co gwarantuje zachowanie całkowitej wartości przybliżanej wielkości.
     \item \textbf{Warunek Diraca:} $\lim_{h \to 0} W(r, h) = \delta(r)$, co oznacza, że wraz ze zmniejszaniem promienia $h$, przybliżenie dąży do rozwiązania idealnego.
-    \item \textbf{Dodatniość i symetria:} $W(r, h) \ge 0$ oraz $W(r, h) = W(-r, h)$.
-    \item \textbf{Zwarta podpora:} $W(r, h) = 0$ dla $r \ge h$. Jest to kluczowy warunek z punktu widzenia wydajności --- komputer musi analizować tylko te cząsteczki, które znajdują się w fizycznym zasięgu oddziaływania, co drastycznie redukuje liczbę operacji.
+    \item \textbf{Dodatniość i~symetria:} $W(r, h) \ge 0$ oraz $W(r, h) = W(-r, h)$.
+    \item \textbf{Zwarta podpora:} $W(r, h) = 0$ dla $r \ge h$. Jest to kluczowy warunek z~punktu widzenia wydajności --- komputer musi analizować tylko te cząstki, które znajdują się w~fizycznym zasięgu oddziaływania, co drastycznie redukuje liczbę operacji.
 \end{itemize}
 
-Praktycznym przykładem zastosowania tej teorii jest obliczanie gęstości $\rho_i$ dla wybranej cząsteczki. Stosując powyższą dyskretyzację, otrzymujemy sumę mas sąsiadów ważoną funkcją jądra:
+Praktycznym przykładem zastosowania tej teorii jest obliczanie gęstości $\rho_i$ dla wybranej cząstki. Stosując powyższą dyskretyzację, otrzymujemy sumę mas sąsiadów ważoną funkcją jądra:
 \begin{equation}
     \rho_i = \sum_{j} m_j W(\mathbf{x}_i - \mathbf{x}_j, h).
 \end{equation}
 
-W tym przypadku gęstość w mianowniku wzoru ogólnego redukuje się, pozostawiając prostą zależność od masy, co pozwala na efektywne obliczanie lokalnego zagęszczenia cieczy przy skończonych zasobach obliczeniowych.
+W~tym przypadku gęstość w~mianowniku wzoru ogólnego redukuje się, pozostawiając prostą zależność od masy, co pozwala na efektywne obliczanie lokalnego zagęszczenia cieczy przy skończonych zasobach obliczeniowych.
 
 \subsection{Algorytm Divergence-Free SPH (DFSPH)}
 \label{subsec:dfsph}
 
 Mimo że klasyczne sformułowanie SPH pozwala na wizualnie atrakcyjne symulacje, 
-boryka się ono z problemem wysokiej ściśliwości cieczy oraz niestabilnością przy 
+boryka się ono z~problemem wysokiej ściśliwości cieczy oraz niestabilnością przy 
 większych krokach czasowych. Tradycyjne rozwiązania, oparte na równaniach stanu (ang.~\textit{Equation of State}, EOS) ---
-wzorach wyznaczających ciśnienie bezpośrednio z lokalnej gęstości cieczy ---
+wzorach wyznaczających ciśnienie bezpośrednio z~lokalnej gęstości cieczy ---
 wymagają bardzo małych wartości $\Delta t$, aby uniknąć ,,zapadania się'' objętości cieczy. 
 Rozwiązaniem tych problemów jest algorytm DFSPH, 
-zaproponowany przez Jana Bendera i Dana Koschiera \cite{bender2015divergence}.
+zaproponowany przez Jana Bendera i~Dana Koschiera \cite{bender2015divergence}.
 
-Istota DFSPH sprowadza się do rygorystycznego wymuszenia nieściśliwości poprzez iteracyjne rozwiązanie dyskretnego układu równań wynikających z warunku nieściśliwości z różnymi wyrazami źródłowymi. Podejście to stabilizuje ciecz na dwóch poziomach.
+Istota DFSPH sprowadza się do rygorystycznego wymuszenia nieściśliwości poprzez iteracyjne rozwiązanie dyskretnego układu równań wynikających z~warunku nieściśliwości z~różnymi wyrazami źródłowymi. Podejście to stabilizuje ciecz na dwóch poziomach.
 
 \paragraph{Poziom zagęszczenia.}
-Celem tego etapu jest utrzymanie stałej objętości cieczy poprzez korekcję prędkości cząsteczek. Algorytm wyznacza błąd gęstości jako różnicę między gęstością bieżącą a spoczynkową $\rho_0$ i uwzględnia wpływ zmian wynikających z adwekcji. Poniższy algorytm oblicza wyraz źródłowy --- wielkość określającą, o ile i~w~jakim kierunku prędkości cząsteczek muszą zostać skorygowane; sama aktualizacja wektorów prędkości stanowi odrębny krok procedury (algorytm~\ref{alg:density_source}).
+Celem tego etapu jest utrzymanie stałej objętości cieczy poprzez korekcję prędkości cząstek. Algorytm wyznacza błąd gęstości jako różnicę między gęstością bieżącą a~spoczynkową $\rho_0$ i~uwzględnia wpływ zmian wynikających z~adwekcji. Poniższy algorytm oblicza wyraz źródłowy --- wielkość określającą, o~ile i~w~jakim kierunku prędkości cząstek muszą zostać skorygowane; sama aktualizacja wektorów prędkości stanowi odrębny krok procedury (algorytm~\ref{alg:density_source}).
 
 \begin{algorithm}[ht]
 \caption{Wyznaczanie wyrazu źródłowego gęstości \cite{bender2015divergence}}
 \label{alg:density_source}
 \ForEach{$i$}{
-    pobierz gęstość bieżącą $\rho_i$ i spoczynkową $\rho_0$\;
-    oblicz sumę dywergencji $d_i$ z różnic prędkości względem sąsiadów $j$\;
+    pobierz gęstość bieżącą $\rho_i$ i~spoczynkową $\rho_0$\;
+    oblicz sumę dywergencji $d_i$ z~różnic prędkości względem sąsiadów $j$\;
     $\mathit{source}_i \leftarrow \dfrac{\rho_0 - \rho_i}{\Delta t} - d_i$\;
     przekaż $\mathit{source}_i$ do solvera ciśnienia\;
 }
 \end{algorithm}
 
 \paragraph{Poziom prędkości.}
-Nawet po skorygowaniu gęstości pole prędkości może zawierać błędy, które w kolejnym kroku czasowym spowodowałyby ponowne zagęszczenie materii. Drugi solver działa wyłącznie na wektorach prędkości, eliminując ich zbieżność lub rozbieżność. Analogicznie do poprzedniego, algorytm wyznacza wyłącznie wyraz źródłowy korekcji --- aktualizacja prędkości na jego podstawie stanowi osobny krok (algorytm~\ref{alg:div_source}).
+Nawet po skorygowaniu gęstości pole prędkości może zawierać błędy, które w~kolejnym kroku czasowym spowodowałyby ponowne zagęszczenie materii. Drugi solver działa wyłącznie na wektorach prędkości, eliminując ich zbieżność lub rozbieżność. Analogicznie do poprzedniego, algorytm wyznacza wyłącznie wyraz źródłowy korekcji --- aktualizacja prędkości na jego podstawie stanowi osobny krok (algorytm~\ref{alg:div_source}).
 
 \begin{algorithm}[ht]
 \caption{Wyznaczanie wyrazu źródłowego dywergencji \cite{bender2015divergence}}
 \label{alg:div_source}
 \ForEach{$i$}{
     $d_i \leftarrow 0$\;
-    \ForAllJ{$j$ cząsteczki $i$}{
+    \ForAllJ{$j$ cząstki $i$}{
         $d_i \leftarrow d_i + m_j \cdot (\mathbf{v}_i - \mathbf{v}_j) \cdot \nabla W_{ij}$\;
     }
     $\mathit{source}_i \leftarrow -d_i$\;
 }
 \end{algorithm}
 
-Wybór algorytmu DFSPH jest kluczowy dla systemów pracujących w czasie rzeczywistym. 
+Wybór algorytmu DFSPH jest kluczowy dla systemów pracujących w~czasie rzeczywistym. 
 Dzięki dwuetapowej korekcji, metoda ta jest znacznie bardziej odporna na błędy numeryczne niż popularne alternatywy, 
-takie jak PBF czy nieściśliwa hydrodynamika cząstek z globalnym solverem ciśnienia
+takie jak PBF czy nieściśliwa hydrodynamika cząstek z~globalnym solverem ciśnienia
 (ang.~\textit{Implicit Incompressible SPH}, IISPH) --- metoda sprzęgająca równania
-ciśnienia wszystkich cząstek w jeden wspólny układ równań, co zapewnia stabilność
+ciśnienia wszystkich cząstek w~jeden wspólny układ równań, co zapewnia stabilność
 przy znacznie większych krokach czasowych niż klasyczne SPH.
 
 Główną zaletą DFSPH jest możliwość stosowania znacznie większego kroku czasowego $\Delta t$ bez ryzyka ,,eksplozji'' symulacji. 
 Przekłada się to bezpośrednio na całkowity czas obliczeń potrzebny do wygenerowania sekwencji ruchu. 
-Jako punkt odniesienia posłużyła symulacja przełamania tamy z udziałem 125\,tys. cząsteczek, 
+Jako punkt odniesienia posłużyła symulacja przełamania tamy z~udziałem 125\,tys. cząstek, 
 przeprowadzona przez okres jednej sekundy przy różnych stałych krokach czasowych \cite{bender2015divergence}. 
-W tabeli~\ref{tab:performance_comparison} zestawiono całkowity czas obliczeń dla każdej z metod, 
-potwierdzając dominację DFSPH w scenariuszach wymagających dużych kroków czasowych.
+W~tabeli~\ref{tab:performance_comparison} zestawiono całkowity czas obliczeń dla każdej z~metod, 
+potwierdzając dominację DFSPH w~scenariuszach wymagających dużych kroków czasowych.
 
 \begin{table}[ht]
     \centering
     \caption{Porównanie całkowitego czasu obliczeń [s] czterech wariantów SPH
-    w scenariuszu przełamania tamy (125\,tys. cząsteczek, 1\,s symulacji)
+    w~scenariuszu przełamania tamy (125\,tys. cząstek, 1\,s symulacji)
     przy różnych stałych krokach czasowych $\Delta t$.
     Mniejsza wartość oznacza krótszy czas obliczeń \cite{bender2015divergence}.}
     \label{tab:performance_comparison}
@@ -256,44 +256,44 @@ potwierdzając dominację DFSPH w scenariuszach wymagających dużych kroków cz
     \end{tabular}
 \end{table}
 
-Przedstawione sformułowanie matematyczne metody SPH oraz algorytmu DFSPH definiuje fizyczny fundament systemu. Dzięki dyskretyzacji kontinuum cieczy za pomocą chmury punktów oraz rygorystycznemu wymuszeniu nieściśliwości przez dwuetapowy solver ciśnienia, możliwe jest uzyskanie stabilnej i wydajnej symulacji w czasie rzeczywistym.
+Przedstawione sformułowanie matematyczne metody SPH oraz algorytmu DFSPH definiuje fizyczny fundament systemu. Dzięki dyskretyzacji kontinuum cieczy za pomocą chmury punktów oraz rygorystycznemu wymuszeniu nieściśliwości przez dwuetapowy solver ciśnienia, możliwe jest uzyskanie stabilnej i~wydajnej symulacji w~czasie rzeczywistym.
 
-Jednak wynik symulacji w czystej postaci Lagrange’owskiej to jedynie zbiór danych o pozycjach i prędkościach cząsteczek --- surowa ,,chmura punktów'', która nie posiada wizualnych cech ciągłej cieczy, takich jak gładka powierzchnia, załamania światła czy przezroczystość. Aby przekształcić te dane w realistyczny obraz, konieczne jest zastosowanie zaawansowanych technik graficznych.
+Jednak wynik symulacji w~czystej postaci lagrange’owskiej to jedynie zbiór danych o~pozycjach i~prędkościach cząstek --- surowa ,,chmura punktów'', która nie posiada wizualnych cech ciągłej cieczy, takich jak gładka powierzchnia, załamania światła czy przezroczystość. Aby przekształcić te dane w~realistyczny obraz, konieczne jest zastosowanie zaawansowanych technik graficznych.
 
 \section{Wizualizacja objętościowa metodą Raymarching}
-Przekształcenie surowych danych cząsteczkowych, pochodzących z symulacji SPH, w ciągły i fotorealistyczny obraz cieczy wymaga zastosowania metod pośredniej reprezentacji materii. W przeciwieństwie do klasycznych technik graficznych, które opierają się na generowaniu jawnej geometrii, w niniejszej pracy zdecydowano się na wykorzystanie bezpośredniego renderowania objętościowego. Koncepcja ta, zaproponowana przez Marca Levoya \cite{levoy1988volume}, zakłada formowanie obrazu bezpośrednio z danych wolumetrycznych bez konieczności kosztownej ekstrakcji izopowierzchni do postaci siatki wielokątów.
+Przekształcenie surowych danych cząsteczkowych, pochodzących z~symulacji SPH, w~ciągły i~fotorealistyczny obraz cieczy wymaga zastosowania metod pośredniej reprezentacji materii. W~przeciwieństwie do klasycznych technik graficznych, które opierają się na generowaniu jawnej geometrii, w~niniejszej pracy zdecydowano się na wykorzystanie bezpośredniego renderowania objętościowego. Koncepcja ta, zaproponowana przez Marca Levoya \cite{levoy1988volume}, zakłada formowanie obrazu bezpośrednio z~danych wolumetrycznych bez konieczności kosztownej ekstrakcji izopowierzchni do postaci siatki wielokątów.
 
 \paragraph{Rekonstrukcja ciągłego pola skalarnego.}
-Symulacja w ujęciu lagrange’owskim dostarcza jedynie dyskretny zbiór punktów masowych. Aby umożliwić analizę wizualną cieczy jako obiektu ciągłego, konieczne jest odtworzenie pola gęstości w każdym punkcie przestrzeni symulacji. Wykorzystuje się do tego znaną z matematycznego sformułowania SPH tożsamość interpolacyjną:
+Symulacja w~ujęciu lagrange’owskim dostarcza jedynie dyskretny zbiór punktów masowych. Aby umożliwić analizę wizualną cieczy jako obiektu ciągłego, konieczne jest odtworzenie pola gęstości w~każdym punkcie przestrzeni symulacji. Wykorzystuje się do tego znaną z~matematycznego sformułowania SPH tożsamość interpolacyjną:
     \begin{equation}
         \rho(\mathbf{x}) = \sum_{j} m_j W(|\mathbf{x} - \mathbf{x}_j|, h),
     \end{equation}
 
-    gdzie $\mathbf{x}$ jest dowolnym punktem w przestrzeni, a $W$ funkcją wygładzającą. Równanie to opisuje przejście od punktowej reprezentacji materii do trójwymiarowego, ciągłego pola objętościowego, spopularyzowanego w nowoczesnej grafice czasu rzeczywistego m.in. przez prace Inigo Quileza \cite{quilez2008raymarching}. W praktyce obliczeniowej pole to poddawane jest dyskretyzacji --- przestrzeń symulacji dzieli się na regularną strukturę o rozdzielczości $N_x \times N_y \times N_z$, gdzie każdy węzeł przechowuje próbkowaną wartość gęstości $\rho_{i,j,k} = \rho(\mathbf{x}_{i,j,k})$.
+    gdzie $\mathbf{x}$ jest dowolnym punktem w~przestrzeni, a~$W$ funkcją wygładzającą. Równanie to opisuje przejście od punktowej reprezentacji materii do trójwymiarowego, ciągłego pola objętościowego, spopularyzowanego w~nowoczesnej grafice czasu rzeczywistego m.in. przez prace Inigo Quileza \cite{quilez2008raymarching}. W~praktyce obliczeniowej pole to poddawane jest dyskretyzacji --- przestrzeń symulacji dzieli się na regularną strukturę o~rozdzielczości $N_x \times N_y \times N_z$, gdzie każdy węzeł przechowuje próbkowaną wartość gęstości $\rho_{i,j,k} = \rho(\mathbf{x}_{i,j,k})$.
     
 
 \paragraph{Numeryczna integracja promieni.}
-Głównym narzędziem wizualizacji tak przygotowanego pola jest przemarsz promienia (ang. Raymarching). Jest to metoda numerycznej integracji światła przechodzącego przez ośrodek objętościowy, która dzięki pełnej paralelizacji idealnie nadaje się do realizacji w środowisku GPU \cite{tomczak2012gpu}. W modelu tym dla każdego piksela obrazu generowany jest promień rzutujący:
+Głównym narzędziem wizualizacji tak przygotowanego pola jest przemarsz promienia (ang. Raymarching). Jest to metoda numerycznej integracji światła przechodzącego przez ośrodek objętościowy, która dzięki pełnej paralelizacji idealnie nadaje się do realizacji w~środowisku GPU \cite{tomczak2012gpu}. W~modelu tym dla każdego piksela obrazu generowany jest promień rzutujący:
     \begin{equation}
         \mathbf{r}(t) = \mathbf{o} + t\mathbf{d},
     \end{equation}
-    gdzie $\mathbf{o}$ to punkt obserwacji (kamera), a $\mathbf{d}$ to wektor kierunku promienia. Promień ten ,,kroczy'' przez pole objętościowe w małych krokach $\Delta t$, a w każdym punkcie $\mathbf{x}_k = \mathbf{o} + k\Delta t \mathbf{d}$ następuje próbkowanie gęstości.
+    gdzie $\mathbf{o}$ to punkt obserwacji (kamera), a~$\mathbf{d}$ to wektor kierunku promienia. Promień ten ,,kroczy'' przez pole objętościowe w~małych krokach $\Delta t$, a~w~każdym punkcie $\mathbf{x}_k = \mathbf{o} + k\Delta t \mathbf{d}$ następuje próbkowanie gęstości.
 
-    Wizualizacja opiera się na przybliżeniu całki objętościowej, która określa końcowy kolor piksela na podstawie lokalnej absorpcji i transmisji światła w cieczy. Kluczową zaletą tego podejścia w kontekście wydajności jest fakt, że proces ten odbywa się całkowicie w przestrzeni ekranu, zazwyczaj wewnątrz shaderów fragmentów --- programów GPU wywoływanych raz
-dla każdego piksela obrazu w celu obliczenia jego końcowego koloru
-(zob. podrozdz.~\ref{subsec:pipeline}). Oznacza to, że system nie buduje fizycznej siatki wielokątów, lecz dynamicznie wyznacza punkty przecięcia promienia z izopowierzchnią cieczy\cite{quilez2013advancing}.
+    Wizualizacja opiera się na przybliżeniu całki objętościowej, która określa końcowy kolor piksela na podstawie lokalnej absorpcji i~transmisji światła w~cieczy. Kluczową zaletą tego podejścia w~kontekście wydajności jest fakt, że proces ten odbywa się całkowicie w~przestrzeni ekranu, zazwyczaj wewnątrz shaderów fragmentów --- programów GPU wywoływanych raz
+dla każdego piksela obrazu w~celu obliczenia jego końcowego koloru
+(zob. podrozdz.~\ref{subsec:pipeline}). Oznacza to, że system nie buduje fizycznej siatki wielokątów, lecz dynamicznie wyznacza punkty przecięcia promienia z~izopowierzchnią cieczy\cite{quilez2013advancing}.
 
-Aby umożliwić realistyczne oświetlenie cieczy (obliczanie odbić i załamań światła), konieczne jest wyznaczenie wektora normalnego do jej powierzchni. Ponieważ powierzchnia w renderingu objętościowym nie jest zdefiniowana wprost, wektor normalny $\mathbf{n}$ aproksymuje się jako znormalizowany gradient pola gęstości:
+Aby umożliwić realistyczne oświetlenie cieczy (obliczanie odbić i~załamań światła), konieczne jest wyznaczenie wektora normalnego do jej powierzchni. Ponieważ powierzchnia w~renderingu objętościowym nie jest zdefiniowana wprost, wektor normalny $\mathbf{n}$ aproksymuje się jako znormalizowany gradient pola gęstości:
 \begin{equation}
     \mathbf{n} = \frac{\nabla \rho}{|\nabla \rho|}.
 \end{equation}
 
 Gradient ten wskazuje kierunek najszybszego wzrostu gęstości, co pozwala matematycznie traktować 
-granice obszarów o wysokiej gęstości jako fizyczną barierę cieczy. Dzięki temu możliwe jest 
+granice obszarów o~wysokiej gęstości jako fizyczną barierę cieczy. Dzięki temu możliwe jest 
 zastosowanie klasycznych modeli oświetlenia, takich jak model Phonga, oraz zaawansowanych 
-efektów optycznych wynikających z praw Snella i~Fresnela\cite{de2006reflections}.
+efektów optycznych wynikających z~praw Snella i~Fresnela\cite{de2006reflections}.
 
-Zastosowanie rekonstrukcji objętościowej i przemarszu promienia stanowi pomost między 
-dyskretnymi danymi fizycznymi a ciągłym obrazem. Pozwala to na uzyskanie wysokiej jakości 
-wizualizacji z naturalnie wyglądającymi detalami powierzchni, zachowując jednocześnie wysoką 
+Zastosowanie rekonstrukcji objętościowej i~przemarszu promienia stanowi pomost między 
+dyskretnymi danymi fizycznymi a~ciągłym obrazem. Pozwala to na uzyskanie wysokiej jakości 
+wizualizacji z~naturalnie wyglądającymi detalami powierzchni, zachowując jednocześnie wysoką 
 wydajność obliczeniową na nowoczesnych układach graficznych.

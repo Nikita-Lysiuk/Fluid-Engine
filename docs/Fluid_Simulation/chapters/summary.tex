@@ -1,0 +1,102 @@
+Celem niniejszej pracy było zaprojektowanie i~zaimplementowanie interaktywnego
+silnika symulacji cieczy, wykonującego pełny potok obliczeniowy --- od dynamiki
+cząstek po gotowy obraz --- w~czasie rzeczywistym na procesorze graficznym.
+Punkt wyjścia stanowiła analiza eulerowskiego i~lagrange'owskiego opisu ruchu
+płynów oraz matematyczne sformułowanie metody SPH wraz z~wariantem DFSPH,
+wymuszającym nieściśliwość cieczy przez dwuetapową korekcję gęstości
+i~dywergencji. Tak zdefiniowane podstawy teoretyczne przełożono na implementację
+w~języku Rust z~wykorzystaniem API Vulkan, a~każdą istotną decyzję projektową
+uzasadniono analizą strukturalną lub bezpośrednim pomiarem.
+
+W~ramach pracy zrealizowano następujące zadania:
+\begin{itemize}
+    \item dokonano przeglądu istniejących rozwiązań symulacji cieczy
+          (Blender, Unreal Engine~5, SPlisHSPlasH) i~wyznaczono na ich tle
+          miejsce własnego systemu: czysto cząsteczkowej implementacji DFSPH
+          wykonywanej w~całości na GPU;
+    \item zaimplementowano kompletny solver DFSPH jako zestaw jedenastu potoków
+          obliczeniowych, obejmujących wyznaczanie gęstości i~współczynnika
+          $\alpha$, iteracyjne pętle korekcji ciśnienia oraz całkowanie ruchu
+          cząstek;
+    \item opracowano wyszukiwanie sąsiedztwa oparte na haszowaniu przestrzennym
+          z~reorganizacją buforów, zapewniające stały czas zapytania
+          i~skoalescowane odczyty pamięci GPU;
+    \item zaimplementowano i~porównano ilościowo dwa algorytmy sortowania
+          na GPU --- sortowanie bitoniczne i~pozycyjne --- wykazując niemal
+          sześciokrotną przewagę tego drugiego w~pełnym potoku symulacji;
+    \item zaprojektowano organizację danych SOA z~podwójnym buforowaniem pozycji
+          i~prędkości, strukturalnie eliminującą wyścigi danych między wątkami
+          GPU;
+    \item zbudowano wolumetryczny potok wizualizacji: splatting gęstości
+          do tekstury trójwymiarowej, przemarsz promienia z~bisekcją oraz model
+          optyczny wody łączący efekt Fresnela, absorpcję Beer-Lamberta,
+          rozproszenie podpowierzchniowe, odbłysk GGX i~oświetlenie panoramą
+          HDRI;
+    \item przeprowadzono analizę zbieżności obu solverów oraz eksperymenty
+          z~adaptacyjnym krokiem czasowym według warunku CFL, dokumentując
+          źródła ich ograniczeń;
+    \item udostępniono interaktywny panel konfiguracji umożliwiający modyfikację
+          parametrów fizycznych i~wizualnych w~trakcie działania symulacji.
+\end{itemize}
+
+Wynikiem pracy jest działający symulator zdolny do stabilnej animacji dziesiątek
+tysięcy cząstek w~czasie rzeczywistym, wraz z~zestawem narzędzi diagnostycznych
+i~pomiarowych. Przeprowadzone testy ujawniły zarazem najważniejsze ograniczenie
+przyjętego modelu: brak właściwej obsługi brzegu powoduje trwały deficyt
+gęstości przy swobodnej powierzchni, który blokuje kryterium zbieżności solvera
+i~uniemożliwia bezpieczne stosowanie adaptacyjnego kroku czasowego
+(podrozdz.~\ref{subsec:cfl}). Świadomy powrót do stałego $\Delta t$ i~stałej
+liczby iteracji stanowi udokumentowany kompromis między stabilnością
+a~wydajnością.
+
+Niniejsza praca koncentrowała się przede wszystkim na warstwie fizycznej
+symulacji; ta orientacja wyznacza naturalne kierunki dalszego rozwoju systemu.
+
+\begin{itemize}
+    \item \textbf{Uzupełnienie modelu fizycznego.} Pierwszym krokiem powinna być
+          obsługa brzegu za pomocą cząstek-duchów lub stałych warstw cząstek
+          brzegowych~\cite{schechter2012ghost}, która usunęłaby deficyt jądra
+          przy powierzchni i~odblokowała zarówno kryterium
+          $\varepsilon$-zbieżności, jak i~adaptacyjny warunek CFL. Kolejnym
+          naturalnym rozszerzeniem jest implementacja napięcia powierzchniowego,
+          otwierająca drogę do zjawisk kapilarnych, formowania kropel
+          i~realistycznego zachowania cienkich warstw cieczy.
+    \item \textbf{Rozbudowa warstwy wizualizacji.} Ponieważ wizualizacja pełniła
+        w~pracy rolę służebną wobec fizyki, pozostaje tu szerokie pole
+        eksperymentów. Obejmują one jawną rekonstrukcję powierzchni metodą
+        maszerujących sześcianów (ang.~\textit{marching cubes}), techniki
+        renderowania w~przestrzeni ekranu oraz cząstki wtórne piany i~rozbryzgów.
+        Dodatkowo, wdrożenie sprzętowego śledzenia promieni poprzez rozszerzenie
+        \texttt{VK\_KHR\_ray\_tracing\_pipeline} pozwoliłoby na uzyskanie fizycznie
+        poprawnych kaustyk i~wielokrotnych odbić światła w~objętości cieczy.
+    \item \textbf{Techniki optymalizacji.} Obiecującym kierunkiem są
+          skompresowane listy sąsiedztwa~\cite{band2019compressed}, których
+          pełna realizacja na GPU pozostaje otwartym problemem badawczym,
+          a~ponadto adaptacyjna rozdzielczość cząstek zagęszczająca symulację
+          wyłącznie w~obszarach istotnych wizualnie oraz głębsze wykorzystanie
+          pamięci dzielonej i~operacji podgrupowych
+          (ang.~\textit{subgroup operations}) w~shaderach solvera.
+    \item \textbf{Integracja z~ekosystemem.} Silnik może zostać przekształcony
+          w~bibliotekę wielokrotnego użytku lub rozwinięty w~stronę
+          pełnoprawnego silnika aplikacji interaktywnych; alternatywą jest
+          opakowanie go we wtyczkę do istniejącego środowiska, analogicznie
+          do roli, jaką NiagaraFluids pełni w~Unreal Engine~5. Krokiem
+          poprzedzającym byłoby usunięcie zależności od platformy Windows
+          i~udostępnienie wersji dla systemów Linux i~macOS.
+    \item \textbf{Metody oparte na danych.} Odrębną perspektywę otwiera
+          częściowe lub całkowite zastąpienie obliczeń fizycznych modelami
+          statystycznymi i~sieciami neuronowymi: aproksymacja kroku solvera
+          modelem nauczonym na danych z~symulacji referencyjnych, generowanie
+          detali wysokiej częstotliwości na podstawie zgrubnej symulacji
+          o~małej liczbie cząstek czy statystyczna analiza pól prędkości
+          i~gęstości pozwalająca przewidywać zachowanie cieczy bez jawnego
+          rozwiązywania równań ruchu.
+\end{itemize}
+
+Przeprowadzone prace potwierdzają, że połączenie języka Rust i~API Vulkan
+stanowi dojrzały fundament dla wysokowydajnych symulacji fizycznych: statyczne
+gwarancje kompilatora wyeliminowały całą klasę błędów zarządzania pamięcią,
+a~jawna kontrola nad procesorem graficznym pozwoliła przenieść na niego
+kompletny potok obliczeniowy. Powstały system --- wraz z~opisanymi w~pracy
+pomiarami, diagnozami i~zidentyfikowanymi ograniczeniami --- może służyć jako
+platforma odniesienia i~punkt wyjścia dla wymienionych wyżej kierunków badań.

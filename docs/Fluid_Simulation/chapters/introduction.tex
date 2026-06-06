@@ -1,0 +1,54 @@
+Realistyczne odwzorowanie zachowania cieczy od lat pozostaje jednym
+z~najbardziej wymagających zadań grafiki komputerowej. Woda towarzyszy
+człowiekowi na co dzień, dlatego widz natychmiast dostrzega każde uproszczenie:
+nienaturalny rozprysk, brak załamania światła czy zbyt gładką powierzchnię fali.
+Jednocześnie zapotrzebowanie na wiarygodne symulacje płynów stale rośnie ---
+od produkcji filmowej i~gier komputerowych, przez wizualizacje naukowe,
+po inżynierskie analizy przepływów. W~produkcji offline, gdzie pojedyncza klatka
+może powstawać godzinami, jakość symulacji ogranicza wyłącznie budżet
+obliczeniowy; w~zastosowaniach interaktywnych ograniczenie jest znacznie
+bardziej rygorystyczne, ponieważ pełny krok fizyki wraz z~renderowaniem musi
+zmieścić się w~kilkunastu milisekundach.
+
+Spełnienie tego wymagania stało się możliwe dzięki ewolucji procesorów
+graficznych, które z~wyspecjalizowanych układów rasteryzujących przekształciły
+się w~masowo równoległe maszyny obliczeniowe ogólnego przeznaczenia.
+Współczesne GPU wykonuje jednocześnie dziesiątki tysięcy wątków, co naturalnie
+odpowiada strukturze symulacji cząsteczkowych, w~których ten sam zestaw operacji
+stosowany jest niezależnie do każdego elementu cieczy. Pełne wykorzystanie tego
+potencjału wymaga jednak narzędzi dających programiście bezpośrednią kontrolę
+nad sprzętem: niskopoziomowych API graficznych oraz języków systemowych
+łączących wydajność z~gwarancjami poprawności. Tymczasem dojrzałe systemy
+symulacji cieczy --- zarówno pakiety animacyjne, jak i~biblioteki badawcze ---
+wykonują centralne obliczenia w~przeważającej mierze na procesorze głównym,
+a~obecność karty graficznej wykorzystują głównie do wyświetlania wyników.
+
+Celem niniejszej pracy jest zaprojektowanie i~implementacja interaktywnego
+silnika symulacji cieczy, w~którym kompletny potok obliczeniowy --- od dynamiki
+cząstek, przez wymuszanie nieściśliwości, po wolumetryczną wizualizację ---
+wykonywany jest w~czasie rzeczywistym w~całości na procesorze graficznym.
+Fundament fizyczny systemu stanowi cząsteczkowa metoda SPH w~wariancie DFSPH,
+wymuszającym nieściśliwość cieczy przez dwuetapową korekcję gęstości
+i~dywergencji pola prędkości. Warstwę technologiczną tworzą język programowania
+Rust oraz niskopoziomowe API graficzne Vulkan --- połączenie oferujące
+statyczne bezpieczeństwo pamięci przy zachowaniu jawnej kontroli nad zasobami
+sprzętowymi. Zakres pracy obejmuje sformułowanie podstaw teoretycznych metody
+SPH i~algorytmu DFSPH, uzasadniony dobór stosu technologicznego, implementację
+solvera oraz potoku wizualizacji wraz z~autorskimi rozwiązaniami
+architektonicznymi, a~także ilościową analizę wydajności i~zbieżności
+zaimplementowanych algorytmów.
+
+Praca składa się z~trzech rozdziałów. W~rozdziale pierwszym przedstawiono
+podstawy teoretyczne: porównanie eulerowskiego i~lagrange'owskiego opisu ruchu
+płynów, równania Naviera-Stokesa, dyskretyzację jądrową metody SPH wraz
+z~algorytmem DFSPH oraz koncepcję wolumetrycznej wizualizacji metodą przemarszu
+promienia. Rozdział drugi zawiera przegląd istniejących rozwiązań symulacji
+cieczy oraz charakterystykę wybranych technologii: języka Rust, API Vulkan
+i~biblioteki Vulkano, narzędzi diagnostycznych, a~ponadto analizę porównawczą
+funkcji wygładzających, struktur wyszukiwania sąsiedztwa i~modeli zjawisk
+fizycznych. Rozdział trzeci dokumentuje implementację systemu: architekturę
+aplikacji, organizację danych w~pamięci GPU, potok wyszukiwania sąsiadów wraz
+z~porównaniem dwóch algorytmów sortowania, kolejne etapy solvera DFSPH oraz
+potok renderowania --- każdorazowo z~uzasadnieniem podjętych decyzji
+i~pomiarami wydajności. Pracę zamyka podsumowanie zestawiające osiągnięte
+rezultaty oraz kierunki dalszego rozwoju systemu.
