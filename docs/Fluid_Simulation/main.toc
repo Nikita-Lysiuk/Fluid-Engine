@@ -84,10 +84,10 @@
 \contentsline {subsection}{\numberline {3.11.2}Raymarching}{89}{subsection.3.11.2}%
 \contentsline {paragraph}{Test AABB i~krok gruby.}{89}{section*.55}%
 \contentsline {paragraph}{Bisekcja i~normalna.}{90}{section*.56}%
-\contentsline {paragraph}{Interpolacja trójliniowa.}{91}{section*.58}%
+\contentsline {paragraph}{Interpolacja trójliniowa.}{90}{section*.58}%
 \contentsline {subsection}{\numberline {3.11.3}Model oświetlenia}{92}{subsection.3.11.3}%
 \contentsline {paragraph}{Fresnel, odbicie i~załamanie.}{92}{section*.60}%
-\contentsline {paragraph}{Absorpcja, SSS i~piana.}{93}{section*.62}%
+\contentsline {paragraph}{Absorpcja, SSS i~piana.}{92}{section*.62}%
 \contentsline {subsection}{\numberline {3.11.4}Środowisko HDRI}{94}{subsection.3.11.4}%
 \contentsline {chapter}{Podsumowanie}{97}{section*.66}%
 \contentsline {chapter}{Spis rysunków}{101}{section*.67}%

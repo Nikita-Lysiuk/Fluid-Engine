@@ -26,7 +26,7 @@
 \contentsline {figure}{\numberline {3.9}{\ignorespaces Zbieżność solvera DFSPH: uśredniony błąd gęstości~(a) i~błąd dywergencji~(b) w~funkcji liczby iteracji Jacobiego. Źródło: opracowanie własne}}{84}{figure.caption.49}%
 \contentsline {figure}{\numberline {3.10}{\ignorespaces Porównanie strategii statycznego i~adaptacyjnego $\Delta t$ w~trakcie 500 klatek symulacji: krok czasowy~(a), liczba iteracji solvera Jacobiego~(b), maksymalna prędkość cząstki~(c). Źródło: opracowanie własne}}{86}{figure.caption.54}%
 \contentsline {figure}{\numberline {3.11}{\ignorespaces Wizualizacja normalnych powierzchni cieczy zakodowanych jako kolor RGB. Źródło: opracowanie własne}}{91}{figure.caption.57}%
-\contentsline {figure}{\numberline {3.12}{\ignorespaces Wizualizacja grubości cieczy wzdłuż promienia jako skala szarości. Źródło: opracowanie własne}}{92}{figure.caption.59}%
+\contentsline {figure}{\numberline {3.12}{\ignorespaces Wizualizacja grubości cieczy wzdłuż promienia jako skala szarości. Źródło: opracowanie własne}}{91}{figure.caption.59}%
 \contentsline {figure}{\numberline {3.13}{\ignorespaces Wizualizacja składnika odbicia zwierciadlanego powierzchni cieczy. Źródło: opracowanie własne}}{93}{figure.caption.61}%
-\contentsline {figure}{\numberline {3.14}{\ignorespaces Wizualizacja składnika refrakcji z~absorpcją i~rozproszeniem podpowierzchniowym (SSS). Źródło: opracowanie własne}}{95}{figure.caption.63}%
+\contentsline {figure}{\numberline {3.14}{\ignorespaces Wizualizacja składnika refrakcji z~absorpcją i~rozproszeniem podpowierzchniowym (SSS). Źródło: opracowanie własne}}{94}{figure.caption.63}%
 \contentsline {figure}{\numberline {3.15}{\ignorespaces Panorama środowiskowa HDRI użyta jako tło i~źródło oświetlenia sceny. Źródło: opracowanie własne}}{95}{figure.caption.64}%
