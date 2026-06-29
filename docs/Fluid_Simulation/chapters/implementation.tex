@@ -28,6 +28,32 @@ pomiarem.
 \section{Założenia projektowe}
 \label{sec:assumptions}
 
+Niniejsza praca stanowi implementację algorytmu DFSPH z~wykorzystaniem nowoczesnego stosu technologicznego:
+języka Rust oraz API Vulkan. W~odróżnieniu od omawianych systemów, projekt skupia się na pełnym przeniesieniu
+potoku obliczeniowego na procesor graficzny przy zachowaniu niskopoziomowej kontroli nad zasobami sprzętowymi.
+Bezpośrednie porównanie cech technicznych opisanych rozwiązań z~systemem opracowanym w~ramach pracy przedstawiono
+w~tabeli~\ref{tab:solutions_comparison}. Wybór tego podejścia wynika z~chęci zbadania granic wydajności i~jakości,
+jakie można osiągnąć dzięki nowoczesnym technologiom programistycznym, oraz z~potrzeby stworzenia elastycznej
+platformy do dalszych eksperymentów z~algorytmami SPH.
+
+\begin{table}[ht]
+    \centering
+    \caption{Porównanie istniejących rozwiązań symulacji cieczy z~niniejszą pracą}
+    \label{tab:solutions_comparison}
+    \small
+    \begin{tabular}{lcccc}
+    \toprule
+    Cecha & Blender & Unreal Engine 5 & SPlisHSPlasH & Niniejsza praca \\ \midrule
+    Metoda symulacji       & FLIP      & FLIP          & SPH       & SPH (DFSPH) \\
+    Czas rzeczywisty       & Nie       & Tak           & Nie       & Tak         \\
+    Obliczenia GPU         & Częściowe & Tak           & Częściowe & Tak (w~pełni) \\
+    Otwarte źródło         & Tak       & Tak           & Tak       & Tak         \\
+    Język implementacji    & C++       & C++           & C++       & Rust        \\
+    API graficzne          & OpenGL    & DX12 / Vulkan & OpenGL    & Vulkan      \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
 Uruchomienie silnika wymaga spełnienia wymagań sprzętowych i~programowych
 opisanych poniżej. Projekt jest przeznaczony wyłącznie dla systemu Windows ---
 kod źródłowy korzysta z~rozszerzenia \texttt{winit::platform::windows}, które
@@ -78,8 +104,11 @@ Silnik oczekuje obecności następujących plików w~katalogu projektu:
 \begin{itemize}
     \item \texttt{assets/logo.png} --- ikona okna i~paska zadań,
     \item \texttt{assets/hdri/citrus\_orchard\_road\_puresky\_4k.exr} ---
-          panorama HDRI w~formacie OpenEXR, używana jako środowisko
-          oświetleniowe i~tło sceny.
+          panorama \newline HDRI (ang.~\textit{High Dynamic Range Image}) --- obraz
+          o~rozszerzonym zakresie dynamiki, przechowujący wartości jasności
+          wykraczające poza standardowy zakres wyświetlania, dzięki czemu wiernie
+          odwzorowuje zarówno jasne, jak i~ciemne obszary --- w~formacie OpenEXR,
+          używana jako środowisko oświetleniowe i~tło sceny.
 \end{itemize}
 
 % ------------------------------------------------------------
@@ -91,7 +120,7 @@ Aplikacja stanowi interaktywny silnik symulacji cieczy działający w~czasie rze
 Po uruchomieniu użytkownik widzi scenę 3D z~prostopadłościennym obszarem symulacji,
 wewnątrz którego odbywa się symulacja cieczy, oraz panel konfiguracyjny
 umożliwiający modyfikację parametrów w~czasie rzeczywistym
-(rysunek~\ref{fig:app_window}).
+(rysunek~\ref{fig:egui_params}).
 
 Motywacją do stworzenia projektu była chęć głębszego zrozumienia sposobu, w~jaki
 współczesne silniki gier i~aplikacji realizują symulacje cząsteczkowe --- symulacja
@@ -108,10 +137,10 @@ Silnik może służyć jako platforma badawcza do testowania algorytmów symulac
 demonstracyjna aplikacja edukacyjna lub punkt wyjścia do integracji fizyki cieczy
 z~systemem renderowania w~czasie rzeczywistym.
 
-\begin{figure}[H]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/app_window.png}
-\caption{Okno aplikacji podczas symulacji. Źródło: Opracowanie własne}
+\caption{Okno aplikacji podczas symulacji. Źródło: opracowanie własne}
 \label{fig:app_window}
 \end{figure}
 
@@ -126,7 +155,7 @@ obliczeń symulacji --- jego jedyną rolą jest zbudowanie buforów komend
 Vulkan i~przesłanie ich do kolejki GPU. Podział modułów między obie warstwy
 przedstawia tabela~\ref{tab:subsystems}.
 
-\begin{table}[H]
+\begin{table}[htbp]
 \centering
 \caption{Podział modułów systemu}
 \label{tab:subsystems}
@@ -150,7 +179,7 @@ Pętla ramki jest sterowana zdarzeniem \texttt{RedrawRequested} biblioteki
 ograniczenia liczby klatek przez system operacyjny. Algorytm~\ref{alg:frame_loop}
 przedstawia kolejność operacji w~obrębie jednej klatki.
 
-\begin{algorithm}[H]
+\begin{algorithm}[htbp]
 \caption{Pętla ramki}
 \label{alg:frame_loop}
 $\Delta t \leftarrow \texttt{fps\_counter.tick()}$\;
@@ -265,7 +294,7 @@ logiczny po stronie CPU; \texttt{CameraGPU} zawiera dane gotowe
 do przesłania na GPU. Pola obu struktur opisują
 tabele~\ref{tab:camera_cpu} i~\ref{tab:camera_gpu}.
 
-\begin{table}[tp]
+\begin{table}[htbp]
 \centering
 \caption{Pola struktury \texttt{Camera}}
 \label{tab:camera_cpu}
@@ -282,7 +311,7 @@ tabele~\ref{tab:camera_cpu} i~\ref{tab:camera_gpu}.
 \end{tabular}
 \end{table}
 
-\begin{table}[tp]
+\begin{table}[htbp]
 \centering
 \caption{Pola struktury \texttt{CameraGPU} przesyłanej na GPU}
 \label{tab:camera_gpu}
@@ -316,7 +345,7 @@ projekcji --- funkcją \texttt{perspective\_lh},
 a~\texttt{inv\_view\_proj}\cite{glam} stanowi odwrotność ich iloczynu $(\mathbf{P}\mathbf{V})^{-1}$.
 Rysunek~\ref{fig:camera_chain} ilustruje kolejność tych obliczeń.
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
   box/.style={draw, rounded corners=3pt, minimum width=5cm,
@@ -333,7 +362,7 @@ Rysunek~\ref{fig:camera_chain} ilustruje kolejność tych obliczeń.
   \draw[->] (proj)  -- (inv);
   \draw[->] (inv)   -- (buf);
 \end{tikzpicture}
-\caption{Łańcuch obliczeń kamery. Źródło: Opracowanie własne}
+\caption{Łańcuch obliczeń kamery. Źródło: opracowanie własne}
 \label{fig:camera_chain}
 \end{figure}
 
@@ -369,8 +398,22 @@ w~interfejsie \texttt{egui} podczas działania aplikacji.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[angle=90, width=0.75\linewidth]{figures/egui_params.png}
-\caption{Panel parametrów symulacji w~interfejsie \texttt{egui}. Źródło: Opracowanie własne}
+\begin{minipage}[t]{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/egui_part_1.png}\\[2pt]
+{\small (a)}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/egui_part_2.png}\\[2pt]
+{\small (b)}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/egui_part_3.png}\\[2pt]
+{\small (c)}
+\end{minipage}
+\caption{Panel parametrów symulacji w~interfejsie \texttt{egui}: (a)~parametry symulacji, (b)~zbieżność solvera DFSPH, siły zewnętrzne i~granice kolizji, (c)~parametry renderowania, algorytm sortowania i~rozdzielczość tekstury. Źródło: opracowanie własne}
 \label{fig:egui_params}
 \end{figure}
 
@@ -733,7 +776,7 @@ pojedynczy indeks tablicy funkcją haszującą:
 \end{equation}
 gdzie $p_1 = 73856093$, $p_2 = 19349663$, $p_3 = 83492791$ to trzy wzajemnie
 pierwsze stałe redukujące kolizje przy typowych rozkładach cząstek~\cite{teschner2003optimized},
-a~$M$ jest rozmiar tablicy równy potędze dwójki.
+a~$M$ jest rozmiarem tablicy równym potędze dwójki.
 
 Wynikiem tej operacji dla każdej cząstki jest rekord \texttt{Entry}, złożony
 z~pola \texttt{hash} --- obliczonego skrótu komórki --- oraz pola \texttt{index}
@@ -779,7 +822,7 @@ Wyszukiwanie sąsiadów realizowane jest przez cztery kolejne etapy
 \node[lbl, below=0.35cm of reorder]
     {\texttt{pos\_b}, \texttt{vel\_b}\\(przestawione)};
 \end{tikzpicture}
-\caption{Czterostopniowy potok wyszukiwania sąsiadów. Źródło: Opracowanie własne}
+\caption{Czterostopniowy potok wyszukiwania sąsiadów. Źródło: opracowanie własne}
 \label{fig:neighbor_pipeline}
 \end{figure}
 
@@ -927,7 +970,7 @@ ilustruje rysunek~\ref{fig:radix_one_pass}.
   \draw[arr] (obuf.south) |- (ror.east);
   \draw[arr] (ror)  -- (out);
 \end{tikzpicture}
-\caption{Przepływ danych w~jednym przebiegu sortowania pozycyjnego. Źródło: Opracowanie własne na podstawie~\cite{harada2011introduction}}
+\caption{Przepływ danych w~jednym przebiegu sortowania pozycyjnego. Źródło: opracowanie własne na podstawie~\cite{harada2011introduction}}
 \label{fig:radix_one_pass}
 \end{figure}
 
@@ -1020,7 +1063,7 @@ rysunek~\ref{fig:sort_benchmark}.
 \centering
 \includegraphics[width=0.85\textwidth]{figures/sort_benchmark.png}
 \caption{Czas sortowania bufora \texttt{grid\_entries} jako funkcja liczby
-elementów $N$, w~skali logarytmicznej na obu osiach. Źródło: Opracowanie własne}
+elementów $N$, w~skali logarytmicznej na obu osiach. Źródło: opracowanie własne}
 \label{fig:sort_benchmark}
 \end{figure}
 
@@ -1155,7 +1198,7 @@ poziomami korekcji: \textit{korekcja gęstości} kończy się adwekcją pozycji
 $\mathbf{p}_i \leftarrow \mathbf{p}_i + \Delta t\,\mathbf{v}_i$,
 natomiast \textit{korekcja dywergencji} działa wyłącznie na buforze
 prędkości i~nie modyfikuje pozycji cząstek.
-Ta różnica determinuje kolejność shaderów w~pętli podkroków (ang. substep).
+Ta różnica determinuje kolejność shaderów w~pętli podkroków (ang.~\textit{substep}).
 Poza nią oba poziomy współdzielą identyczną strukturę: iteracyjna pętla
 ciśnienia z~tym samym wzorcem dostępu do sąsiedztwa, różniąca się
 wyłącznie wyrazem źródłowym i~finalnym krokiem integracji.
@@ -1343,7 +1386,7 @@ na podstawie prędkości adwekcyjnych wyznaczonych po fazie lepkości:
 \begin{lstlisting}[caption={Shader \texttt{density\_source\_term} --- wyraz źródłowy solvera gęstości},
                    label=lst:density_source,]
 float divergence_sum = 0.0;
-// dla kazdego sasiada j w promieniu h:
+// dla każdego sasiada j w promieniu h:
 vec3 vel_diff = vel_i - vel_j;
 divergence_sum += mass * dot(vel_diff, grad);
 // koniec petli
@@ -1359,7 +1402,7 @@ pola prędkości adwekcyjnych, przewidując jak ten błąd będzie dalej narasta
 Tablica \texttt{pressures} jest zerowana na wejściu każdego wywołania,
 gwarantując start iteracji ze świeżym wektorem ciśnień.
 
-Iteracja Jacobiego przebiega przez naprzemienne wywołania \texttt{pressure\_force} i~\texttt{pressure\_update}. 
+Iteracja Jacobiego przebiega przez naprzemienne wywołania \texttt{pressure\_force} \newline i~\texttt{pressure\_update}. 
 Pierwszy shader wyznacza dla każdej cząstki przyspieszenie ciśnieniowe
 będące iloczynem macierzy układu i~wektora ciśnień; drugi aktualizuje ciśnienie:
 
@@ -1406,7 +1449,7 @@ Shader \texttt{divergence\_source\_term} oblicza wyraz źródłowy z~prędkości
 \begin{lstlisting}[caption={Shader \texttt{divergence\_source\_term} --- wyraz źródłowy solvera dywergencji},
                    label=lst:divergence_source,]
 float divergence_sum = 0.0;
-// dla kazdego sasiada j w promieniu h:
+// dla każdego sasiada j w promieniu h:
 vec3 vel_diff = vel_i - vel_j;
 divergence_sum += mass * dot(vel_diff, grad);
 // koniec petli
@@ -1439,7 +1482,7 @@ ustabilizować pola prędkości --- stąd trwałe plateau po obu stronach wykres
     \centering
     \includegraphics[width=\linewidth]{figures/convergence.png}
     \caption{Zbieżność solvera DFSPH: uśredniony błąd gęstości~(a) i~błąd dywergencji~(b)
-             w~funkcji liczby iteracji Jacobiego. Źródło: Opracowanie własne}
+             w~funkcji liczby iteracji Jacobiego. Źródło: opracowanie własne}
     \label{fig:convergence}
 \end{figure}
 
@@ -1505,7 +1548,7 @@ co wskazuje na stan uszkodzonej symulacji.
   \includegraphics[width=\textwidth]{figures/cfl_comparison.png}
   \caption{Porównanie strategii statycznego i~adaptacyjnego $\Delta t$
     w~trakcie 500 klatek symulacji: krok czasowy~(a),
-    liczba iteracji solvera Jacobiego~(b), maksymalna prędkość cząstki~(c). Źródło: Opracowanie własne}
+    liczba iteracji solvera Jacobiego~(b), maksymalna prędkość cząstki~(c). Źródło: opracowanie własne}
   \label{fig:cfl_comparison}
 \end{figure}
 
@@ -1530,7 +1573,7 @@ i~końcową aktualizację prędkości:
 \begin{lstlisting}[caption={Rdzeń shadera \texttt{viscosity} --- korekcja XSPH i~grawitacja},
                    label=lst:xsph,]
 vec3 sum_viscosity = vec3(0.0);
-// dla kazdego sasiada j w promieniu h:
+// dla każdego sasiada j w promieniu h:
 vec3 vel_diff = velocities[j].xyz - velocities[i].xyz;
 sum_viscosity += mass / densities[j] * vel_diff * kernel_w(r, h);
 // koniec petli
@@ -1606,7 +1649,7 @@ a~następnie iteruje po sześcianie $\pm 8$ wokseli i~atomowo dodaje wkład do t
 \begin{lstlisting}[caption={Shader \texttt{splat\_density} --- waga woksela i~zapis atomowy},
                    label=lst:splat,]
 int radius = 8;
-\ dla kazdego woksela (x,y,z) w szescianie [-radius, radius]^3:
+// dla każdego woksela (x,y,z) w szescianie [-radius, radius]^3:
 float dist   = length(vec3(x, y, z));
 if (dist < float(radius)) {
     float x_norm = dist / float(radius);
@@ -1618,7 +1661,7 @@ if (dist < float(radius)) {
 }
 \end{lstlisting}
 
-Waga jest gładkim wielomianem $(1-q^2)^3$ tożsamym z~eq.~\ref{eq:splat_weight}.
+Obliczana waga $(1 - x_{\mathrm{norm}}^2)^3$, w~której zmienna \texttt{x\_norm} $= \texttt{dist}/\texttt{radius}$ odpowiada znormalizowanej odległości $\delta/R$, jest bezpośrednią realizacją gładkiego wielomianu wygaszającego $w(\delta)$ zdefiniowanego równaniem~\ref{eq:splat_weight} --- zmienna \texttt{dist} pełni tu rolę odległości $\delta$, a~\texttt{radius} --- promienia $R$.
 Mnożnik $200$ skaluje wartość do zakresu liczby całkowitej bez utraty precyzji;
 woksele powietrza osiągają wartości bliskie zeru, woksele wewnątrz cieczy --- rzędu
 setek.
@@ -1686,7 +1729,7 @@ if (dot(N, N) < 0.5) N = vec3(0.0, 1.0, 0.0);
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.85\linewidth]{figures/debug_normals.png}
-\caption{Wizualizacja normalnych powierzchni cieczy zakodowanych jako kolor RGB. Źródło: Opracowanie własne}
+\caption{Wizualizacja normalnych powierzchni cieczy zakodowanych jako kolor RGB. Źródło: opracowanie własne}
 \label{fig:debug_normals}
 \end{figure}
 
@@ -1702,12 +1745,12 @@ pionowym w~miejscach, gdzie gradient zanika.
 Próbkowanie tekstury \texttt{R32Uint} realizowane jest ręcznie, ponieważ format
 całkowitoliczbowy nie obsługuje sprzętowej interpolacji:
 
-\begin{lstlisting}[caption={Funkcja \texttt{getDensity} --- interpolacja trojliniowa},
+\begin{lstlisting}[caption={Funkcja \texttt{getDensity} --- interpolacja trójliniowa},
                    label=lst:trilinear,]
 vec3 gridPos = uvw * vec3(sim_params.grid_res.xyz) - 0.5;
 ivec3 iobase = ivec3(floor(gridPos));
 vec3  f      = fract(gridPos);
-\ 8 wywolan texelFetch dla wierzcholkow kostki (v000..v111)
+// 8 wywolan texelFetch dla wierzcholkow kostki (v000..v111)
 float v0 = mix(mix(v000, v100, f.x), mix(v010, v110, f.x), f.y);
 float v1 = mix(mix(v001, v101, f.x), mix(v011, v111, f.x), f.y);
 return max(0.0, (mix(v0, v1, f.z) - DENSITY_OFFSET)
@@ -1718,7 +1761,7 @@ return max(0.0, (mix(v0, v1, f.z) - DENSITY_OFFSET)
 \centering
 \includegraphics[width=0.6\linewidth]{figures/debug_thickness.png}
 \caption{Wizualizacja grubości cieczy wzdłuż promienia jako skala szarości.
-         Źródło: Opracowanie własne}
+         Źródło: opracowanie własne}
 \label{fig:debug_thickness}
 \end{figure}
 
@@ -1735,7 +1778,7 @@ Cały model optyczny zamknięty jest w~funkcji \texttt{main()} shadera
 \texttt{raymarch.frag} i~wykonywany po znalezieniu punktu powierzchni.
 
 \paragraph{Fresnel, odbicie i~załamanie.}
-Współczynnik odbicia $F_0$ wyznaczany jest ze wzoru Fresnela, a~promienie
+Współczynnik odbicia $F_0$ wyznaczany jest ze wzoru Fresnela (równanie~\ref{eq:fresnel_f0}), a~promienie
 odbitego i~załamanego kierunku próbkują mapę środowiskową:
 
 \begin{lstlisting}[caption={Fragment \texttt{raymarch.frag} --- Fresnel, odbicie, zalamania},
@@ -1760,7 +1803,7 @@ vec3 background = sampleSkybox(normalize(refrDir));
 \centering
 \includegraphics[width=0.80\linewidth]{figures/debug_reflection.png}
 \caption{Wizualizacja składnika odbicia zwierciadlanego powierzchni cieczy.
-         Źródło: Opracowanie własne}
+         Źródło: opracowanie własne}
 \label{fig:debug_reflection}
 \end{figure}
 
@@ -1809,7 +1852,7 @@ waterColor = waterColor / (waterColor + vec3(1.0));
 \centering
 \includegraphics[width=0.85\linewidth]{figures/debug_refraction.png}
 \caption{Wizualizacja składnika refrakcji z~absorpcją i~rozproszeniem podpowierzchniowym (SSS).
-         Źródło: Opracowanie własne}
+         Źródło: opracowanie własne}
 \label{fig:debug_refraction_sss}
 \end{figure}
 
@@ -1831,7 +1874,7 @@ z~pliku \texttt{.exr} przy starcie aplikacji.
 Funkcja \texttt{sampleSkybox} przelicza dowolny kierunek przestrzenny na
 współrzędne UV tej tekstury:
 
-\begin{lstlisting}[caption={Funkcja \texttt{sampleSkybox} --- odwzorowanie rownokatne},
+\begin{lstlisting}[caption={Funkcja \texttt{sampleSkybox} --- odwzorowanie równokątne},
                    label=lst:skybox,]
 vec3 sampleSkybox(vec3 dir) {
     dir = normalize(dir);
@@ -1845,7 +1888,7 @@ vec3 sampleSkybox(vec3 dir) {
 \centering
 \includegraphics[width=0.85\linewidth]{figures/skybox_hdri.png}
 \caption{Panorama środowiskowa HDRI użyta jako tło i~źródło oświetlenia sceny.
-         Źródło: Opracowanie własne}
+         Źródło: opracowanie własne}
 \label{fig:skybox_hdri}
 \end{figure}
 
