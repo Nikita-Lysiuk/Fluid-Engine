@@ -1,5 +1,5 @@
-use crate::sim::particle_buffers::ParticleBuffers;
 use crate::sim::params::SimulationParams;
+use crate::sim::particle_buffers::ParticleBuffers;
 use crate::sim::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
@@ -7,9 +7,7 @@ use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::Device;
-use vulkano::pipeline::{
-    ComputePipeline, Pipeline, PipelineBindPoint,
-};
+use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
 use vulkano::shader::EntryPoint;
 
 mod cs {
@@ -113,4 +111,3 @@ impl BitonicSorter {
 }
 
 // ── Radix sort ────────────────────────────────────────────────────────────────
-

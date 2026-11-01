@@ -11,9 +11,7 @@ pub enum AppError {
 
     #[error("Failed to load resource: {0}")]
     ResourceLoad(String),
-    
+
     #[error("An unexpected application error occurred: {0}")]
     Other(String),
 }
-
-

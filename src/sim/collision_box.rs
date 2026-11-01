@@ -1,5 +1,5 @@
-use std::f32::consts::TAU;
 use glam::Vec3;
+use std::f32::consts::TAU;
 
 /// Moving simulation boundary.
 pub struct CollisionBox {
@@ -48,4 +48,3 @@ impl CollisionBox {
         self.wave_amplitude * omega * (self.time * omega).cos()
     }
 }
-

@@ -1,21 +1,23 @@
+use crate::input::Input;
+use crate::render::renderer::Renderer;
+use crate::scene::Scene;
 use glam::Vec2;
-use log::{info, debug, error};
+use log::{debug, error, info};
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
-use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, MouseScrollDelta, WindowEvent};
+use winit::event::{
+    DeviceEvent, DeviceId, ElementState, MouseButton, MouseScrollDelta, WindowEvent,
+};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::PhysicalKey;
 use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{CursorGrabMode, Icon, WindowAttributes, WindowId};
-use crate::input::Input;
-use crate::scene::Scene;
-use crate::render::renderer::Renderer;
 
 use crate::app_error::AppError;
-use crate::constants::{PREFERRED_FPS};
-use crate::frame_timer::FrameTimer;
+use crate::constants::PREFERRED_FPS;
 use crate::frame_benchmark::FrameBenchmark;
+use crate::frame_timer::FrameTimer;
 
 fn load_icon(path: &str) -> Result<Icon, AppError> {
     let (icon_rgba, icon_width, icon_height) = {
@@ -26,9 +28,8 @@ fn load_icon(path: &str) -> Result<Icon, AppError> {
         let rgba = image.into_raw();
         (rgba, width, height)
     };
-    Icon::from_rgba(icon_rgba, icon_width, icon_height).map_err(|e| {
-        AppError::ResourceLoad(format!("Failed to create icon from RGBA data: {}", e))
-    })
+    Icon::from_rgba(icon_rgba, icon_width, icon_height)
+        .map_err(|e| AppError::ResourceLoad(format!("Failed to create icon from RGBA data: {}", e)))
 }
 
 pub struct App {
@@ -50,8 +51,7 @@ impl App {
         SimpleLogger::new().init().unwrap();
         info!("[Engine] Initializing Engine Core...");
 
-        let event_loop = EventLoop::new()
-            .map_err(|e| AppError::EventLoopInit(e))?;
+        let event_loop = EventLoop::new().map_err(|e| AppError::EventLoopInit(e))?;
 
         event_loop.set_control_flow(ControlFlow::Poll);
         let particle_count = std::env::var("FLUID_PARTICLES")
@@ -92,7 +92,9 @@ impl App {
     }
 
     pub fn run(&mut self) {
-        let event_loop = self.event_loop.take()
+        let event_loop = self
+            .event_loop
+            .take()
             .expect("[Engine] Event Loop missing! (already consumed?)");
 
         debug!("[Engine] Starting Winit Event Loop.");
@@ -103,9 +105,13 @@ impl App {
 impl App {
     fn on_mouse_button(&mut self, button: MouseButton, state: ElementState, over_ui: bool) {
         match (button, state) {
-            (MouseButton::Left, ElementState::Pressed) if !over_ui => self.scene.attractor.active = true,
+            (MouseButton::Left, ElementState::Pressed) if !over_ui => {
+                self.scene.attractor.active = true
+            }
             (MouseButton::Left, ElementState::Released) => self.scene.attractor.active = false,
-            (MouseButton::Right, ElementState::Pressed) if !over_ui => self.set_camera_rotation(true),
+            (MouseButton::Right, ElementState::Pressed) if !over_ui => {
+                self.set_camera_rotation(true)
+            }
             (MouseButton::Right, ElementState::Released) => self.set_camera_rotation(false),
             _ => {}
         }
@@ -130,7 +136,12 @@ impl App {
 
         if let Some(renderer) = self.renderer.as_mut() {
             let window_size = Vec2::from(renderer.window_renderer.window_size());
-            self.scene.attractor.aim(&self.scene.camera, self.cursor, window_size, &self.scene.boundary);
+            self.scene.attractor.aim(
+                &self.scene.camera,
+                self.cursor,
+                window_size,
+                &self.scene.boundary,
+            );
             self.scene.attractor.hovered = !self.pointer_over_ui && !self.rotating_camera;
 
             renderer.update_and_render(&mut self.scene, safe_dt, self.fps_counter.fps());
@@ -155,7 +166,6 @@ impl ApplicationHandler for App {
                 .with_window_icon(load_icon("assets/logo.png").ok())
                 .with_taskbar_icon(load_icon("assets/logo.png").ok());
 
-
             let window = match event_loop.create_window(window_attributes) {
                 Ok(w) => w,
                 Err(e) => {
@@ -166,7 +176,10 @@ impl ApplicationHandler for App {
             };
             let mut renderer = Renderer::new(window, &self.scene, event_loop);
             // Lets the benchmark compare substep caps without touching the UI.
-            if let Some(cap) = std::env::var("FLUID_BENCH_MAX_SUBSTEPS").ok().and_then(|v| v.parse().ok()) {
+            if let Some(cap) = std::env::var("FLUID_BENCH_MAX_SUBSTEPS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+            {
                 renderer.app_ui.max_substeps_per_frame = cap;
             }
             if std::env::var("FLUID_BENCH_RENDER").as_deref() == Ok("particles") {
@@ -205,14 +218,17 @@ impl ApplicationHandler for App {
             WindowEvent::CursorLeft { .. } => {
                 self.pointer_over_ui = true;
             }
-            WindowEvent::MouseInput { state, button, .. } => self.on_mouse_button(button, state, egui_wants_pointer),
+            WindowEvent::MouseInput { state, button, .. } => {
+                self.on_mouse_button(button, state, egui_wants_pointer)
+            }
             WindowEvent::MouseWheel { delta, .. } => {
                 if self.scene.attractor.active {
                     let lines = match delta {
                         MouseScrollDelta::LineDelta(_, y) => y,
                         MouseScrollDelta::PixelDelta(p) => p.y as f32 / 40.0,
                     };
-                    self.scene.attractor.distance = (self.scene.attractor.distance + 0.2 * lines).clamp(0.3, 20.0);
+                    self.scene.attractor.distance =
+                        (self.scene.attractor.distance + 0.2 * lines).clamp(0.3, 20.0);
                 }
             }
             WindowEvent::Resized(_new_size) => {
@@ -220,7 +236,9 @@ impl ApplicationHandler for App {
                     renderer.window_renderer.resize();
                 }
             }
-            WindowEvent::KeyboardInput { event: key_event, .. } => {
+            WindowEvent::KeyboardInput {
+                event: key_event, ..
+            } => {
                 self.on_key(key_event.physical_key, key_event.state, egui_wants_keyboard);
             }
             WindowEvent::RedrawRequested => self.on_redraw(event_loop),
@@ -232,11 +250,17 @@ impl ApplicationHandler for App {
             renderer.window_renderer.window().request_redraw();
         }
     }
-    fn device_event(&mut self, _event_loop: &ActiveEventLoop, _device_id: DeviceId, event: DeviceEvent) {
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: DeviceId,
+        event: DeviceEvent,
+    ) {
         if let DeviceEvent::MouseMotion { delta } = event {
             if self.rotating_camera {
                 let sensitivity = 0.1;
-                self.input.mouse_motion(delta.0 as f32 * sensitivity, delta.1 as f32 * sensitivity);
+                self.input
+                    .mouse_motion(delta.0 as f32 * sensitivity, delta.1 as f32 * sensitivity);
             }
         }
     }
@@ -244,6 +268,3 @@ impl ApplicationHandler for App {
         info!("[Engine] Graceful shutdown...");
     }
 }
-
-
-

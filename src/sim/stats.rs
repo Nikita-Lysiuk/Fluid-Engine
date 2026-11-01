@@ -1,5 +1,5 @@
-use crate::sim::particle_buffers::stats_layout;
 use crate::sim::params::SimulationParams;
+use crate::sim::particle_buffers::stats_layout;
 
 /// Solver and speed measurements read from the GPU.
 pub struct SimulationStats {
@@ -18,8 +18,10 @@ pub struct SimulationStats {
 impl SimulationStats {
     /// Decodes the simulation statistics buffer.
     pub fn read(words: &[u32]) -> Self {
-        let density = &words[stats_layout::DENSITY_SOLVER.start as usize..stats_layout::DENSITY_SOLVER.end as usize];
-        let divergence = &words[stats_layout::DIVERGENCE_SOLVER.start as usize..stats_layout::DIVERGENCE_SOLVER.end as usize];
+        let density = &words[stats_layout::DENSITY_SOLVER.start as usize
+            ..stats_layout::DENSITY_SOLVER.end as usize];
+        let divergence = &words[stats_layout::DIVERGENCE_SOLVER.start as usize
+            ..stats_layout::DIVERGENCE_SOLVER.end as usize];
         Self {
             max_speed: f32::from_bits(words[stats_layout::MAX_SPEED]),
             density_iterations: density[stats_layout::ITERATIONS],
@@ -31,7 +33,13 @@ impl SimulationStats {
 }
 
 /// Computes the bounded CFL time step from the latest measured speed.
-pub fn cfl_time_step(params: &SimulationParams, max_speed: f32, factor: f32, min_dt: f32, max_dt: f32) -> f32 {
+pub fn cfl_time_step(
+    params: &SimulationParams,
+    max_speed: f32,
+    factor: f32,
+    min_dt: f32,
+    max_dt: f32,
+) -> f32 {
     let diameter = 2.0 * params.particle_radius;
     let gravity = glam::Vec4::from(params.gravity).length();
     let speed = (max_speed + gravity * params.dt).max(1e-9);

@@ -1,22 +1,20 @@
-use crate::scene::Scene;
-use crate::render::sky::SkyData;
-use crate::render::water::WaterRenderer;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::render::density_texture::DensityTexturePipeline;
+use crate::render::frame_resources::GpuSceneResources;
+use crate::render::gpu_context::GpuContext;
 use crate::render::graphics_pipelines::Pipelines;
+use crate::render::sky::SkyData;
+use crate::render::ui;
+use crate::render::ui::AppUi;
+pub use crate::render::ui::RenderMode;
+use crate::render::water::WaterRenderer;
+use crate::scene::Scene;
 use crate::sim::pipelines::ComputePipelines;
 use crate::sim::simulation::Simulation;
 use crate::sim::simulation_resources::SimulationResources;
-use crate::render::density_texture::DensityTexturePipeline;
-use crate::render::frame_resources::GpuSceneResources;
-use crate::render::ui::AppUi;
-use crate::render::ui;
-pub use crate::render::ui::RenderMode;
-use crate::constants::MAX_FRAMES_IN_FLIGHT;
-use crate::render::gpu_context::GpuContext;
 use egui_winit_vulkano::{Gui, GuiConfig};
 use std::sync::Arc;
-use vulkano::command_buffer::allocator::{
-    StandardCommandBufferAllocator,
-};
+use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::command_buffer::{
     AutoCommandBufferBuilder, ClearColorImageInfo, CommandBufferUsage, CopyBufferInfo,
     RenderingAttachmentInfo, RenderingInfo,
@@ -47,14 +45,18 @@ pub struct Renderer {
 
     pub gui: Gui,
     pub app_ui: AppUi,
-
-
 }
 
 impl Renderer {
     /// Creates the associated resources.
     pub fn new(window: Window, scene: &Scene, event_loop: &ActiveEventLoop) -> Self {
-        let GpuContext { context, window_renderer, command_buffer_allocator, descriptor_set_allocator, depth_format } = GpuContext::new(window);
+        let GpuContext {
+            context,
+            window_renderer,
+            command_buffer_allocator,
+            descriptor_set_allocator,
+            depth_format,
+        } = GpuContext::new(window);
 
         let pipelines = Pipelines::new(
             context.clone(),
@@ -63,7 +65,8 @@ impl Renderer {
         );
 
         let resources = GpuSceneResources::new(context.memory_allocator().clone(), scene);
-        let simulation_resources = SimulationResources::new(context.memory_allocator().clone(), scene);
+        let simulation_resources =
+            SimulationResources::new(context.memory_allocator().clone(), scene);
 
         let sky_data = SkyData::new(
             500.0,
@@ -129,7 +132,12 @@ impl Renderer {
             sky_data,
             water_renderer,
             density_texture,
-            simulation: Simulation::new(gpu_physics, simulation_resources, command_buffer_allocator.clone(), context.graphics_queue().queue_family_index()),
+            simulation: Simulation::new(
+                gpu_physics,
+                simulation_resources,
+                command_buffer_allocator.clone(),
+                context.graphics_queue().queue_family_index(),
+            ),
             gui,
             app_ui: AppUi::new(),
         }
@@ -147,12 +155,20 @@ impl Renderer {
         let render_positions = self.resources.render_data.position_buffers[next_frame].clone();
         let render_colors = self.resources.render_data.color_buffers[next_frame].clone();
         let (future, frame) = self.simulation.step(
-            scene, max_dt, &settings,
-            self.resources.current_frame_idx, self.context.graphics_queue().clone(), previous_future,
+            scene,
+            max_dt,
+            &settings,
+            self.resources.current_frame_idx,
+            self.context.graphics_queue().clone(),
+            previous_future,
             |scene| self.resources.sync_with_scene(scene),
             |builder| {
-                builder.copy_buffer(CopyBufferInfo::buffers(position, render_positions)).unwrap();
-                builder.copy_buffer(CopyBufferInfo::buffers(colors, render_colors)).unwrap();
+                builder
+                    .copy_buffer(CopyBufferInfo::buffers(position, render_positions))
+                    .unwrap();
+                builder
+                    .copy_buffer(CopyBufferInfo::buffers(colors, render_colors))
+                    .unwrap();
             },
         );
         if let Some(stats) = frame.stats {
@@ -162,7 +178,9 @@ impl Renderer {
             self.app_ui.display_divergence_iters_used = stats.divergence_iterations;
             self.app_ui.display_avg_divergence_error = stats.divergence_error;
         }
-        if let Some(dt) = frame.cfl_dt { self.app_ui.display_cfl_dt = dt; }
+        if let Some(dt) = frame.cfl_dt {
+            self.app_ui.display_cfl_dt = dt;
+        }
         self.app_ui.display_substeps = frame.substeps;
         future
     }

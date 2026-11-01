@@ -1,11 +1,11 @@
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::render::graphics_pipelines::Pipelines;
 use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use vulkano::pipeline::graphics::vertex_input::Vertex;
 use vulkano::pipeline::Pipeline;
-use crate::render::graphics_pipelines::Pipelines;
-use crate::constants::MAX_FRAMES_IN_FLIGHT;
+use vulkano::pipeline::graphics::vertex_input::Vertex;
 
 /// Particle position supplied to the graphics pipeline.
 #[repr(C)]
@@ -64,13 +64,15 @@ impl GpuRenderData {
                     ..Default::default()
                 },
                 AllocationCreateInfo {
-                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                        | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..Default::default()
                 },
                 initial_positions.iter().map(|p| PositionVertex {
-                    position: [p[0], p[1], p[2], 1.0]
+                    position: [p[0], p[1], p[2], 1.0],
                 }),
-            ).expect("Failed to create render position buffer");
+            )
+            .expect("Failed to create render position buffer");
             position_buffers.push(buffer);
 
             let color_buffer = Buffer::from_iter(
@@ -80,13 +82,15 @@ impl GpuRenderData {
                     ..Default::default()
                 },
                 AllocationCreateInfo {
-                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                        | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..Default::default()
                 },
                 (0..particle_count).map(|_| ColorVertex {
-                    color: [0.0, 0.5, 1.0, 1.0]
+                    color: [0.0, 0.5, 1.0, 1.0],
                 }),
-            ).expect("Failed to create render color buffer");
+            )
+            .expect("Failed to create render color buffer");
             color_buffers.push(color_buffer);
         }
 
@@ -97,15 +101,19 @@ impl GpuRenderData {
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
-            (0..particle_count).map(|_| AttributeVertex {
-                radius,
-            }),
-        ).expect("Failed to create attribute buffer");
+            (0..particle_count).map(|_| AttributeVertex { radius }),
+        )
+        .expect("Failed to create attribute buffer");
 
-        Self { position_buffers, attribute_buffer, color_buffers }
+        Self {
+            position_buffers,
+            attribute_buffer,
+            color_buffers,
+        }
     }
     /// Records the graphics commands for this resource.
     pub fn bind_to_command_buffer<Cb>(
@@ -116,25 +124,28 @@ impl GpuRenderData {
         frame_idx: usize,
         count: u32,
     ) {
-
         // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder
-                .bind_pipeline_graphics(pipelines.point_pipeline.inner.clone()).unwrap()
-                .bind_vertex_buffers(0, (
-                    self.position_buffers[frame_idx].clone(),
-                    self.color_buffers[frame_idx].clone(),
-                    self.attribute_buffer.clone()
-                ))
+                .bind_pipeline_graphics(pipelines.point_pipeline.inner.clone())
+                .unwrap()
+                .bind_vertex_buffers(
+                    0,
+                    (
+                        self.position_buffers[frame_idx].clone(),
+                        self.color_buffers[frame_idx].clone(),
+                        self.attribute_buffer.clone(),
+                    ),
+                )
                 .unwrap()
                 .push_constants(
                     pipelines.point_pipeline.inner.layout().clone(),
                     0,
                     camera_addr,
-                ).unwrap()
+                )
+                .unwrap()
                 .draw(count, 1, 0, 0)
                 .expect("Failed to bind particle vertex buffers");
         }
     }
 }
-

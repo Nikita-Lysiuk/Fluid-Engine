@@ -1,7 +1,12 @@
+use crate::constants::WINDOW_TITLE;
 use std::sync::Arc;
 use vulkano::Version;
-use vulkano::command_buffer::allocator::{StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo};
-use vulkano::descriptor_set::allocator::{StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo};
+use vulkano::command_buffer::allocator::{
+    StandardCommandBufferAllocator, StandardCommandBufferAllocatorCreateInfo,
+};
+use vulkano::descriptor_set::allocator::{
+    StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo,
+};
 use vulkano::device::DeviceFeatures;
 use vulkano::format::Format;
 use vulkano::image::ImageUsage;
@@ -11,7 +16,6 @@ use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 use vulkano_util::renderer::VulkanoWindowRenderer;
 use vulkano_util::window::WindowDescriptor;
 use winit::window::Window;
-use crate::constants::WINDOW_TITLE;
 
 /// Window and Vulkan objects shared by rendering and simulation.
 pub struct GpuContext {
@@ -90,6 +94,12 @@ impl GpuContext {
             StandardDescriptorSetAllocatorCreateInfo::default(),
         ));
 
-        Self { context, window_renderer, command_buffer_allocator, descriptor_set_allocator, depth_format }
+        Self {
+            context,
+            window_renderer,
+            command_buffer_allocator,
+            descriptor_set_allocator,
+            depth_format,
+        }
     }
 }

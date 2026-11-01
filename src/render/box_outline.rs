@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::render::graphics_pipelines::Pipelines;
+use crate::render::model_vertex::ModelVertex;
 use crate::sim::collision_box::CollisionBox;
+use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::render::model_vertex::ModelVertex;
-use crate::render::graphics_pipelines::Pipelines;
-use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 /// GPU buffers for the simulation boundary outline.
 pub struct CollisionBoxData {
@@ -20,9 +20,7 @@ impl CollisionBoxData {
         let mut index_buffer = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
 
         let indices: Vec<u16> = vec![
-            0, 1, 1, 2, 2, 3, 3, 0,
-            4, 5, 5, 6, 6, 7, 7, 4,
-            0, 4, 1, 5, 2, 6, 3, 7,
+            0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7,
         ];
 
         for _ in 0..MAX_FRAMES_IN_FLIGHT {
@@ -33,11 +31,14 @@ impl CollisionBoxData {
                     ..BufferCreateInfo::default()
                 },
                 AllocationCreateInfo {
-                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                        | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
                 },
-                8
-            ).map_err(|e| panic!("[CollisionBox] Failed to create vertex buffer:\n{:?}", e)).unwrap();
+                8,
+            )
+            .map_err(|e| panic!("[CollisionBox] Failed to create vertex buffer:\n{:?}", e))
+            .unwrap();
 
             let ib = Buffer::from_iter(
                 memory_allocator.clone(),
@@ -46,11 +47,14 @@ impl CollisionBoxData {
                     ..BufferCreateInfo::default()
                 },
                 AllocationCreateInfo {
-                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                        | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
                 },
-                indices.iter().cloned()
-            ).map_err(|e| panic!("[CollisionBox] Failed to create index buffer:\n{:?}", e)).unwrap();
+                indices.iter().cloned(),
+            )
+            .map_err(|e| panic!("[CollisionBox] Failed to create index buffer:\n{:?}", e))
+            .unwrap();
 
             vertex_buffer.push(vb);
             index_buffer.push(ib);
@@ -66,14 +70,30 @@ impl CollisionBoxData {
         let max = collision_box.max;
 
         let vertices = [
-            ModelVertex { position: [min.x, min.y, min.z] },
-            ModelVertex { position: [max.x, min.y, min.z] },
-            ModelVertex { position: [max.x, max.y, min.z] },
-            ModelVertex { position: [min.x, max.y, min.z] },
-            ModelVertex { position: [min.x, min.y, max.z] },
-            ModelVertex { position: [max.x, min.y, max.z] },
-            ModelVertex { position: [max.x, max.y, max.z] },
-            ModelVertex { position: [min.x, max.y, max.z] },
+            ModelVertex {
+                position: [min.x, min.y, min.z],
+            },
+            ModelVertex {
+                position: [max.x, min.y, min.z],
+            },
+            ModelVertex {
+                position: [max.x, max.y, min.z],
+            },
+            ModelVertex {
+                position: [min.x, max.y, min.z],
+            },
+            ModelVertex {
+                position: [min.x, min.y, max.z],
+            },
+            ModelVertex {
+                position: [max.x, min.y, max.z],
+            },
+            ModelVertex {
+                position: [max.x, max.y, max.z],
+            },
+            ModelVertex {
+                position: [min.x, max.y, max.z],
+            },
         ];
 
         self.vertex_buffer[current_frame_idx]
@@ -81,7 +101,6 @@ impl CollisionBoxData {
             .map_err(|e| panic!("[CollisionBox] Failed to write to vertex buffer:\n{:?}", e))
             .unwrap()
             .copy_from_slice(&vertices);
-
     }
 
     pub fn index_len(&self, current_frame_idx: usize) -> u32 {
@@ -91,27 +110,39 @@ impl CollisionBoxData {
     pub fn vertex_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.vertex_buffer[current_frame_idx]
             .device_address()
-            .map_err(|e| panic!("[CollisionBox] Failed to get vertex buffer device address:\n{:?}", e))
+            .map_err(|e| {
+                panic!(
+                    "[CollisionBox] Failed to get vertex buffer device address:\n{:?}",
+                    e
+                )
+            })
             .unwrap()
             .get()
     }
 
     /// Records the graphics commands for this resource.
-    pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
+    pub fn bind_to_command_buffer<Cb>(
+        &self,
+        builder: &mut AutoCommandBufferBuilder<Cb>,
+        pipelines: &Pipelines,
+        camera_addr: u64,
+        current_frame_idx: usize,
+    ) {
         // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder
-                .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone()).unwrap()
+                .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone())
+                .unwrap()
                 .push_constants(
                     pipelines.common_layout.clone(),
                     0,
-                    [
-                        camera_addr,
-                        self.vertex_buffer_addr(current_frame_idx),
-                    ]
-                ).unwrap()
-                .bind_index_buffer(self.index_buffer[current_frame_idx].clone()).unwrap()
-                .draw_indexed(self.index_len(current_frame_idx), 1, 0, 0, 0).unwrap();
+                    [camera_addr, self.vertex_buffer_addr(current_frame_idx)],
+                )
+                .unwrap()
+                .bind_index_buffer(self.index_buffer[current_frame_idx].clone())
+                .unwrap()
+                .draw_indexed(self.index_len(current_frame_idx), 1, 0, 0, 0)
+                .unwrap();
         }
     }
 }

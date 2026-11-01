@@ -1,5 +1,5 @@
-use super::{BitonicSorter, RadixSorter};
 use super::radix_sorter::ELEMENTS_PER_INVOCATION;
+use super::{BitonicSorter, RadixSorter};
 
 #[cfg(test)]
 mod tests {
@@ -237,7 +237,7 @@ mod benchmark {
 
     use super::{BitonicSorter, RadixSorter};
     use crate::sim::particle_buffers::Entry;
-    
+
     // All values are powers of two so bitonic sort can use them directly.
     const N_VALUES: &[u32] = &[
         1_024,     // 1k

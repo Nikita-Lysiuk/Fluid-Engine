@@ -1,16 +1,16 @@
+use crate::render::shader_loader::load_shader_entry_point;
+use crate::sim::compute_pass::ComputePass;
+use crate::sim::params::SimulationParams;
+use crate::sim::particle_buffers::ParticleBuffers;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
-use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::WriteDescriptorSet;
-use crate::sim::compute_pass::ComputePass;
+use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Device;
 use vulkano::image::view::ImageView;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::shader::EntryPoint;
-use crate::sim::particle_buffers::ParticleBuffers;
-use crate::sim::params::SimulationParams;
-use crate::render::shader_loader::load_shader_entry_point;
 
 mod splat_cs {
     use vulkano_shaders::shader;
@@ -36,11 +36,16 @@ impl DensityTexturePipeline {
         image: Arc<ImageView>,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
-        self.pass = Some(ComputePass::new(self.pipeline.clone(), allocator, [
-            WriteDescriptorSet::buffer(0, physics_data.position_a.clone()),
-            WriteDescriptorSet::image_view(1, image),
-            WriteDescriptorSet::buffer(2, sim_params.clone()),
-        ], physics_data.count.div_ceil(256)));
+        self.pass = Some(ComputePass::new(
+            self.pipeline.clone(),
+            allocator,
+            [
+                WriteDescriptorSet::buffer(0, physics_data.position_a.clone()),
+                WriteDescriptorSet::image_view(1, image),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
     }
 }
 
@@ -54,10 +59,16 @@ impl DensityTexturePipeline {
         load_shader_entry_point(device, splat_cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
-        Self { pipeline, pass: None }
+        Self {
+            pipeline,
+            pass: None,
+        }
     }
     /// Records the associated GPU commands.
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
-        self.pass.as_ref().expect("prepare the density texture before dispatch").dispatch(builder);
+        self.pass
+            .as_ref()
+            .expect("prepare the density texture before dispatch")
+            .dispatch(builder);
     }
 }

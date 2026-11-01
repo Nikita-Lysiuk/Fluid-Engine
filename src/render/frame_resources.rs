@@ -1,15 +1,15 @@
+use crate::camera::CameraData;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::render::box_outline::CollisionBoxData;
+use crate::render::graphics_pipelines::Pipelines;
+use crate::render::particle_renderer::GpuRenderData;
+use crate::scene::Scene;
 use std::sync::Arc;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::format::Format;
-use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
 use vulkano::image::view::ImageView;
+use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
 use vulkano::memory::allocator::{AllocationCreateInfo, StandardMemoryAllocator};
-use crate::scene::Scene;
-use crate::camera::CameraData;
-use crate::render::box_outline::CollisionBoxData;
-use crate::render::particle_renderer::GpuRenderData;
-use crate::render::graphics_pipelines::Pipelines;
-use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 /// Per-frame scene and render resources.
 pub struct GpuSceneResources {
@@ -17,7 +17,6 @@ pub struct GpuSceneResources {
     collision_box_data: CollisionBoxData,
     /// Buffers used to draw particles.
     pub render_data: GpuRenderData,
-
 
     /// Density volume sampled by the fluid renderer.
     pub density_texture: Arc<Image>,
@@ -34,11 +33,11 @@ impl GpuSceneResources {
         let render_data = GpuRenderData::new(
             allocator.clone(),
             &scene.initial_positions,
-            scene.sim_params.particle_radius
+            scene.sim_params.particle_radius,
         );
 
         let grid_res = scene.sim_params.grid_res;
-        
+
         let density_texture = Image::new(
             allocator.clone(),
             ImageCreateInfo {
@@ -48,9 +47,10 @@ impl GpuSceneResources {
                 usage: ImageUsage::STORAGE | ImageUsage::SAMPLED | ImageUsage::TRANSFER_DST,
                 ..Default::default()
             },
-            AllocationCreateInfo::default()
-        ).unwrap();
-        
+            AllocationCreateInfo::default(),
+        )
+        .unwrap();
+
         let density_view = ImageView::new_default(density_texture.clone()).unwrap();
 
         Self {
@@ -68,13 +68,24 @@ impl GpuSceneResources {
     }
     /// Updates frame resources from the scene.
     pub fn sync_with_scene(&self, scene: &Scene) {
-        self.camera_data.write_to_buffer(&scene.camera, self.current_frame_idx);
-        self.collision_box_data.write_to_buffer(&scene.boundary, self.current_frame_idx);
+        self.camera_data
+            .write_to_buffer(&scene.camera, self.current_frame_idx);
+        self.collision_box_data
+            .write_to_buffer(&scene.boundary, self.current_frame_idx);
     }
 
     /// Records the graphics commands for this resource.
-    pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines) {
-        self.collision_box_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx);
+    pub fn bind_to_command_buffer<Cb>(
+        &self,
+        builder: &mut AutoCommandBufferBuilder<Cb>,
+        pipelines: &Pipelines,
+    ) {
+        self.collision_box_data.bind_to_command_buffer(
+            builder,
+            pipelines,
+            self.camera_addr(),
+            self.current_frame_idx,
+        );
         //self.render_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx, self.physics_data.count);
     }
 

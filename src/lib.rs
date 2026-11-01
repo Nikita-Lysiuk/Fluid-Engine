@@ -5,6 +5,6 @@ pub mod constants;
 pub mod frame_benchmark;
 pub mod frame_timer;
 pub mod input;
-pub mod scene;
 mod render;
+pub mod scene;
 mod sim;

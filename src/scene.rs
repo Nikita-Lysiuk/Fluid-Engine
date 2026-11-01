@@ -1,9 +1,9 @@
-use glam::{IVec3, Vec2, Vec3};
-use log::info;
 use crate::camera::Camera;
 use crate::sim::collision_box::CollisionBox;
-use crate::sim::spawn::spawn_block;
 use crate::sim::params::SimulationParams;
+use crate::sim::spawn::spawn_block;
+use glam::{IVec3, Vec2, Vec3};
+use log::info;
 
 pub struct Scene {
     pub initial_positions: Vec<[f32; 3]>,
@@ -31,7 +31,13 @@ pub struct Attractor {
 
 impl Attractor {
     /// Places the attraction point on the ray through the cursor.
-    pub fn aim(&mut self, camera: &Camera, cursor: Vec2, window_size: Vec2, boundary: &CollisionBox) {
+    pub fn aim(
+        &mut self,
+        camera: &Camera,
+        cursor: Vec2,
+        window_size: Vec2,
+        boundary: &CollisionBox,
+    ) {
         let (origin, direction) = camera.ray_through(cursor, window_size);
         if !self.active {
             let box_centre = 0.5 * (boundary.min + boundary.max);
@@ -69,7 +75,6 @@ impl Scene {
         collision_box.wave_amplitude = 0.3;
         collision_box.wave_frequency = 0.5;
 
-
         let spacing = particle_radius * 2.0;
 
         // 2.0 x 2.0 x 1.6 m holds 100k particles at this spacing; other
@@ -80,21 +85,22 @@ impl Scene {
         let water_depth = 1.6 * scale;
         let spawn_pos = Vec3::new(box_min.x + 0.05, 0.5, -0.5 * water_depth);
 
-        let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+        let crate::sim::spawn::SpawnedBlock {
+            positions: initial_positions,
+            particle_mass,
+        } = spawn_block(
             spawn_pos,
             Vec3::new(water_width, water_height, water_depth),
             particle_radius,
             target_density,
             spacing,
-            0.01
+            0.01,
         );
 
         let mut camera = Camera::new(Vec3::new(0.0, 1.5, -3.5));
         camera.rotate(0.0, 0.0, 0.0);
 
-
         let smoothing_radius = particle_radius * 4.0;
-
 
         let dt = 0.005;
 
@@ -123,7 +129,10 @@ impl Scene {
             grid_res,
         );
 
-        info!("[Scene] Created new scene with {} particles.", initial_positions.len());
+        info!(
+            "[Scene] Created new scene with {} particles.",
+            initial_positions.len()
+        );
 
         Self {
             initial_positions,

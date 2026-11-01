@@ -74,7 +74,10 @@ fn profile_substep(
     let device = queue.device().clone();
     let pool = QueryPool::new(
         device.clone(),
-        QueryPoolCreateInfo { query_count: MAX_QUERIES, ..QueryPoolCreateInfo::query_type(QueryType::Timestamp) },
+        QueryPoolCreateInfo {
+            query_count: MAX_QUERIES,
+            ..QueryPoolCreateInfo::query_type(QueryType::Timestamp)
+        },
     )
     .unwrap();
 
@@ -86,41 +89,74 @@ fn profile_substep(
     .unwrap();
     // SAFETY: the pool is fresh, reset before use, and every query index is
     // written at most once and read only after the fence wait below.
-    unsafe { builder.reset_query_pool(pool.clone(), 0..MAX_QUERIES).unwrap() };
+    unsafe {
+        builder
+            .reset_query_pool(pool.clone(), 0..MAX_QUERIES)
+            .unwrap()
+    };
 
     let mut labels: Vec<&'static str> = Vec::new();
     let mut mark = |builder: &mut AutoCommandBufferBuilder<_>, label: &'static str| {
         let idx = labels.len() as u32;
         // SAFETY: each index is reset above and written once before the pool is read.
-        unsafe { builder.write_timestamp(pool.clone(), idx, PipelineStage::AllCommands).unwrap() };
+        unsafe {
+            builder
+                .write_timestamp(pool.clone(), idx, PipelineStage::AllCommands)
+                .unwrap()
+        };
         labels.push(label);
     };
 
     mark(&mut builder, "start");
-    pipelines.viscosity.as_ref().expect("prepare viscosity before dispatch").dispatch(&mut builder);
+    pipelines
+        .viscosity
+        .as_ref()
+        .expect("prepare viscosity before dispatch")
+        .dispatch(&mut builder);
     mark(&mut builder, "viscosity");
-    pipelines.density_source_term.as_ref().expect("prepare density_source_term before dispatch").dispatch(&mut builder);
+    pipelines
+        .density_source_term
+        .as_ref()
+        .expect("prepare density_source_term before dispatch")
+        .dispatch(&mut builder);
     mark(&mut builder, "density_source_term");
     pipelines.record_pressure_solve(&mut builder, &solver.density, PressureSolve::Density);
     mark(&mut builder, "density_solve");
-    pipelines.pressure_integration.as_ref().expect("prepare pressure_integration before dispatch").dispatch(&mut builder);
+    pipelines
+        .pressure_integration
+        .as_ref()
+        .expect("prepare pressure_integration before dispatch")
+        .dispatch(&mut builder);
     mark(&mut builder, "pressure_integration");
     pipelines.neighbor_search.execute(&mut builder);
     mark(&mut builder, "neighbor_search");
-    pipelines.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(&mut builder);
+    pipelines
+        .density_alpha
+        .as_ref()
+        .expect("prepare density_alpha before dispatch")
+        .dispatch(&mut builder);
     mark(&mut builder, "density_alpha");
-    pipelines.divergence_source_term.as_ref().expect("prepare divergence_source_term before dispatch").dispatch(&mut builder);
+    pipelines
+        .divergence_source_term
+        .as_ref()
+        .expect("prepare divergence_source_term before dispatch")
+        .dispatch(&mut builder);
     mark(&mut builder, "divergence_source_term");
     pipelines.record_pressure_solve(&mut builder, &solver.divergence, PressureSolve::Divergence);
     mark(&mut builder, "divergence_solve");
-    pipelines.divergence_integration.as_ref().expect("prepare divergence_integration before dispatch").dispatch(&mut builder);
+    pipelines
+        .divergence_integration
+        .as_ref()
+        .expect("prepare divergence_integration before dispatch")
+        .dispatch(&mut builder);
     mark(&mut builder, "divergence_integration");
 
     submit_and_wait(queue, builder.build().unwrap());
 
     let count = labels.len();
     let mut ticks = vec![0u64; count];
-    pool.get_results(0..count as u32, &mut ticks, QueryResultFlags::WAIT).unwrap();
+    pool.get_results(0..count as u32, &mut ticks, QueryResultFlags::WAIT)
+        .unwrap();
     let ns_per_tick = device.physical_device().properties().timestamp_period as f64;
 
     // Sum repeated passes (solver iterations) under one label, keep order.
@@ -185,7 +221,10 @@ fn run_substep_benchmark(particle_count: u32) {
             ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
         let sim_params_buffer = Buffer::from_data(
             memory_allocator.clone(),
-            BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
+            BufferCreateInfo {
+                usage: BufferUsage::UNIFORM_BUFFER,
+                ..Default::default()
+            },
             AllocationCreateInfo {
                 memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
                     | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
@@ -266,7 +305,10 @@ fn run_substep_benchmark(particle_count: u32) {
         let stats = super::convergence_benchmark::read_stats(&physics_data, scene.sim_params.dt);
         println!(
             "    iterations: density {} (avg err {:.3} kg/m³), divergence {} (avg err {:.3} kg/m³/s)",
-            stats.density_iterations, stats.density_error, stats.divergence_iterations, stats.divergence_error,
+            stats.density_iterations,
+            stats.density_error,
+            stats.divergence_iterations,
+            stats.divergence_error,
         );
 
         println!(
@@ -291,7 +333,10 @@ fn solver_iterations_over_time() {
     let memory_allocator = ctx.memory_allocator().clone();
     let queue = ctx.graphics_queue().clone();
 
-    let particle_count = std::env::var("FLUID_PARTICLES").ok().and_then(|v| v.parse().ok()).unwrap_or(25_000);
+    let particle_count = std::env::var("FLUID_PARTICLES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(25_000);
     let scene = Scene::new(particle_count);
     let solver = SolverSettings::default_for(&scene.sim_params);
     let dt = scene.sim_params.dt;
@@ -304,22 +349,33 @@ fn solver_iterations_over_time() {
         device.clone(),
         StandardDescriptorSetAllocatorCreateInfo::default(),
     ));
-    let physics_data = ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let physics_data =
+        ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
     let sim_params_buffer = Buffer::from_data(
         memory_allocator.clone(),
-        BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
+        BufferCreateInfo {
+            usage: BufferUsage::UNIFORM_BUFFER,
+            ..Default::default()
+        },
         AllocationCreateInfo {
-            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
             ..Default::default()
         },
         scene.sim_params,
     )
     .unwrap();
-    let mut pipelines =
-        ComputePipelines::new(device.clone(), memory_allocator.clone(), physics_data.grid_entries.len() as u32);
+    let mut pipelines = ComputePipelines::new(
+        device.clone(),
+        memory_allocator.clone(),
+        physics_data.grid_entries.len() as u32,
+    );
     prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
 
-    println!("{:>7} {:>6}  {:>9} {:>12}  {:>9} {:>14}", "t [s]", "substep", "dens_it", "dens_err", "div_it", "div_err");
+    println!(
+        "{:>7} {:>6}  {:>9} {:>12}  {:>9} {:>14}",
+        "t [s]", "substep", "dens_it", "dens_err", "div_it", "div_err"
+    );
     let total_substeps = (3.0 / dt) as u32;
     let mut sum_density_iters = 0u32;
     let mut sum_divergence_iters = 0u32;
@@ -380,19 +436,27 @@ fn attractor_gathers_water() {
         device.clone(),
         StandardDescriptorSetAllocatorCreateInfo::default(),
     ));
-    let physics_data = ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let physics_data =
+        ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
     let sim_params_buffer = Buffer::from_data(
         memory_allocator.clone(),
-        BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
+        BufferCreateInfo {
+            usage: BufferUsage::UNIFORM_BUFFER,
+            ..Default::default()
+        },
         AllocationCreateInfo {
-            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
             ..Default::default()
         },
         scene.sim_params,
     )
     .unwrap();
-    let mut pipelines =
-        ComputePipelines::new(device.clone(), memory_allocator.clone(), physics_data.grid_entries.len() as u32);
+    let mut pipelines = ComputePipelines::new(
+        device.clone(),
+        memory_allocator.clone(),
+        physics_data.grid_entries.len() as u32,
+    );
     prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
 
     let run = |substeps: u32, init: bool| {
@@ -432,6 +496,12 @@ fn attractor_gathers_water() {
     run(200, false);
     let after = count_inside();
 
-    println!("particles within {:.2} m of the attractor: {before} -> {after}", radius * 0.5);
-    assert!(after > before, "attractor did not gather water: {before} -> {after}");
+    println!(
+        "particles within {:.2} m of the attractor: {before} -> {after}",
+        radius * 0.5
+    );
+    assert!(
+        after > before,
+        "attractor did not gather water: {before} -> {after}"
+    );
 }

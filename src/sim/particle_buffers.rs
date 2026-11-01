@@ -46,7 +46,6 @@ pub struct ParticleBuffers {
     /// Pressure acceleration per particle.
     pub pressure_accelerations: Subbuffer<[[f32; 4]]>,
 
-
     /// Sorted particle hash entries.
     pub grid_entries: Subbuffer<[Entry]>,
     /// First entry for each spatial hash bucket.
@@ -92,52 +91,58 @@ pub mod stats_layout {
 
 impl ParticleBuffers {
     /// Creates the associated resources.
-    pub fn new(
-        allocator: Arc<StandardMemoryAllocator>,
-        initial_positions: Vec<[f32; 3]>,
-    ) -> Self {
+    pub fn new(allocator: Arc<StandardMemoryAllocator>, initial_positions: Vec<[f32; 3]>) -> Self {
         let count = initial_positions.len() as u32;
 
-        let positions_vec4: Vec<[f32; 4]> = initial_positions.iter()
+        let positions_vec4: Vec<[f32; 4]> = initial_positions
+            .iter()
             .map(|p| [p[0], p[1], p[2], 1.0])
             .collect();
 
         let position_a = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+                usage: BufferUsage::STORAGE_BUFFER
+                    | BufferUsage::TRANSFER_SRC
+                    | BufferUsage::TRANSFER_DST,
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
             positions_vec4.into_iter(),
-        ).expect("Failed to create position buffer");
+        )
+        .expect("Failed to create position buffer");
 
         let position_b = Self::new_device_buffer(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let velocity_a = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+                usage: BufferUsage::STORAGE_BUFFER
+                    | BufferUsage::TRANSFER_SRC
+                    | BufferUsage::TRANSFER_DST,
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
             (0..count).map(|_| [0.0, 0.0, 0.0, 0.0]),
-        ).expect("Failed to create velocity buffer");
+        )
+        .expect("Failed to create velocity buffer");
 
         let velocity_b = Self::new_device_buffer(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let pressures = Buffer::from_iter(
@@ -147,40 +152,42 @@ impl ParticleBuffers {
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
             (0..count).map(|_| 0.0f32),
-        ).expect("Failed to create pressure buffer");
+        )
+        .expect("Failed to create pressure buffer");
 
         let pressure_accelerations = Self::new_device_buffer::<[f32; 4]>(
             BufferUsage::STORAGE_BUFFER,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let colors = Self::new_device_buffer(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let densities = Self::new_device_buffer::<f32>(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let factors = Self::new_device_buffer::<f32>(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let source_terms = Self::new_device_buffer::<f32>(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
-            count as u64
+            count as u64,
         );
 
         let sort_buffer_size = count.next_power_of_two();
@@ -188,13 +195,13 @@ impl ParticleBuffers {
         let grid_entries = Self::new_device_buffer::<Entry>(
             BufferUsage::STORAGE_BUFFER,
             allocator.clone(),
-            sort_buffer_size as u64
+            sort_buffer_size as u64,
         );
 
         let grid_start = Self::new_device_buffer::<u32>(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_DST,
             allocator.clone(),
-            sort_buffer_size as u64
+            sort_buffer_size as u64,
         );
 
         let neighbor_list = Self::new_device_buffer::<u32>(
@@ -202,7 +209,11 @@ impl ParticleBuffers {
             allocator.clone(),
             count as u64 * MAX_NEIGHBORS as u64,
         );
-        let neighbor_counts = Self::new_device_buffer::<u32>(BufferUsage::STORAGE_BUFFER, allocator.clone(), count as u64);
+        let neighbor_counts = Self::new_device_buffer::<u32>(
+            BufferUsage::STORAGE_BUFFER,
+            allocator.clone(),
+            count as u64,
+        );
 
         let warm_start = Buffer::from_iter(
             allocator.clone(),
@@ -211,11 +222,13 @@ impl ParticleBuffers {
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
             (0..count).map(|_| [0.0f32; 2]),
-        ).expect("Failed to create warm start buffer");
+        )
+        .expect("Failed to create warm start buffer");
         let warm_start_sorted = Self::new_device_buffer::<[f32; 2]>(
             BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC,
             allocator.clone(),
@@ -236,15 +249,19 @@ impl ParticleBuffers {
         let stats_buffer = Buffer::from_iter(
             allocator.clone(),
             BufferCreateInfo {
-                usage: BufferUsage::STORAGE_BUFFER | BufferUsage::TRANSFER_SRC | BufferUsage::TRANSFER_DST,
+                usage: BufferUsage::STORAGE_BUFFER
+                    | BufferUsage::TRANSFER_SRC
+                    | BufferUsage::TRANSFER_DST,
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_RANDOM_ACCESS,
+                memory_type_filter: MemoryTypeFilter::PREFER_HOST
+                    | MemoryTypeFilter::HOST_RANDOM_ACCESS,
                 ..Default::default()
             },
             [0u32; stats_layout::LEN].into_iter(),
-        ).expect("Failed to create stats buffer");
+        )
+        .expect("Failed to create stats buffer");
 
         Self {
             count,
@@ -270,14 +287,26 @@ impl ParticleBuffers {
         }
     }
     /// Allocates a device-local buffer for simulation data.
-    fn new_device_buffer<T>(usage: BufferUsage, allocator: Arc<StandardMemoryAllocator>, count: u64) -> Subbuffer<[T]> where T: BufferContents {
+    fn new_device_buffer<T>(
+        usage: BufferUsage,
+        allocator: Arc<StandardMemoryAllocator>,
+        count: u64,
+    ) -> Subbuffer<[T]>
+    where
+        T: BufferContents,
+    {
         Buffer::new_slice::<T>(
             allocator.clone(),
-            BufferCreateInfo { usage, ..Default::default() },
-            AllocationCreateInfo { memory_type_filter: MemoryTypeFilter::PREFER_DEVICE, ..Default::default() },
-            count
-        ).unwrap()
+            BufferCreateInfo {
+                usage,
+                ..Default::default()
+            },
+            AllocationCreateInfo {
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE,
+                ..Default::default()
+            },
+            count,
+        )
+        .unwrap()
     }
 }
-
-

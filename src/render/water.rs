@@ -1,16 +1,18 @@
-use std::sync::Arc;
+use crate::render::model_vertex::ModelVertex;
+use crate::sim::params::SimulationParams;
 use glam::{Mat4, Quat, Vec3};
+use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::DeviceOwned;
-use vulkano::image::sampler::{BorderColor, Filter, Sampler, SamplerAddressMode, SamplerCreateInfo};
+use vulkano::image::sampler::{
+    BorderColor, Filter, Sampler, SamplerAddressMode, SamplerCreateInfo,
+};
 use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint, PipelineLayout};
-use crate::render::model_vertex::ModelVertex;
-use crate::sim::params::SimulationParams;
 
 #[derive(BufferContents)]
 #[repr(C)]
@@ -47,11 +49,13 @@ impl WaterRenderer {
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
             vertices,
-        ).unwrap();
+        )
+        .unwrap();
 
         let index_buffer = Buffer::from_iter(
             memory_allocator.clone(),
@@ -60,11 +64,13 @@ impl WaterRenderer {
                 ..Default::default()
             },
             AllocationCreateInfo {
-                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                    | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                 ..Default::default()
             },
-            indices.clone()
-        ).unwrap();
+            indices.clone(),
+        )
+        .unwrap();
 
         let density_sampler = Sampler::new(
             memory_allocator.device().clone(),
@@ -74,8 +80,9 @@ impl WaterRenderer {
                 address_mode: [SamplerAddressMode::ClampToBorder; 3],
                 border_color: BorderColor::IntTransparentBlack,
                 ..SamplerCreateInfo::default()
-            }
-        ).unwrap();
+            },
+        )
+        .unwrap();
 
         let skybox_sampler = Sampler::new(
             memory_allocator.device().clone(),
@@ -83,8 +90,9 @@ impl WaterRenderer {
                 mag_filter: Filter::Linear,
                 min_filter: Filter::Linear,
                 ..SamplerCreateInfo::default()
-            }
-        ).unwrap();
+            },
+        )
+        .unwrap();
 
         let set_layout = pipeline_layout.set_layouts().get(0).unwrap();
         let descriptor_set = DescriptorSet::new(
@@ -95,8 +103,9 @@ impl WaterRenderer {
                 WriteDescriptorSet::image_view_sampler(1, skybox_view, skybox_sampler),
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
             ],
-            []
-        ).unwrap();
+            [],
+        )
+        .unwrap();
 
         Self {
             vertex_buffer,
@@ -107,24 +116,35 @@ impl WaterRenderer {
     }
     fn generate_cube() -> (Vec<ModelVertex>, Vec<u32>) {
         let vertices = vec![
-
-            ModelVertex { position: [-0.5, -0.5,  0.5] },
-            ModelVertex { position: [ 0.5, -0.5,  0.5] },
-            ModelVertex { position: [ 0.5,  0.5,  0.5] },
-            ModelVertex { position: [-0.5,  0.5,  0.5] },
-            ModelVertex { position: [-0.5, -0.5, -0.5] },
-            ModelVertex { position: [ 0.5, -0.5, -0.5] },
-            ModelVertex { position: [ 0.5,  0.5, -0.5] },
-            ModelVertex { position: [-0.5,  0.5, -0.5] },
+            ModelVertex {
+                position: [-0.5, -0.5, 0.5],
+            },
+            ModelVertex {
+                position: [0.5, -0.5, 0.5],
+            },
+            ModelVertex {
+                position: [0.5, 0.5, 0.5],
+            },
+            ModelVertex {
+                position: [-0.5, 0.5, 0.5],
+            },
+            ModelVertex {
+                position: [-0.5, -0.5, -0.5],
+            },
+            ModelVertex {
+                position: [0.5, -0.5, -0.5],
+            },
+            ModelVertex {
+                position: [0.5, 0.5, -0.5],
+            },
+            ModelVertex {
+                position: [-0.5, 0.5, -0.5],
+            },
         ];
 
         let indices = vec![
-            0, 1, 2, 2, 3, 0,
-            1, 5, 6, 6, 2, 1,
-            5, 4, 7, 7, 6, 5,
-            4, 0, 3, 3, 7, 4,
-            3, 2, 6, 6, 7, 3,
-            4, 5, 1, 1, 0, 4,
+            0, 1, 2, 2, 3, 0, 1, 5, 6, 6, 2, 1, 5, 4, 7, 7, 6, 5, 4, 0, 3, 3, 7, 4, 3, 2, 6, 6, 7,
+            3, 4, 5, 1, 1, 0, 4,
         ];
 
         (vertices, indices)
@@ -143,11 +163,7 @@ impl WaterRenderer {
         let size = max - min;
         let center = min + size * 0.5;
 
-        let model_matrix = Mat4::from_scale_rotation_translation(
-            size,
-            Quat::IDENTITY,
-            center
-        );
+        let model_matrix = Mat4::from_scale_rotation_translation(size, Quat::IDENTITY, center);
 
         let push_data = WaterPushConstants {
             camera_addr,
@@ -158,17 +174,23 @@ impl WaterRenderer {
         // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder
-                .bind_pipeline_graphics(pipeline.clone()).unwrap()
+                .bind_pipeline_graphics(pipeline.clone())
+                .unwrap()
                 .bind_descriptor_sets(
                     PipelineBindPoint::Graphics,
                     pipeline.layout().clone(),
                     0,
                     self.descriptor_set.clone(),
-                ).unwrap()
-                .bind_vertex_buffers(0, self.vertex_buffer.clone()).unwrap()
-                .bind_index_buffer(self.index_buffer.clone()).unwrap()
-                .push_constants(pipeline.layout().clone(), 0, push_data).unwrap()
-                .draw_indexed(self.index_count, 1, 0, 0, 0).unwrap();
+                )
+                .unwrap()
+                .bind_vertex_buffers(0, self.vertex_buffer.clone())
+                .unwrap()
+                .bind_index_buffer(self.index_buffer.clone())
+                .unwrap()
+                .push_constants(pipeline.layout().clone(), 0, push_data)
+                .unwrap()
+                .draw_indexed(self.index_count, 1, 0, 0, 0)
+                .unwrap();
         }
     }
 }

@@ -1,8 +1,8 @@
-use std::sync::Arc;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3};
+use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 #[derive(BufferContents, Debug, Clone, Copy)]
 #[repr(C)]
@@ -25,7 +25,9 @@ pub struct Camera {
 
 impl Camera {
     /// Returns the camera position.
-    pub fn position(&self) -> Vec3 { self.position }
+    pub fn position(&self) -> Vec3 {
+        self.position
+    }
     /// Moves the camera along a world-space direction.
     pub fn move_by(&mut self, direction: Vec3, distance: f32) {
         self.position += direction * distance;
@@ -50,7 +52,12 @@ impl Camera {
         }
     }
     pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Self {
-        let orientation = Quat::from_euler(EulerRot::YXZ, yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+        let orientation = Quat::from_euler(
+            EulerRot::YXZ,
+            yaw.to_radians(),
+            pitch.to_radians(),
+            roll.to_radians(),
+        );
 
         Self {
             position: Vec3::ZERO,
@@ -62,12 +69,22 @@ impl Camera {
         }
     }
     pub fn rotate(&mut self, pitch: f32, yaw: f32, roll: f32) {
-        let rotation = Quat::from_euler(EulerRot::YXZ, yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+        let rotation = Quat::from_euler(
+            EulerRot::YXZ,
+            yaw.to_radians(),
+            pitch.to_radians(),
+            roll.to_radians(),
+        );
         self.orientation = rotation * self.orientation;
         self.orientation = self.orientation.normalize();
     }
     pub fn rotate_absolute(&mut self, pitch: f32, yaw: f32, roll: f32) {
-        self.orientation = Quat::from_euler(EulerRot::YXZ, yaw.to_radians(), pitch.to_radians(), roll.to_radians());
+        self.orientation = Quat::from_euler(
+            EulerRot::YXZ,
+            yaw.to_radians(),
+            pitch.to_radians(),
+            roll.to_radians(),
+        );
         self.orientation = self.orientation.normalize();
     }
     pub fn rotate_with_quat(&mut self, quat: Quat) {
@@ -105,7 +122,10 @@ impl Camera {
     /// Origin and direction of the ray through a window pixel (origin at the
     /// top-left corner, same units as `window_size`).
     pub fn ray_through(&self, pixel: Vec2, window_size: Vec2) -> (Vec3, Vec3) {
-        let ndc = Vec2::new(2.0 * pixel.x / window_size.x - 1.0, 1.0 - 2.0 * pixel.y / window_size.y);
+        let ndc = Vec2::new(
+            2.0 * pixel.x / window_size.x - 1.0,
+            1.0 - 2.0 * pixel.y / window_size.y,
+        );
         let inverse = self.view_projection().inverse();
         let near = inverse.project_point3(ndc.extend(0.0));
         let far = inverse.project_point3(ndc.extend(1.0));
@@ -119,14 +139,22 @@ impl Camera {
             return None;
         }
         let ndc = clip.truncate() / clip.w;
-        Some(Vec2::new((ndc.x + 1.0) * 0.5 * window_size.x, (1.0 - ndc.y) * 0.5 * window_size.y))
+        Some(Vec2::new(
+            (ndc.x + 1.0) * 0.5 * window_size.x,
+            (1.0 - ndc.y) * 0.5 * window_size.y,
+        ))
     }
     fn view_matrix(&self) -> Mat4 {
         let target = self.position + self.forward();
         Mat4::look_at_lh(self.position, target, Vec3::Y)
     }
     fn projection_matrix(&self) -> Mat4 {
-        Mat4::perspective_lh(self.fov.to_radians(), self.aspect_ratio, self.near, self.far)
+        Mat4::perspective_lh(
+            self.fov.to_radians(),
+            self.aspect_ratio,
+            self.near,
+            self.far,
+        )
     }
 }
 
@@ -142,21 +170,23 @@ impl CameraData {
             let ub = Buffer::new_sized(
                 memory_allocator.clone(),
                 BufferCreateInfo {
-                    usage: BufferUsage::UNIFORM_BUFFER
-                        | BufferUsage::SHADER_DEVICE_ADDRESS,
+                    usage: BufferUsage::UNIFORM_BUFFER | BufferUsage::SHADER_DEVICE_ADDRESS,
                     ..BufferCreateInfo::default()
-                },AllocationCreateInfo {
-                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+                },
+                AllocationCreateInfo {
+                    memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                        | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..AllocationCreateInfo::default()
-                }).map_err(|e| {
+                },
+            )
+            .map_err(|e| {
                 panic!("[Camera Data] Failed to create uniform buffer:\n{:?}", e);
-            }).unwrap();
+            })
+            .unwrap();
             uniform_buffers.push(ub);
         }
 
-        Self {
-            uniform_buffers,
-        }
+        Self { uniform_buffers }
     }
     pub fn write_to_buffer(&self, camera: &Camera, current_frame_idx: usize) {
         let view = camera.view_matrix();
@@ -173,14 +203,20 @@ impl CameraData {
         };
 
         self.uniform_buffers[current_frame_idx]
-            .write().map_err(|e| panic!("[Camera Data] Failed to write to uniform buffer:\n{:?}", e))
+            .write()
+            .map_err(|e| panic!("[Camera Data] Failed to write to uniform buffer:\n{:?}", e))
             .unwrap()
             .clone_from(&camera_gpu);
     }
     pub fn uniform_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.uniform_buffers[current_frame_idx]
             .device_address()
-            .map_err(|e| panic!("[Camera Data] Failed to get uniform buffer device address:\n{:?}", e))
+            .map_err(|e| {
+                panic!(
+                    "[Camera Data] Failed to get uniform buffer device address:\n{:?}",
+                    e
+                )
+            })
             .unwrap()
             .get()
     }
@@ -196,24 +232,36 @@ mod tests {
     fn ray_through_window_centre_points_forward() {
         let camera = Camera::new(Vec3::new(0.0, 1.5, -3.5));
         let (origin, direction) = camera.ray_through(WINDOW * 0.5, WINDOW);
-        assert!(direction.dot(camera.forward()) > 0.999, "direction {direction:?}");
+        assert!(
+            direction.dot(camera.forward()) > 0.999,
+            "direction {direction:?}"
+        );
         assert!(origin.distance(camera.position) < 0.2);
     }
 
     #[test]
     fn project_inverts_ray_through() {
         let camera = Camera::new(Vec3::new(0.0, 1.5, -3.5));
-        for pixel in [Vec2::new(100.0, 200.0), Vec2::new(1500.0, 900.0), Vec2::new(960.0, 10.0)] {
+        for pixel in [
+            Vec2::new(100.0, 200.0),
+            Vec2::new(1500.0, 900.0),
+            Vec2::new(960.0, 10.0),
+        ] {
             let (origin, direction) = camera.ray_through(pixel, WINDOW);
             let projected = camera.project(origin + direction * 4.0, WINDOW).unwrap();
-            assert!(projected.distance(pixel) < 0.5, "{pixel:?} -> {projected:?}");
+            assert!(
+                projected.distance(pixel) < 0.5,
+                "{pixel:?} -> {projected:?}"
+            );
         }
     }
 
     #[test]
     fn points_above_the_camera_are_in_the_upper_half() {
         let camera = Camera::new(Vec3::ZERO);
-        let above = camera.project(camera.forward() * 5.0 + Vec3::Y, WINDOW).unwrap();
+        let above = camera
+            .project(camera.forward() * 5.0 + Vec3::Y, WINDOW)
+            .unwrap();
         assert!(above.y < WINDOW.y * 0.5, "{above:?}");
     }
 }

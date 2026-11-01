@@ -69,4 +69,3 @@ pub(crate) mod cs_reorder {
     use vulkano_shaders::shader;
     shader!(ty: "compute", path: "shaders\\compute\\reorder.comp");
 }
-

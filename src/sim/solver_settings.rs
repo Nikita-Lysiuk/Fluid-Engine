@@ -35,14 +35,28 @@ impl SolverSettings {
     pub fn default_for(params: &SimulationParams) -> Self {
         let error = 0.1 / 100.0 * params.target_density;
         Self {
-            density: SolveSettings { min_iterations: 2.min(params.density_solver_iterations), max_iterations: params.density_solver_iterations, max_avg_error: error },
-            divergence: SolveSettings { min_iterations: 1.min(params.divergence_solver_iterations), max_iterations: params.divergence_solver_iterations, max_avg_error: error },
+            density: SolveSettings {
+                min_iterations: 2.min(params.density_solver_iterations),
+                max_iterations: params.density_solver_iterations,
+                max_avg_error: error,
+            },
+            divergence: SolveSettings {
+                min_iterations: 1.min(params.divergence_solver_iterations),
+                max_iterations: params.divergence_solver_iterations,
+                max_avg_error: error,
+            },
         }
     }
     /// Exactly `density` / `divergence` iterations, no early exit.
     pub fn fixed(density: u32, divergence: u32) -> Self {
-        let fixed = |n| SolveSettings { min_iterations: n, max_iterations: n, max_avg_error: -1.0 };
-        Self { density: fixed(density), divergence: fixed(divergence) }
+        let fixed = |n| SolveSettings {
+            min_iterations: n,
+            max_iterations: n,
+            max_avg_error: -1.0,
+        };
+        Self {
+            density: fixed(density),
+            divergence: fixed(divergence),
+        }
     }
 }
-

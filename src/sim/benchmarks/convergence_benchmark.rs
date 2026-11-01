@@ -33,11 +33,11 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::sync::GpuFuture;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 
-use crate::sim::particle_buffers::stats_layout;
-use crate::sim::particle_buffers::ParticleBuffers;
-use crate::sim::spawn::spawn_block;
 use crate::sim::params::SimulationParams;
+use crate::sim::particle_buffers::ParticleBuffers;
+use crate::sim::particle_buffers::stats_layout;
 use crate::sim::pipelines::{ComputePipelines, SolverSettings};
+use crate::sim::spawn::spawn_block;
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
@@ -146,7 +146,10 @@ pub(super) fn read_stats(physics_data: &ParticleBuffers, dt: f32) -> SolverStats
     let stats = physics_data.stats_buffer.read().unwrap();
     let solve = |range: std::ops::Range<u64>| {
         let state = &stats[range.start as usize..range.end as usize];
-        (state[stats_layout::ITERATIONS], f32::from_bits(state[stats_layout::AVG_ERROR]))
+        (
+            state[stats_layout::ITERATIONS],
+            f32::from_bits(state[stats_layout::AVG_ERROR]),
+        )
     };
     let (density_iterations, density_error) = solve(stats_layout::DENSITY_SOLVER);
     let (divergence_iterations, divergence_per_step) = solve(stats_layout::DIVERGENCE_SOLVER);
@@ -211,7 +214,10 @@ fn solver_convergence_benchmark() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock {
+        positions: initial_positions,
+        particle_mass,
+    } = spawn_block(
         spawn_pos,
         Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
@@ -333,7 +339,8 @@ fn make_density_staging(
             ..Default::default()
         },
         AllocationCreateInfo {
-            memory_type_filter: MemoryTypeFilter::PREFER_HOST | MemoryTypeFilter::HOST_RANDOM_ACCESS,
+            memory_type_filter: MemoryTypeFilter::PREFER_HOST
+                | MemoryTypeFilter::HOST_RANDOM_ACCESS,
             ..Default::default()
         },
         (0..n_particles).map(|_| 0.0f32),
@@ -360,12 +367,29 @@ fn print_density_stats(label: &str, densities: &[f32], target: f32) {
     );
     println!("  min, max     : {:.2}, {:.2}", min, max);
     println!("  std          : {:.2}", std);
-    println!("  avg |rho-rho_0| (the convergence-bench metric): {:.2}", avg_abs_err);
+    println!(
+        "  avg |rho-rho_0| (the convergence-bench metric): {:.2}",
+        avg_abs_err
+    );
 
     // Coarse histogram so we can see the bimodal interior/boundary split.
     let edges = [
-        0.0f32, 700.0, 800.0, 900.0, 950.0, 980.0, 995.0, 1000.0, 1005.0, 1020.0, 1050.0, 1100.0,
-        1200.0, 1500.0, 2000.0, f32::INFINITY,
+        0.0f32,
+        700.0,
+        800.0,
+        900.0,
+        950.0,
+        980.0,
+        995.0,
+        1000.0,
+        1005.0,
+        1020.0,
+        1050.0,
+        1100.0,
+        1200.0,
+        1500.0,
+        2000.0,
+        f32::INFINITY,
     ];
     let mut bins = vec![0usize; edges.len() - 1];
     for &d in densities {
@@ -437,7 +461,10 @@ fn rest_density_diagnostic() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock {
+        positions: initial_positions,
+        particle_mass,
+    } = spawn_block(
         spawn_pos,
         Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
@@ -505,7 +532,11 @@ fn rest_density_diagnostic() {
     )
     .unwrap();
     pipelines.neighbor_search.execute(&mut builder);
-    pipelines.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(&mut builder);
+    pipelines
+        .density_alpha
+        .as_ref()
+        .expect("prepare density_alpha before dispatch")
+        .dispatch(&mut builder);
     builder
         .copy_buffer(CopyBufferInfo::buffers(
             physics_data.densities.clone(),
@@ -525,10 +556,14 @@ fn rest_density_diagnostic() {
 
     // Write CSV for plot_rest_density.py.
     let p = Path::new(REST_DENSITY_CSV);
-    if let Some(parent) = p.parent() { fs::create_dir_all(parent).ok(); }
+    if let Some(parent) = p.parent() {
+        fs::create_dir_all(parent).ok();
+    }
     let mut f = fs::File::create(p).unwrap();
     writeln!(f, "density").unwrap();
-    for d in &densities { writeln!(f, "{:.6}", d).unwrap(); }
+    for d in &densities {
+        writeln!(f, "{:.6}", d).unwrap();
+    }
     println!("wrote {}", REST_DENSITY_CSV);
 }
 
@@ -584,7 +619,10 @@ fn density_after_warmup_diagnostic() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock {
+        positions: initial_positions,
+        particle_mass,
+    } = spawn_block(
         spawn_pos,
         Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
@@ -655,7 +693,11 @@ fn density_after_warmup_diagnostic() {
         )
         .unwrap();
         pipelines.neighbor_search.execute(&mut builder);
-        pipelines.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(&mut builder);
+        pipelines
+            .density_alpha
+            .as_ref()
+            .expect("prepare density_alpha before dispatch")
+            .dispatch(&mut builder);
         builder
             .copy_buffer(CopyBufferInfo::buffers(
                 physics_data.densities.clone(),
@@ -729,7 +771,9 @@ fn density_after_warmup_diagnostic() {
 
 fn write_cfl_csv(path: &str, rows: &[(u32, &str, f32, f32, u32)]) {
     let p = Path::new(path);
-    if let Some(parent) = p.parent() { fs::create_dir_all(parent).ok(); }
+    if let Some(parent) = p.parent() {
+        fs::create_dir_all(parent).ok();
+    }
     let mut f = fs::File::create(p).unwrap();
     writeln!(f, "frame,mode,dt,max_speed,iters").unwrap();
     for &(frame, mode, dt, max_speed, iters) in rows {
@@ -758,8 +802,16 @@ fn cfl_comparison() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
-        spawn_pos, Vec3::new(0.8, 0.8, 0.5), particle_radius, target_density, spacing, 0.01,
+    let crate::sim::spawn::SpawnedBlock {
+        positions: initial_positions,
+        particle_mass,
+    } = spawn_block(
+        spawn_pos,
+        Vec3::new(0.8, 0.8, 0.5),
+        particle_radius,
+        target_density,
+        spacing,
+        0.01,
     );
     println!(
         "cfl_comparison: {} cząstek, {} klatek per tryb",
@@ -771,7 +823,11 @@ fn cfl_comparison() {
 
     for &use_cfl in &[false, true] {
         let mode_label = if use_cfl { "adaptive" } else { "static" };
-        let iter_count = if use_cfl { CFL_MAX_ITERS } else { CFL_STATIC_ITERS };
+        let iter_count = if use_cfl {
+            CFL_MAX_ITERS
+        } else {
+            CFL_STATIC_ITERS
+        };
 
         println!("--- Tryb: {} (iters={}) ---", mode_label, iter_count);
 
@@ -792,16 +848,28 @@ fn cfl_comparison() {
         // Host-accessible so we can update dt each frame.
         let sim_params_buffer = Buffer::from_data(
             memory_allocator.clone(),
-            BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
+            BufferCreateInfo {
+                usage: BufferUsage::UNIFORM_BUFFER,
+                ..Default::default()
+            },
             AllocationCreateInfo {
                 memory_type_filter: MemoryTypeFilter::PREFER_HOST
                     | MemoryTypeFilter::HOST_RANDOM_ACCESS,
                 ..Default::default()
             },
             SimulationParams::new(
-                particle_radius, particle_mass, smoothing_radius, target_density,
-                0.15, 0.5, dt, iter_count, iter_count,
-                Vec3::new(0.0, -9.81, 0.0), box_min, box_max,
+                particle_radius,
+                particle_mass,
+                smoothing_radius,
+                target_density,
+                0.15,
+                0.5,
+                dt,
+                iter_count,
+                iter_count,
+                Vec3::new(0.0, -9.81, 0.0),
+                box_min,
+                box_max,
                 IVec3::new(128, 128, 128),
             ),
         )

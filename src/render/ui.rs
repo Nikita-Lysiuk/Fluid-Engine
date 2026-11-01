@@ -1,6 +1,6 @@
 use crate::scene::Scene;
-use crate::sim::simulation::SimulationSettings;
 use crate::sim::pipelines::SortAlgorithm;
+use crate::sim::simulation::SimulationSettings;
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
 use glam::{Vec2, Vec4};
 
@@ -85,11 +85,15 @@ impl AppUi {
     /// Collects the simulation controls for the next frame.
     pub fn simulation_settings(&self) -> SimulationSettings {
         SimulationSettings {
-            use_cfl: self.use_cfl, cfl_factor: self.cfl_factor,
-            cfl_min_dt: self.cfl_min_dt, cfl_max_dt: self.cfl_max_dt,
-            max_substeps: self.max_substeps_per_frame, sort_algorithm: self.sort_algorithm,
+            use_cfl: self.use_cfl,
+            cfl_factor: self.cfl_factor,
+            cfl_min_dt: self.cfl_min_dt,
+            cfl_max_dt: self.cfl_max_dt,
+            max_substeps: self.max_substeps_per_frame,
+            sort_algorithm: self.sort_algorithm,
             use_solver_error_threshold: self.use_solver_error_threshold,
-            density_error_pct: self.density_error_pct, divergence_error_pct: self.divergence_error_pct,
+            density_error_pct: self.density_error_pct,
+            divergence_error_pct: self.divergence_error_pct,
         }
     }
 
@@ -187,7 +191,9 @@ impl AppUi {
                 ui.heading("External Forces");
                 ui.label("Left mouse: pull water (wheel = closer / further)");
                 ui.label("Right mouse held: rotate camera, WASD / QE: move");
-                ui.add(Slider::new(&mut scene.attractor.strength, 0.0..=150.0).text("Pull strength"));
+                ui.add(
+                    Slider::new(&mut scene.attractor.strength, 0.0..=150.0).text("Pull strength"),
+                );
                 ui.add(Slider::new(&mut scene.attractor.radius, 0.1..=1.5).text("Pull radius"));
                 ui.add(
                     Slider::new(&mut scene.sim_params.gravity[1], -100.0..=100.0).text("Gravity Y"),
