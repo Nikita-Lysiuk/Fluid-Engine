@@ -60,7 +60,7 @@ const DIVERGENCE_SCALE: f32 = 10.0;
 
 // ── Vulkan setup ─────────────────────────────────────────────────────────────
 
-fn make_context() -> Arc<VulkanoContext> {
+pub(super) fn make_context() -> Arc<VulkanoContext> {
     let config = VulkanoConfig {
         instance_create_info: InstanceCreateInfo {
             enabled_extensions: InstanceExtensions {
@@ -82,7 +82,7 @@ fn make_context() -> Arc<VulkanoContext> {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-fn prepare_all_pipelines(
+pub(super) fn prepare_all_pipelines(
     pipelines: &mut ComputePipelines,
     ds_alloc: Arc<StandardDescriptorSetAllocator>,
     physics_data: &GpuPhysicsData,
@@ -125,30 +125,11 @@ fn submit_substeps(
     // physics_data, since subsequent substeps' internal neighbor_search keeps
     // the structure synchronized.
     if is_first_call {
-        pipelines.neighbor_search.execute(&mut builder);
-        pipelines.density_alpha.execute(&mut builder);
+        pipelines.record_init(&mut builder);
     }
 
     for _ in 0..n_substeps {
-        // Phase 1 — density correction.
-        pipelines.viscosity.execute(&mut builder);
-        pipelines.density_source_term.execute(&mut builder);
-        for _ in 0..iter_count {
-            pipelines.pressure_force.execute(&mut builder);
-            pipelines.pressure_update.execute(&mut builder);
-        }
-        pipelines.pressure_integration.execute(&mut builder);
-
-        // Phase 2 — divergence correction (rebuild neighbours first, since
-        // pressure_integration just moved every particle).
-        pipelines.neighbor_search.execute(&mut builder);
-        pipelines.density_alpha.execute(&mut builder);
-        pipelines.divergence_source_term.execute(&mut builder);
-        for _ in 0..iter_count {
-            pipelines.pressure_force.execute(&mut builder);
-            pipelines.pressure_update.execute(&mut builder);
-        }
-        pipelines.divergence_integration.execute(&mut builder);
+        pipelines.record_substep(&mut builder, iter_count, iter_count);
     }
 
     pipelines.stats.execute(&mut builder);

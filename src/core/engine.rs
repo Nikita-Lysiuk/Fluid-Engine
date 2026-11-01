@@ -14,6 +14,7 @@ use crate::renderer::Renderer;
 use crate::errors::application_error::ApplicationError;
 use crate::utils::constants::{PREFERRED_FPS};
 use crate::utils::fps_counter::FpsCounter;
+use crate::utils::frame_benchmark::FrameBenchmark;
 
 fn load_icon(path: &str) -> Result<Icon, ApplicationError> {
     let (icon_rgba, icon_width, icon_height) = {
@@ -36,6 +37,7 @@ pub struct Engine {
     controller: Controller,
     fps_counter: FpsCounter,
     is_focused: bool,
+    benchmark: Option<FrameBenchmark>,
 }
 
 impl Engine {
@@ -56,6 +58,7 @@ impl Engine {
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
             is_focused: false,
+            benchmark: FrameBenchmark::from_env(),
         })
     }
 
@@ -87,7 +90,15 @@ impl ApplicationHandler for Engine {
                     return;
                 }
             };
-            self.renderer = Some(Renderer::new(window, &self.scene, event_loop));
+            let mut renderer = Renderer::new(window, &self.scene, event_loop);
+            // Lets the benchmark compare substep caps without touching the UI.
+            if let Some(cap) = std::env::var("FLUID_BENCH_MAX_SUBSTEPS").ok().and_then(|v| v.parse().ok()) {
+                renderer.app_ui.max_substeps_per_frame = cap;
+            }
+            if std::env::var("FLUID_BENCH_RENDER").as_deref() == Ok("particles") {
+                renderer.app_ui.render_mode = crate::renderer::RenderMode::Particles;
+            }
+            self.renderer = Some(renderer);
             info!("[Engine] Systems initialized successfully.");
         }
     }
@@ -168,7 +179,8 @@ impl ApplicationHandler for Engine {
                 }
             }
             WindowEvent::RedrawRequested => {
-                let dt = self.fps_counter.tick().as_secs_f32();
+                let frame_time = self.fps_counter.tick();
+                let dt = frame_time.as_secs_f32();
                 let safe_dt = dt.min(0.1);
 
                 if self.is_focused {
@@ -182,6 +194,13 @@ impl ApplicationHandler for Engine {
 
                 if let Some(renderer) = self.renderer.as_mut() {
                     renderer.update_and_render(&mut self.scene, safe_dt, self.fps_counter.fps());
+
+                    if let Some(benchmark) = self.benchmark.as_mut() {
+                        if benchmark.record(frame_time, renderer.app_ui.display_substeps) {
+                            benchmark.report();
+                            event_loop.exit();
+                        }
+                    }
                 }
 
                 // if IS_PAINT_FPS_COUNTER {
