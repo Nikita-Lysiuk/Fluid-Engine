@@ -93,7 +93,7 @@ impl Simulation {
             future = future.then_execute(queue.clone(), substep.clone()).expect("substep can be submitted").boxed();
         }
         let mut builder = AutoCommandBufferBuilder::primary(self.command_buffer_allocator.clone(), self.queue_family_index, CommandBufferUsage::OneTimeSubmit).expect("readback command buffer can be allocated");
-        self.pipelines.stats.execute(&mut builder);
+        self.pipelines.record_stats(&mut builder);
         builder.copy_buffer(CopyBufferInfo::buffers(self.resources.physics_data.stats_buffer.clone(), self.resources.stats_readback[frame_index].clone())).expect("statistics can be copied");
         copy_render_buffers(&mut builder);
         let future = future.then_execute(queue, builder.build().expect("readback commands are valid")).expect("readback can be submitted").then_signal_semaphore().boxed();

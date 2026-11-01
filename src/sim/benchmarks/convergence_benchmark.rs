@@ -119,7 +119,7 @@ fn submit_substeps(
         pipelines.record_substep(&mut builder, &solver);
     }
 
-    pipelines.stats.execute(&mut builder);
+    pipelines.record_stats(&mut builder);
 
     let cb = builder.build().unwrap();
     cb.execute(queue.clone())

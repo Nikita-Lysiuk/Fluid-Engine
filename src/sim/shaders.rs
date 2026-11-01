@@ -34,3 +34,26 @@ pub(super) mod divergence_integration_shader {
     }
 }
 
+pub(super) mod pressure_force_shader {
+    use vulkano_shaders::shader;
+    shader! { ty: "compute", path: "shaders\\compute\\pressure_force.comp" }
+}
+
+pub(super) mod pressure_update_shader {
+    use vulkano_shaders::shader;
+    shader!(
+        ty: "compute",
+        path: "shaders\\compute\\pressure_update.comp"
+    );
+}
+
+pub(super) mod stats_shader {
+    use vulkano_shaders::shader;
+    shader! { ty: "compute", path: "shaders\\compute\\stats.comp" }
+}
+
+pub(super) mod solver_check_shader {
+    use vulkano_shaders::shader;
+    shader!(ty: "compute", path: "shaders/compute/solver_check.comp");
+}
+
