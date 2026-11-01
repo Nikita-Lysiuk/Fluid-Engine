@@ -1,10 +1,6 @@
-#[path = "core/mod.rs"]
-pub mod core;
 #[path = "app.rs"]
 pub mod app;
-mod utils;
 mod renderer;
-mod entities;
 pub mod input;
 #[path = "camera.rs"]
 pub mod camera;
@@ -50,3 +46,17 @@ mod sim_pipelines;
 
 #[path = "sim/simulation_resources.rs"]
 mod simulation_resources;
+
+mod particle;
+#[path = "sim/collision_box.rs"]
+mod collision_box;
+#[path = "render/box_outline.rs"]
+mod box_outline;
+#[path = "render/model_vertex.rs"]
+mod model_vertex;
+#[path = "render/sky.rs"]
+mod sky;
+#[path = "render/water.rs"]
+mod water;
+#[path = "render/shader_loader.rs"]
+mod shader_loader;

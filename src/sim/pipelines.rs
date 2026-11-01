@@ -1,9 +1,9 @@
-use crate::entities::particle::{stats_layout, ParticleBuffers, SimulationParams};
+use crate::particle::{stats_layout, ParticleBuffers, SimulationParams};
 #[path = "shaders.rs"]
 mod shaders;
 use std::sync::Arc;
 use crate::compute_pass::{ComputePass, new_pipeline};
-use crate::utils::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo, DispatchIndirectCommand};

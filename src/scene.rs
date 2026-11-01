@@ -1,8 +1,8 @@
 use glam::{IVec3, Vec2, Vec3};
 use log::info;
-use crate::entities::camera::Camera;
-use crate::entities::collision::CollisionBox;
-use crate::entities::particle::{spawn_block, SimulationParams};
+use crate::camera::Camera;
+use crate::collision_box::CollisionBox;
+use crate::particle::{spawn_block, SimulationParams};
 
 pub struct Scene {
     pub initial_positions: Vec<[f32; 3]>,

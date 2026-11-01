@@ -11,7 +11,7 @@ use vulkano::pipeline::graphics::rasterization::{CullMode, RasterizationState};
 use vulkano::pipeline::graphics::subpass::{PipelineRenderingCreateInfo, PipelineSubpassType};
 use vulkano::pipeline::graphics::vertex_input::VertexInputState;
 use vulkano::pipeline::graphics::viewport::ViewportState;
-use crate::utils::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 
 mod vs {
     use vulkano_shaders::shader;

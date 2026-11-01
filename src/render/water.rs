@@ -9,8 +9,8 @@ use vulkano::image::sampler::{BorderColor, Filter, Sampler, SamplerAddressMode, 
 use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::{GraphicsPipeline, Pipeline, PipelineBindPoint, PipelineLayout};
-use crate::entities::ModelVertex;
-use crate::entities::particle::SimulationParams;
+use crate::model_vertex::ModelVertex;
+use crate::particle::SimulationParams;
 
 #[derive(BufferContents)]
 #[repr(C)]

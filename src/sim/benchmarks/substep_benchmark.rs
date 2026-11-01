@@ -28,8 +28,8 @@ use vulkano::query::{QueryPool, QueryPoolCreateInfo, QueryResultFlags, QueryType
 use vulkano::sync::{self, GpuFuture, PipelineStage};
 
 use super::convergence_benchmark::{make_context, prepare_all_pipelines};
-use crate::core::scene::Scene;
-use crate::entities::particle::ParticleBuffers;
+use crate::scene::Scene;
+use crate::particle::ParticleBuffers;
 use crate::sim_pipelines::{ComputePipelines, PressureSolve, SolverSettings, SortAlgorithm};
 
 const SUBSTEPS_PER_BATCH: u32 = 20;

@@ -14,7 +14,7 @@ use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::{PipelineBindPoint, PipelineLayout};
 use vulkano::sync::GpuFuture;
-use crate::entities::ModelVertex;
+use crate::model_vertex::ModelVertex;
 use crate::renderer::pipelines::Pipelines;
 
 pub struct SkyData {

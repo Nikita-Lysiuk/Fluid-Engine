@@ -4,12 +4,12 @@ use vulkano::format::Format;
 use vulkano::image::{Image, ImageCreateInfo, ImageType, ImageUsage};
 use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, StandardMemoryAllocator};
-use crate::core::scene::Scene;
-use crate::entities::camera::CameraData;
-use crate::entities::collision::CollisionBoxData;
-use crate::entities::particle::GpuRenderData;
+use crate::scene::Scene;
+use crate::camera::CameraData;
+use crate::box_outline::CollisionBoxData;
+use crate::particle::GpuRenderData;
 use crate::renderer::pipelines::Pipelines;
-use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct GpuSceneResources {
     camera_data: CameraData,

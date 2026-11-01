@@ -1,6 +1,6 @@
-use crate::core::scene::Scene;
-use crate::entities::sky::SkyData;
-use crate::entities::water::WaterRenderer;
+use crate::scene::Scene;
+use crate::sky::SkyData;
+use crate::water::WaterRenderer;
 use crate::renderer::pipelines::Pipelines;
 use crate::sim_pipelines::ComputePipelines;
 use crate::simulation::Simulation;
@@ -9,7 +9,7 @@ use crate::density_texture::DensityTexturePipeline;
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
 pub use crate::renderer::ui::RenderMode;
-use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
 use crate::gpu_context::GpuContext;
 use egui_winit_vulkano::{Gui, GuiConfig};
 use std::sync::Arc;

@@ -13,8 +13,8 @@ use vulkano::pipeline::graphics::subpass::{PipelineRenderingCreateInfo, Pipeline
 use vulkano::pipeline::graphics::vertex_input::{Vertex, VertexDefinition};
 use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
-use crate::entities::ModelVertex;
-use crate::utils::shader_loader::load_shader_entry_point;
+use crate::model_vertex::ModelVertex;
+use crate::shader_loader::load_shader_entry_point;
 
 mod vs {
     use vulkano_shaders::shader;

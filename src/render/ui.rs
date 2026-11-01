@@ -1,4 +1,4 @@
-use crate::core::scene::Scene;
+use crate::scene::Scene;
 use crate::simulation::SimulationSettings;
 use crate::sim_pipelines::SortAlgorithm;
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};

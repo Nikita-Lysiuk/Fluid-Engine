@@ -10,10 +10,10 @@ use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
-use crate::entities::particle::{ParticleBuffers, SimulationParams};
+use crate::particle::{ParticleBuffers, SimulationParams};
 use crate::sim_pipelines::SortAlgorithm;
 use crate::sim_pipelines::sorter::{BitonicSorter, RadixSorter};
-use crate::utils::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 
 mod cs_hash {
     use vulkano_shaders::shader;

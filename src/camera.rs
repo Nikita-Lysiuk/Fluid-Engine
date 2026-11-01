@@ -2,7 +2,7 @@ use std::sync::Arc;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3};
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
+use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 #[derive(BufferContents, Debug, Clone, Copy)]
 #[repr(C)]

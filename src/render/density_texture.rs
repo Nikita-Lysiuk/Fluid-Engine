@@ -8,8 +8,8 @@ use vulkano::device::Device;
 use vulkano::image::view::ImageView;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::shader::EntryPoint;
-use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::utils::shader_loader::load_shader_entry_point;
+use crate::particle::{ParticleBuffers, SimulationParams};
+use crate::shader_loader::load_shader_entry_point;
 
 mod splat_cs {
     use vulkano_shaders::shader;

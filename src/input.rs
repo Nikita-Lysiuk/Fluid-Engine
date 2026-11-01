@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use glam::Vec2;
 use winit::event::ElementState;
 use winit::keyboard::KeyCode;
-use crate::entities::camera::Camera;
+use crate::camera::Camera;
 
 const CAMERA_MOVE_SPEED: f32 = 5.0;
 

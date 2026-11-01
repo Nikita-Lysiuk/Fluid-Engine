@@ -1,5 +1,5 @@
-use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::utils::shader_loader::load_shader_entry_point;
+use crate::particle::{ParticleBuffers, SimulationParams};
+use crate::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;

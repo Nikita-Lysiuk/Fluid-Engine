@@ -3,7 +3,7 @@ use super::radix_sorter::ELEMENTS_PER_INVOCATION;
 
 #[cfg(test)]
 mod tests {
-    use crate::entities::particle::Entry;
+    use crate::particle::Entry;
 
     const WG_SIZE: usize = 256;
     const EPI: usize = super::ELEMENTS_PER_INVOCATION as usize;
@@ -236,7 +236,7 @@ mod benchmark {
     use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 
     use super::{BitonicSorter, RadixSorter};
-    use crate::entities::particle::Entry;
+    use crate::particle::Entry;
     
     // All values are powers of two so bitonic sort can use them directly.
     const N_VALUES: &[u32] = &[
