@@ -37,6 +37,7 @@ pub mod collision_pipeline;
 mod neighbor_search;
 pub mod point_pipeline;
 pub mod sky_pipeline;
+#[path = "../../sim/sort/mod.rs"]
 mod sorter;
 pub use sorter::SortAlgorithm;
 mod density_alpha;

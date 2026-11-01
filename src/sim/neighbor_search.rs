@@ -11,7 +11,7 @@ use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::{SortAlgorithm};
-use crate::renderer::pipelines::sorter::{GpuSorter, RadixSorter};
+use crate::renderer::pipelines::sorter::{BitonicSorter, RadixSorter};
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs_hash {
@@ -32,7 +32,7 @@ pub struct NeighborSearch {
     offsets_pipeline: Arc<ComputePipeline>,
     reorder_pipeline: Arc<ComputePipeline>,
 
-    sorter: GpuSorter,
+    sorter: BitonicSorter,
     radix_sorter: RadixSorter,
 
     hash_set: Option<Arc<DescriptorSet>>,
@@ -54,7 +54,7 @@ impl NeighborSearch {
         memory_allocator: Arc<StandardMemoryAllocator>,
         sort_buffer_size: u32,
     ) -> Self {
-        let sorter = GpuSorter::new(device.clone());
+        let sorter = BitonicSorter::new(device.clone());
         let radix_sorter = RadixSorter::new(device.clone(), memory_allocator, sort_buffer_size);
 
         let hash_shader = load_shader_entry_point(device.clone(), cs_hash::load, "main");
