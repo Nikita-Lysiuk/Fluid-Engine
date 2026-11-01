@@ -2,11 +2,12 @@ use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo};
 use vulkano::instance::debug::DebugUtilsLabel;
-use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::WriteDescriptorSet;
+use crate::compute_pass::ComputePass;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Device;
 use vulkano::memory::allocator::StandardMemoryAllocator;
-use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
+use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
@@ -35,9 +36,9 @@ pub struct NeighborSearch {
     sorter: BitonicSorter,
     radix_sorter: RadixSorter,
 
-    hash_set: Option<Arc<DescriptorSet>>,
-    offsets_set: Option<Arc<DescriptorSet>>,
-    reorder_set: Option<Arc<DescriptorSet>>,
+    hash_pass: Option<ComputePass>,
+    offsets_pass: Option<ComputePass>,
+    reorder_pass: Option<ComputePass>,
 
     grid_start: Option<Subbuffer<[u32]>>,
     warm_start: Option<(Subbuffer<[[f32; 2]]>, Subbuffer<[[f32; 2]]>)>,
@@ -97,9 +98,9 @@ impl NeighborSearch {
             sorter,
             radix_sorter,
             sort_algorithm: SortAlgorithm::Bitonic,
-            hash_set: None,
-            offsets_set: None,
-            reorder_set: None,
+            hash_pass: None,
+            offsets_pass: None,
+            reorder_pass: None,
             grid_start: None,
             warm_start: None,
             sort_buffer_len: 0,
@@ -120,50 +121,24 @@ impl NeighborSearch {
         self.grid_start = Some(physics_data.grid_start.clone());
         self.warm_start = Some((physics_data.warm_start_sorted.clone(), physics_data.warm_start.clone()));
 
-        {
-            let layout = self.spatial_hash_pipeline.layout().set_layouts().get(0).unwrap();
-            self.hash_set = Some(DescriptorSet::new(
-                allocator.clone(),
-                layout.clone(),
-                [
-                    WriteDescriptorSet::buffer(0, physics_data.position_a.clone()),
-                    WriteDescriptorSet::buffer(1, physics_data.grid_entries.clone()),
-                    WriteDescriptorSet::buffer(2, sim_params.clone()),
-                ],
-                [],
-            ).unwrap());
-        }
-
-        {
-            let layout = self.offsets_pipeline.layout().set_layouts().get(0).unwrap();
-            self.offsets_set = Some(DescriptorSet::new(
-                allocator.clone(),
-                layout.clone(),
-                [
-                    WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
-                    WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
-                ],
-                [],
-            ).unwrap());
-        }
-
-        {
-            let layout = self.reorder_pipeline.layout().set_layouts().get(0).unwrap();
-            self.reorder_set = Some(DescriptorSet::new(
-                allocator.clone(),
-                layout.clone(),
-                [
-                    WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
-                    WriteDescriptorSet::buffer(1, physics_data.position_a.clone()),
-                    WriteDescriptorSet::buffer(2, physics_data.velocity_a.clone()),
-                    WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),
-                    WriteDescriptorSet::buffer(5, physics_data.velocity_b.clone()),
-                    WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
-                    WriteDescriptorSet::buffer(7, physics_data.warm_start_sorted.clone()),
-                ],
-                [],
-            ).unwrap());
-        }
+        self.hash_pass = Some(ComputePass::new(self.spatial_hash_pipeline.clone(), allocator.clone(), [
+            WriteDescriptorSet::buffer(0, physics_data.position_a.clone()),
+            WriteDescriptorSet::buffer(1, physics_data.grid_entries.clone()),
+            WriteDescriptorSet::buffer(2, sim_params.clone()),
+        ], self.sort_buffer_len.div_ceil(256)));
+        self.offsets_pass = Some(ComputePass::new(self.offsets_pipeline.clone(), allocator.clone(), [
+            WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
+            WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
+        ], self.sort_buffer_len.div_ceil(256)));
+        self.reorder_pass = Some(ComputePass::new(self.reorder_pipeline.clone(), allocator.clone(), [
+            WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
+            WriteDescriptorSet::buffer(1, physics_data.position_a.clone()),
+            WriteDescriptorSet::buffer(2, physics_data.velocity_a.clone()),
+            WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),
+            WriteDescriptorSet::buffer(5, physics_data.velocity_b.clone()),
+            WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
+            WriteDescriptorSet::buffer(7, physics_data.warm_start_sorted.clone()),
+        ], self.num_particles.div_ceil(256)));
 
         self.sorter.prepare(allocator.clone(), physics_data, sim_params);
         self.radix_sorter.prepare(allocator, &physics_data.grid_entries);
@@ -171,18 +146,10 @@ impl NeighborSearch {
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let sort_buffer_len = self.sort_buffer_len;
         let num_particles = self.num_particles;
-        let group_size = 256;
 
-        {
-            let set = self.hash_set.as_ref().expect("NeighborSearch: call prepare() before execute()");
-            let pc = cs_hash::PushConstants { num_particles, table_size: sort_buffer_len };
-            let dispatch_count = (sort_buffer_len + group_size - 1) / group_size;
-            builder
-                .bind_pipeline_compute(self.spatial_hash_pipeline.clone()).unwrap()
-                .bind_descriptor_sets(PipelineBindPoint::Compute, self.spatial_hash_pipeline.layout().clone(), 0, set.clone()).unwrap()
-                .push_constants(self.spatial_hash_pipeline.layout().clone(), 0, pc).unwrap();
-            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
-        }
+        let pass = self.hash_pass.as_ref().expect("prepare neighbor hash before dispatch");
+        pass.bind_with_constants(builder, cs_hash::PushConstants { num_particles, table_size: sort_buffer_len });
+        pass.dispatch_bound(builder);
 
         match self.sort_algorithm {
             SortAlgorithm::Bitonic => self.sorter.execute(builder),
@@ -202,28 +169,14 @@ impl NeighborSearch {
         let grid_start = self.grid_start.as_ref().expect("NeighborSearch: grid_start not set");
         builder.fill_buffer(grid_start.clone(), 0xFFFFFFFF).unwrap();
 
-        {
-            let set = self.offsets_set.as_ref().unwrap();
-            let pc = cs_offsets::PushConstants { num_entries: sort_buffer_len };
-            let dispatch_count = (sort_buffer_len + group_size - 1) / group_size;
-            builder
-                .bind_pipeline_compute(self.offsets_pipeline.clone()).unwrap()
-                .bind_descriptor_sets(PipelineBindPoint::Compute, self.offsets_pipeline.layout().clone(), 0, set.clone()).unwrap()
-                .push_constants(self.offsets_pipeline.layout().clone(), 0, pc).unwrap();
-            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
-        }
+        let pass = self.offsets_pass.as_ref().expect("prepare grid offsets before dispatch");
+        pass.bind_with_constants(builder, cs_offsets::PushConstants { num_entries: sort_buffer_len });
+        pass.dispatch_bound(builder);
 
-        {
-            let set = self.reorder_set.as_ref().unwrap();
-            let pc = cs_reorder::PushConstants { num_particles };
-            let dispatch_count = (num_particles + group_size - 1) / group_size;
-            builder
-                .bind_pipeline_compute(self.reorder_pipeline.clone()).unwrap()
-                .bind_descriptor_sets(PipelineBindPoint::Compute, self.reorder_pipeline.layout().clone(), 0, set.clone()).unwrap()
-                .push_constants(self.reorder_pipeline.layout().clone(), 0, pc).unwrap();
-            unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
-            let (sorted, warm_start) = self.warm_start.clone().unwrap();
-            builder.copy_buffer(CopyBufferInfo::buffers(sorted, warm_start)).unwrap();
-        }
+        let pass = self.reorder_pass.as_ref().expect("prepare particle reorder before dispatch");
+        pass.bind_with_constants(builder, cs_reorder::PushConstants { num_particles });
+        pass.dispatch_bound(builder);
+        let (sorted, warm_start) = self.warm_start.clone().expect("prepare warm start buffers");
+        builder.copy_buffer(CopyBufferInfo::buffers(sorted, warm_start)).unwrap();
     }
 }
