@@ -1,6 +1,6 @@
 use crate::core::scene::Scene;
-use crate::entities::particle::SimulationParams;
-use crate::sim_pipelines::{SolveSettings, SolverSettings, SortAlgorithm};
+use crate::simulation::SimulationSettings;
+use crate::sim_pipelines::SortAlgorithm;
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
 use glam::{Vec2, Vec4};
 
@@ -63,26 +63,14 @@ impl AppUI {
             display_divergence_iters_used: 0,
         }
     }
-    /// Iteration limits for the next frame. Minimum iterations follow
-    /// SPlisHSPlasH (`m_minIterations = 2`, divergence loop runs at least once).
-    pub fn solver_settings(&self, params: &SimulationParams) -> SolverSettings {
-        if !self.use_solver_error_threshold {
-            return SolverSettings::fixed(params.density_solver_iterations, params.divergence_solver_iterations);
-        }
-        let rho0 = params.target_density;
-        SolverSettings {
-            density: SolveSettings {
-                min_iterations: 2.min(params.density_solver_iterations),
-                max_iterations: params.density_solver_iterations,
-                max_avg_error: self.density_error_pct / 100.0 * rho0,
-            },
-            // The solver measures the divergence error per time step
-            // (kg/m³), so the threshold ηv·ρ₀/dt becomes ηv·ρ₀.
-            divergence: SolveSettings {
-                min_iterations: 1.min(params.divergence_solver_iterations),
-                max_iterations: params.divergence_solver_iterations,
-                max_avg_error: self.divergence_error_pct / 100.0 * rho0,
-            },
+    /// Collects the simulation controls for the next frame.
+    pub fn simulation_settings(&self) -> SimulationSettings {
+        SimulationSettings {
+            use_cfl: self.use_cfl, cfl_factor: self.cfl_factor,
+            cfl_min_dt: self.cfl_min_dt, cfl_max_dt: self.cfl_max_dt,
+            max_substeps: self.max_substeps_per_frame, sort_algorithm: self.sort_algorithm,
+            use_solver_error_threshold: self.use_solver_error_threshold,
+            density_error_pct: self.density_error_pct, divergence_error_pct: self.divergence_error_pct,
         }
     }
 

@@ -11,7 +11,42 @@ use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, Copy
 use vulkano::device::Queue;
 use vulkano::sync::GpuFuture;
 use crate::scene::Scene;
-use crate::sim_pipelines::{ComputePipelines, SolverSettings, SortAlgorithm};
+use crate::sim_pipelines::{ComputePipelines, SolveSettings, SolverSettings, SortAlgorithm};
+use crate::simulation_stats::{SimulationStats, cfl_time_step};
+use crate::params::SimulationParams;
+
+/// Controls for a simulation frame.
+pub struct SimulationSettings {
+    pub use_cfl: bool,
+    pub cfl_factor: f32,
+    pub cfl_min_dt: f32,
+    pub cfl_max_dt: f32,
+    pub max_substeps: u32,
+    pub sort_algorithm: SortAlgorithm,
+    pub use_solver_error_threshold: bool,
+    pub density_error_pct: f32,
+    pub divergence_error_pct: f32,
+}
+
+impl SimulationSettings {
+    fn solver_settings(&self, params: &SimulationParams) -> SolverSettings {
+        if !self.use_solver_error_threshold {
+            return SolverSettings::fixed(params.density_solver_iterations, params.divergence_solver_iterations);
+        }
+        let rho0 = params.target_density;
+        SolverSettings {
+            density: SolveSettings { min_iterations: 2.min(params.density_solver_iterations), max_iterations: params.density_solver_iterations, max_avg_error: self.density_error_pct / 100.0 * rho0 },
+            divergence: SolveSettings { min_iterations: 1.min(params.divergence_solver_iterations), max_iterations: params.divergence_solver_iterations, max_avg_error: self.divergence_error_pct / 100.0 * rho0 },
+        }
+    }
+}
+
+/// Measurements and time step used for the submitted frame.
+pub struct SimulationFrame {
+    pub stats: Option<SimulationStats>,
+    pub cfl_dt: Option<f32>,
+    pub substeps: u32,
+}
 
 /// Owns the simulation pipelines and reusable substep commands.
 pub struct Simulation {
@@ -30,16 +65,30 @@ impl Simulation {
     }
 
     /// Submits initialization, cached substeps, and readback for one frame.
-    pub fn step<F>(&mut self, scene: &mut Scene, frame_dt: f32, max_substeps: u32, solver: SolverSettings, sort_algorithm: SortAlgorithm, frame_index: usize, queue: Arc<Queue>, previous_future: Box<dyn GpuFuture>, copy_render_buffers: F) -> (Box<dyn GpuFuture>, u32)
-    where F: FnOnce(&mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>) {
+    pub fn step<F, S>(&mut self, scene: &mut Scene, frame_dt: f32, settings: &SimulationSettings, frame_index: usize, queue: Arc<Queue>, previous_future: Box<dyn GpuFuture>, sync_scene: S, copy_render_buffers: F) -> (Box<dyn GpuFuture>, SimulationFrame)
+    where F: FnOnce(&mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>), S: FnOnce(&Scene) {
+        let stats = self.resources.oldest_stats(frame_index).map(|words| SimulationStats::read(&words));
+        let mut cfl_dt = None;
+        if let Some(stats) = &stats {
+            if settings.use_cfl {
+                let dt = cfl_time_step(&scene.sim_params, stats.max_speed, settings.cfl_factor, settings.cfl_min_dt, settings.cfl_max_dt);
+                scene.sim_params.dt = dt;
+                cfl_dt = Some(dt);
+            }
+        }
+        let solver = settings.solver_settings(&scene.sim_params);
+        scene.sim_params.piston_velocity = scene.boundary.piston_velocity();
+        scene.sim_params.attractor = scene.attractor.to_gpu();
+        scene.sim_params.attractor_radius = scene.attractor.radius;
+        sync_scene(scene);
         let mut builder = AutoCommandBufferBuilder::primary(self.command_buffer_allocator.clone(), self.queue_family_index, CommandBufferUsage::OneTimeSubmit).expect("initialization command buffer can be allocated");
         builder.update_buffer(self.resources.sim_params_buffer.clone(), Box::new(scene.sim_params)).expect("simulation parameters can be updated");
         self.record_init(&mut builder);
         let mut future = previous_future.then_execute(queue.clone(), builder.build().expect("initialization commands are valid")).expect("initialization can be submitted").boxed();
         let wanted = (frame_dt / scene.sim_params.dt).ceil() as u32;
-        let substeps = wanted.max(1).min(max_substeps);
+        let substeps = wanted.max(1).min(settings.max_substeps);
         scene.boundary.update(substeps as f32 * scene.sim_params.dt);
-        let substep = self.substep_command_buffer(solver, sort_algorithm);
+        let substep = self.substep_command_buffer(solver, settings.sort_algorithm);
         for _ in 0..substeps {
             future = future.then_execute(queue.clone(), substep.clone()).expect("substep can be submitted").boxed();
         }
@@ -48,7 +97,7 @@ impl Simulation {
         builder.copy_buffer(CopyBufferInfo::buffers(self.resources.physics_data.stats_buffer.clone(), self.resources.stats_readback[frame_index].clone())).expect("statistics can be copied");
         copy_render_buffers(&mut builder);
         let future = future.then_execute(queue, builder.build().expect("readback commands are valid")).expect("readback can be submitted").then_signal_semaphore().boxed();
-        (future, substeps)
+        (future, SimulationFrame { stats, cfl_dt, substeps })
     }
 
     /// Records initialization before the first substep.

@@ -1,5 +1,4 @@
 use crate::core::scene::Scene;
-use crate::simulation_stats::{SimulationStats, cfl_time_step};
 use crate::entities::sky::SkyData;
 use crate::entities::water::WaterRenderer;
 use crate::renderer::pipelines::Pipelines;
@@ -143,41 +142,30 @@ impl Renderer {
         max_dt: f32,
         previous_future: Box<dyn GpuFuture>,
     ) -> Box<dyn GpuFuture> {
-        if let Some(stats) = self.simulation.resources.oldest_stats(self.resources.current_frame_idx) {
-            let stats = SimulationStats::read(&stats);
-            self.app_ui.display_max_speed = stats.max_speed;
-            self.app_ui.display_density_iters_used = stats.density_iterations;
-            self.app_ui.display_avg_density_error = stats.density_error;
-            self.app_ui.display_divergence_iters_used = stats.divergence_iterations;
-            self.app_ui.display_avg_divergence_error = stats.divergence_error;
-
-            if self.app_ui.use_cfl {
-                let cfl_dt = cfl_time_step(&scene.sim_params, stats.max_speed, self.app_ui.cfl_factor, self.app_ui.cfl_min_dt, self.app_ui.cfl_max_dt);
-                scene.sim_params.dt = cfl_dt;
-                self.app_ui.display_cfl_dt = cfl_dt;
-            }
-        }
-        let solver = self.app_ui.solver_settings(&scene.sim_params);
-
-        scene.sim_params.piston_velocity = scene.boundary.piston_velocity();
-        scene.sim_params.attractor = scene.attractor.to_gpu();
-        scene.sim_params.attractor_radius = scene.attractor.radius;
-        self.resources.sync_with_scene(scene);
-
+        let settings = self.app_ui.simulation_settings();
         let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
         let position = self.simulation.resources.physics_data.position_a.clone();
         let colors = self.simulation.resources.physics_data.colors.clone();
         let render_positions = self.resources.render_data.position_buffers[next_frame].clone();
         let render_colors = self.resources.render_data.color_buffers[next_frame].clone();
-        let (future, substeps) = self.simulation.step(
-            scene, max_dt, self.app_ui.max_substeps_per_frame, solver, self.app_ui.sort_algorithm,
+        let (future, frame) = self.simulation.step(
+            scene, max_dt, &settings,
             self.resources.current_frame_idx, self.context.graphics_queue().clone(), previous_future,
+            |scene| self.resources.sync_with_scene(scene),
             |builder| {
                 builder.copy_buffer(CopyBufferInfo::buffers(position, render_positions)).unwrap();
                 builder.copy_buffer(CopyBufferInfo::buffers(colors, render_colors)).unwrap();
             },
         );
-        self.app_ui.display_substeps = substeps;
+        if let Some(stats) = frame.stats {
+            self.app_ui.display_max_speed = stats.max_speed;
+            self.app_ui.display_density_iters_used = stats.density_iterations;
+            self.app_ui.display_avg_density_error = stats.density_error;
+            self.app_ui.display_divergence_iters_used = stats.divergence_iterations;
+            self.app_ui.display_avg_divergence_error = stats.divergence_error;
+        }
+        if let Some(dt) = frame.cfl_dt { self.app_ui.display_cfl_dt = dt; }
+        self.app_ui.display_substeps = frame.substeps;
         future
     }
 
