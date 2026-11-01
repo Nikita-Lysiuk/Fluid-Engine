@@ -43,8 +43,8 @@ impl ComputeStep for ViscosityPipeline {
             allocator,
             layout.clone(),
             [
-                WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
-                WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
+                WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
                 WriteDescriptorSet::buffer(3, physics_data.velocity_b.clone()),
                 WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),

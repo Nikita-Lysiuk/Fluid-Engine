@@ -1,11 +1,12 @@
 #version 460
 #extension GL_GOOGLE_include_directive : enable
 #include "../include/common.glsl"
+#include "../include/solver.glsl"
 
 layout(local_size_x = 256) in;
 
-layout(std430, set = 0, binding = 0) readonly buffer Entries { Entry entries[]; };
-layout(std430, set = 0, binding = 1) readonly buffer Offsets { uint grid_start[]; };
+layout(std430, set = 0, binding = 0) readonly buffer NeighborList { uint neighbor_list[]; };
+layout(std430, set = 0, binding = 1) readonly buffer NeighborCounts { uint neighbor_counts[]; };
 layout(std430, set = 0, binding = 3) readonly buffer Positions { vec4 positions[]; };
 layout(std430, set = 0, binding = 4) readonly buffer PressureForces { vec4 pressure_forces[]; };
 layout(std430, set = 0, binding = 5) readonly buffer Alphas { float factors[]; };
@@ -14,12 +15,48 @@ layout(std430, set = 0, binding = 7) readonly buffer Densities { float densities
 
 
 layout(std430, set = 0, binding = 8) buffer Pressures { float pressures[]; };
+layout(std430, set = 0, binding = 9) buffer State { SolverState solver_state; };
+
+layout(push_constant) uniform PushConstants {
+    // 1 during the divergence solve: particles with too few neighbours do not
+    // count towards the error (SPlisHSPlasH `divergenceSolveIteration`).
+    uint is_divergence_solve;
+} pc;
+
+shared float group_error[256];
+
+float update_pressure(uint i, uint num_particles);
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
     uint num_particles = uint(positions.length());
 
-    if (i >= num_particles) return;
+    // No early return: every invocation has to reach the reduction barrier.
+    float compression_error = 0.0;
+    if (i < num_particles) {
+        compression_error = update_pressure(i, num_particles);
+    }
+
+    uint lid = gl_LocalInvocationID.x;
+    group_error[lid] = compression_error;
+    barrier();
+    for (uint stride = gl_WorkGroupSize.x / 2u; stride > 0u; stride /= 2u) {
+        if (lid < stride) {
+            group_error[lid] += group_error[lid + stride];
+        }
+        barrier();
+    }
+    if (lid == 0u) {
+        uint fixed_point = uint(min(group_error[0] * SOLVER_ERROR_SCALE, float(SOLVER_MAX_GROUP_ERROR)));
+        atomicAdd(solver_state.error_sum, fixed_point);
+    }
+}
+
+// One Jacobi update of particle i. Returns its predicted compression in kg/m^3
+// (density solver) or kg/m^3 per time step (divergence solver): the residual
+// r = s - Ap has units of density per second, and only r < 0 (compression)
+// counts, as in SPlisHSPlasH `pressureSolveIteration`.
+float update_pressure(uint i, uint num_particles) {
 
     vec3 pos_i = positions[i].xyz;
     vec3 p_acc_i = pressure_forces[i].xyz;
@@ -32,41 +69,34 @@ void main() {
     float relax_factor = sim_params.relax_factor;
     float dt = sim_params.dt;
 
-    ivec3 cell_coords = ivec3(floor(pos_i / h));
-    uint table_size = uint(grid_start.length());
 
     float sum_Ap = 0.0;
 
-    for (int z = -1; z <= 1; z++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
-                uint hash = get_cell_hash(neighbor_cell, table_size);
-                uint start_idx = grid_start[hash];
+    uint neighbor_count = neighbor_counts[i];
+    for (uint k = 0u; k < neighbor_count; k++) {
+        uint j = neighbor_list[k * num_particles + i];
 
-                if (start_idx == 0xFFFFFFFF) continue;
+        vec3 pos_j = positions[j].xyz;
+        vec3 r_vec = pos_i - pos_j;
+        float r2 = dot(r_vec, r_vec);
 
-                for (uint j = start_idx; j < num_particles; j++) {
-                    if (entries[j].hash != hash) break;
+        if (r2 > h * h) continue;
 
-                    vec3 pos_j = positions[j].xyz;
-                    vec3 r_vec = pos_i - pos_j;
-                    float r2 = dot(r_vec, r_vec);
+        float r = sqrt(r2);
 
-                    if (r2 > h * h) continue;
-
-                    float r = sqrt(r2);
-
-                    if (r > 1e-6) {
-                        vec3 grad = kernel_grad(r_vec, r, h);
-                        vec3 p_acc_j = pressure_forces[j].xyz;
-                        vec3 p_acc_diff = p_acc_i - p_acc_j;
-                        sum_Ap += mass * dot(p_acc_diff, grad);
-                    }
-                }
-            }
+        if (r > 1e-6) {
+            vec3 grad = kernel_grad(r_vec, r, h);
+            vec3 p_acc_j = pressure_forces[j].xyz;
+            vec3 p_acc_diff = p_acc_i - p_acc_j;
+            sum_Ap += mass * dot(p_acc_diff, grad);
         }
-    }
+        }
+
+    // Walls do not accelerate: their term is rho0 * (a_i - 0) . grad V.
+    float wall_volume_i;
+    vec3 wall_grad_i;
+    box_boundary(pos_i, wall_volume_i, wall_grad_i);
+    sum_Ap += sim_params.target_density * dot(p_acc_i, wall_grad_i);
 
     float Ap_i = dt * sum_Ap;
 
@@ -80,5 +110,11 @@ void main() {
 
             pressures[i] = max(p_i + correction, 0.0);
         }
+        if (pc.is_divergence_solve != 0u
+            && effective_neighbor_count(pos_i, neighbor_count) < MIN_DIVERGENCE_NEIGHBORS) {
+            return 0.0;
+        }
+        return max(-error, 0.0) * dt;
     }
+    return 0.0;
 }

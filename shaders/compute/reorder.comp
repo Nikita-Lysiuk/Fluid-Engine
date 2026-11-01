@@ -15,6 +15,11 @@ layout(set = 0, binding = 2, std430) readonly buffer VelIn { vec4 v[]; } vel_a;
 layout(set = 0, binding = 4, std430) buffer PosOut { vec4 p[]; } pos_b;
 layout(set = 0, binding = 5, std430) buffer VelOut { vec4 v[]; } vel_b;
 
+// Per-particle state that survives the step (warm-start pressures) has to
+// follow its particle into the new order as well.
+layout(set = 0, binding = 6, std430) readonly buffer WarmStartIn { vec2 w[]; } warm_start_a;
+layout(set = 0, binding = 7, std430) writeonly buffer WarmStartOut { vec2 w[]; } warm_start_b;
+
 layout(push_constant) uniform PushConstants {
     uint num_particles;
 } pc;
@@ -43,4 +48,5 @@ void main() {
 
     pos_b.p[i] = pos_a.p[source_idx];
     vel_b.v[i] = vel_a.v[source_idx];
+    warm_start_b.w[i] = warm_start_a.w[source_idx];
 }

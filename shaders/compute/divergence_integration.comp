@@ -10,6 +10,8 @@ layout(std430, set = 0, binding = 0) buffer Velosities { vec4 velocities[]; };
 layout(std430, set = 0, binding = 1) readonly buffer PressureForces { vec4 pressure_forces[]; };
 
 layout(std430, set = 0, binding = 4) writeonly buffer ColorBuffer { vec4 colors[]; };
+layout(std430, set = 0, binding = 5) readonly buffer Pressures { float pressures[]; };
+layout(std430, set = 0, binding = 6) buffer WarmStart { vec2 warm_start[]; };
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -38,6 +40,7 @@ void main() {
         final_color = mix(water_color, foam_color, (t - 0.5) * 2.0);
     }
 
+    warm_start[i].y = pressures[i] * dt;
     velocities[i] = vec4(new_vel, 0.0);
     colors[i] = vec4(final_color, 1.0);
 }

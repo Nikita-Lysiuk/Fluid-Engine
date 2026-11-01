@@ -2,7 +2,7 @@ use log::{info, debug, error};
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
-use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, WindowEvent};
+use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, MouseScrollDelta, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::platform::windows::WindowAttributesExtWindows;
@@ -49,7 +49,11 @@ impl Engine {
             .map_err(|e| ApplicationError::EventLoopInitializationError(e))?;
 
         event_loop.set_control_flow(ControlFlow::Poll);
-        let scene = Scene::new();
+        let particle_count = std::env::var("FLUID_PARTICLES")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(Scene::DEFAULT_PARTICLES);
+        let scene = Scene::new(particle_count);
 
         Ok(Self {
             renderer: None,
@@ -146,6 +150,20 @@ impl ApplicationHandler for Engine {
                         window.set_cursor_visible(false);
                     }
                     info!("[Input] Mouse Locked");
+                }
+            }
+            WindowEvent::MouseInput { state, button: MouseButton::Right, .. } => {
+                if self.is_focused {
+                    self.scene.attractor.active = state == ElementState::Pressed;
+                }
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                if self.is_focused {
+                    let lines = match delta {
+                        MouseScrollDelta::LineDelta(_, y) => y,
+                        MouseScrollDelta::PixelDelta(p) => p.y as f32 / 40.0,
+                    };
+                    self.scene.attractor.distance = (self.scene.attractor.distance + 0.2 * lines).clamp(0.3, 8.0);
                 }
             }
             WindowEvent::Resized(_new_size) => {

@@ -50,6 +50,8 @@ impl ComputeStep for DivergenceIntegrationPipeline {
                 WriteDescriptorSet::buffer(1, physics_data.pressure_accelerations.clone()),
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
                 WriteDescriptorSet::buffer(4, physics_data.colors.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
             ],
             []
         ).unwrap());

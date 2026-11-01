@@ -1,0 +1,34 @@
+#version 460
+#extension GL_GOOGLE_include_directive : enable
+#include "../include/solver.glsl"
+
+// Runs after every Jacobi iteration of a pressure solve. Once the average
+// compression error is below the threshold (and the minimum number of
+// iterations is done) it zeroes the indirect dispatch arguments, so the
+// remaining recorded iterations become empty dispatches. This is the GPU
+// version of the `while (avg_err > eta)` loop in the DFSPH paper.
+
+layout(local_size_x = 1) in;
+
+layout(std430, set = 0, binding = 0) buffer State { SolverState state; };
+layout(std430, set = 0, binding = 1) buffer Dispatch { uint group_count_x; uint group_count_y; uint group_count_z; };
+
+layout(push_constant) uniform PushConstants {
+    float max_avg_error;   // kg/m^3; negative disables the early exit
+    uint min_iterations;
+    uint num_particles;
+} pc;
+
+void main() {
+    if (state.converged != 0u) return;
+
+    state.iterations += 1u;
+    float avg_error = float(state.error_sum) / (SOLVER_ERROR_SCALE * float(pc.num_particles));
+    state.avg_error = avg_error;
+    state.error_sum = 0u;
+
+    if (state.iterations >= pc.min_iterations && avg_error <= pc.max_avg_error) {
+        state.converged = 1u;
+        group_count_x = 0u;
+    }
+}

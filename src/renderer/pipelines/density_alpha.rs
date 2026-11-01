@@ -49,6 +49,8 @@ impl ComputeStep for DensityAlphaPipeline {
                 WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
                 WriteDescriptorSet::buffer(4, physics_data.densities.clone()),
                 WriteDescriptorSet::buffer(5, physics_data.factors.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(7, physics_data.neighbor_counts.clone()),
             ],
             [],
         ).unwrap());

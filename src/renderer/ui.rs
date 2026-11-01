@@ -1,5 +1,6 @@
 use crate::core::scene::Scene;
-use crate::renderer::pipelines::SortAlgorithm;
+use crate::entities::particle::SimulationParams;
+use crate::renderer::pipelines::{SolveSettings, SolverSettings, SortAlgorithm};
 use egui::{Context, Slider, Window};
 use glam::Vec4;
 
@@ -24,9 +25,10 @@ pub struct AppUI {
     pub display_substeps: u32,
 
     pub use_solver_error_threshold: bool,
-    /// η  — max density error as % of ρ₀  (paper default 0.1 %)
+    /// η: max average compression as % of ρ₀ (SPlisHSPlasH `maxError`).
     pub density_error_pct: f32,
-    /// ηv — max divergence error as % of ρ₀ (paper default 0.5 %)
+    /// ηv: max average density change per second as % of ρ₀ / dt
+    /// (SPlisHSPlasH `maxErrorV`).
     pub divergence_error_pct: f32,
     pub display_avg_density_error: f32,
     pub display_avg_divergence_error: f32,
@@ -39,7 +41,9 @@ impl AppUI {
         Self {
             show_controls: true,
             render_mode: RenderMode::Raymarching,
-            sort_algorithm: SortAlgorithm::Radix,
+            // With the substep recorded once, only GPU time matters, and Bitonic
+            // is faster up to ~250k particles (substep_benchmark).
+            sort_algorithm: SortAlgorithm::Bitonic,
             use_cfl: false,
             cfl_factor: 0.5,
             cfl_min_dt: 0.0001,
@@ -50,15 +54,38 @@ impl AppUI {
             max_substeps_per_frame: 3,
             display_substeps: 0,
 
-            use_solver_error_threshold: false,
+            use_solver_error_threshold: true,
             density_error_pct: 0.1,
-            divergence_error_pct: 0.5,
+            divergence_error_pct: 0.1,
             display_avg_density_error: 0.0,
             display_avg_divergence_error: 0.0,
             display_density_iters_used: 0,
             display_divergence_iters_used: 0,
         }
     }
+    /// Iteration limits for the next frame. Minimum iterations follow
+    /// SPlisHSPlasH (`m_minIterations = 2`, divergence loop runs at least once).
+    pub fn solver_settings(&self, params: &SimulationParams) -> SolverSettings {
+        if !self.use_solver_error_threshold {
+            return SolverSettings::fixed(params.density_solver_iterations, params.divergence_solver_iterations);
+        }
+        let rho0 = params.target_density;
+        SolverSettings {
+            density: SolveSettings {
+                min_iterations: 2.min(params.density_solver_iterations),
+                max_iterations: params.density_solver_iterations,
+                max_avg_error: self.density_error_pct / 100.0 * rho0,
+            },
+            // The solver measures the divergence error per time step
+            // (kg/m³), so the threshold ηv·ρ₀/dt becomes ηv·ρ₀.
+            divergence: SolveSettings {
+                min_iterations: 1.min(params.divergence_solver_iterations),
+                max_iterations: params.divergence_solver_iterations,
+                max_avg_error: self.divergence_error_pct / 100.0 * rho0,
+            },
+        }
+    }
+
     pub fn render(&mut self, ctx: &Context, scene: &mut Scene, fps: u32) {
         if !self.show_controls {
             return;
@@ -103,8 +130,8 @@ impl AppUI {
                 ui.label(format!("Max speed:  {:.3} m/s", self.display_max_speed));
                 ui.label(format!("CFL limit:  {:.4} s", self.display_cfl_dt));
                 ui.add(
-                    Slider::new(&mut self.max_substeps_per_frame, 1..=20)
-                        .text("Max substeps / frame"),
+                    Slider::new(&mut self.max_substeps_per_frame, 0..=20)
+                        .text("Max substeps / frame (0 = pause)"),
                 );
                 ui.label(format!("Substeps this frame: {}", self.display_substeps));
 
@@ -132,21 +159,26 @@ impl AppUI {
                     );
                     ui.label(format!(
                         "  = {:.3} kg/m³/s",
-                        self.divergence_error_pct / 100.0 * rho0
+                        self.divergence_error_pct / 100.0 * rho0 / scene.sim_params.dt
                     ));
                 }
+                // Errors of the last solve of the previous frame, compression only.
                 ui.label(format!(
                     "Avg Δρ:      {:.4} kg/m³  ({} iters)",
                     self.display_avg_density_error, self.display_density_iters_used
                 ));
                 ui.label(format!(
                     "Avg Dρ/Dt:   {:.4} kg/m³/s ({} iters)",
-                    self.display_avg_divergence_error, self.display_divergence_iters_used
+                    self.display_avg_divergence_error / scene.sim_params.dt,
+                    self.display_divergence_iters_used
                 ));
 
                 ui.separator();
 
                 ui.heading("External Forces");
+                ui.label("Hold right mouse button to pull water, wheel = distance");
+                ui.add(Slider::new(&mut scene.attractor.strength, 0.0..=150.0).text("Pull strength"));
+                ui.add(Slider::new(&mut scene.attractor.radius, 0.1..=1.5).text("Pull radius"));
                 ui.add(
                     Slider::new(&mut scene.sim_params.gravity[1], -100.0..=100.0).text("Gravity Y"),
                 );
@@ -154,6 +186,7 @@ impl AppUI {
                 ui.separator();
 
                 ui.heading("Collision Boundary");
+                ui.checkbox(&mut scene.boundary.animate, "Moving wall");
                 ui.label("Control the simulation box size:");
 
                 ui.group(|ui| {

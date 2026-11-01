@@ -4,8 +4,8 @@
 
 layout(local_size_x = 256) in;
 
-layout(std430, set = 0, binding = 0) readonly buffer Entries { Entry entries[]; };
-layout(std430, set = 0, binding = 1) readonly buffer Offsets { uint grid_start[]; };
+layout(std430, set = 0, binding = 0) readonly buffer NeighborList { uint neighbor_list[]; };
+layout(std430, set = 0, binding = 1) readonly buffer NeighborCounts { uint neighbor_counts[]; };
 layout(std430, set = 0, binding = 3) readonly buffer Positions { vec4 positions[]; };
 layout(std430, set = 0, binding = 4) readonly buffer Pressures { float pressures[]; };
 layout(std430, set = 0, binding = 5) readonly buffer Densities { float densities[]; };
@@ -31,48 +31,41 @@ void main() {
         p_rho_i = p_i / (rho_i * rho_i);
     }
 
-    ivec3 cell_coords = ivec3(floor(pos_i / h));
-    uint table_size = uint(grid_start.length());
 
 
     vec3 accel_sum = vec3(0.0);
 
-    for (int z = -1; z <= 1; z++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
-                uint hash = get_cell_hash(neighbor_cell, table_size);
-                uint start_idx = grid_start[hash];
+    uint neighbor_count = neighbor_counts[i];
+    for (uint k = 0u; k < neighbor_count; k++) {
+        uint j = neighbor_list[k * num_particles + i];
 
-                if (start_idx == 0xFFFFFFFF) continue;
+        vec3 pos_j = positions[j].xyz;
+        vec3 r_vec = pos_i - pos_j;
+        float r2 = dot(r_vec, r_vec);
 
-                for (uint j = start_idx; j < num_particles; j++) {
-                    if (entries[j].hash != hash) break;
+        if (r2 > h * h) continue;
 
-                    vec3 pos_j = positions[j].xyz;
-                    vec3 r_vec = pos_i - pos_j;
-                    float r2 = dot(r_vec, r_vec);
+        float r = sqrt(r2);
 
-                    if (r2 > h * h) continue;
+        if (r > 1e-6) {
+            float rho_j = densities[j];
+            float p_j = pressures[j];
 
-                    float r = sqrt(r2);
+            if (rho_j > 1e-6) {
+                vec3 grad = kernel_grad(r_vec, r, h);
+                float p_rho_j = p_j / (rho_j * rho_j);
 
-                    if (r > 1e-6) {
-                        float rho_j = densities[j];
-                        float p_j = pressures[j];
-
-                        if (rho_j > 1e-6) {
-                            vec3 grad = kernel_grad(r_vec, r, h);
-                            float p_rho_j = p_j / (rho_j * rho_j);
-
-                            float pressure_term = p_rho_i + p_rho_j;
-                            accel_sum += mass * pressure_term * grad;
-                        }
-                    }
-                }
+                float pressure_term = p_rho_i + p_rho_j;
+                accel_sum += mass * pressure_term * grad;
             }
         }
-    }
+        }
+
+    // Walls mirror the particle's own pressure (p_b / rho_b^2 = p_i / rho_i^2).
+    float wall_volume_i;
+    vec3 wall_grad_i;
+    box_boundary(pos_i, wall_volume_i, wall_grad_i);
+    accel_sum += sim_params.target_density * p_rho_i * wall_grad_i;
 
     pressure_forces[i] = vec4(-accel_sum, 0.0);
 }

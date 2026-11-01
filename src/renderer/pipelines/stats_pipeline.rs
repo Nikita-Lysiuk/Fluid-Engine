@@ -33,7 +33,7 @@ impl ComputeStep for StatsPipeline {
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &GpuPhysicsData,
-        sim_params: &Subbuffer<SimulationParams>,
+        _sim_params: &Subbuffer<SimulationParams>,
     ) {
         let num_particles = physics_data.count;
         self.dispatch_count = (num_particles + 255) / 256;
@@ -45,17 +45,14 @@ impl ComputeStep for StatsPipeline {
             layout.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.velocity_a.clone()),
-                WriteDescriptorSet::buffer(1, physics_data.stats_buffer.clone()),
-                WriteDescriptorSet::buffer(2, sim_params.clone()),
-                WriteDescriptorSet::buffer(3, physics_data.densities.clone()),
-                WriteDescriptorSet::buffer(4, physics_data.source_terms.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.stats_buffer.clone().slice(0..1)),
             ],
             []
         ).unwrap());
     }
     fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let buf = self.stats_buffer.as_ref().expect("StatsPipeline: call prepare() before execute()");
-        builder.fill_buffer(buf.clone(), 0).unwrap();
+        builder.fill_buffer(buf.clone().slice(0..1), 0).unwrap();
 
         let set = self.descriptor_set.as_ref().unwrap();
         builder

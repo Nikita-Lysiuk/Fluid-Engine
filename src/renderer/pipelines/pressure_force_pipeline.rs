@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
-use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DispatchIndirectCommand};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::Device;
@@ -43,8 +43,8 @@ impl ComputeStep for PressureForcePipeline {
             allocator,
             layout.clone(),
             [
-                WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
-                WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
+                WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
                 WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
                 WriteDescriptorSet::buffer(4, physics_data.pressures.clone()),
@@ -61,5 +61,24 @@ impl ComputeStep for PressureForcePipeline {
             .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set.clone())
             .unwrap();
         unsafe { builder.dispatch([self.dispatch_count, 1, 1]).unwrap(); }
+    }
+}
+
+impl PressureForcePipeline {
+    /// Same as `execute`, but the workgroup count is read from `args`, so a
+    /// converged solver can skip the dispatch without a CPU round trip.
+    pub fn execute_indirect<Cb>(
+        &self,
+        builder: &mut AutoCommandBufferBuilder<Cb>,
+        args: Subbuffer<[DispatchIndirectCommand]>,
+    ) {
+        let set = self.descriptor_set.as_ref().expect("PressureForcePipeline: call prepare() before execute()");
+        builder
+            .bind_pipeline_compute(self.pipeline.clone()).unwrap()
+            .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set.clone())
+            .unwrap();
+        // SAFETY: `args` is written only by `solver_check.comp`, which keeps
+        // the group count at either the full particle count or zero.
+        unsafe { builder.dispatch_indirect(args).unwrap(); }
     }
 }

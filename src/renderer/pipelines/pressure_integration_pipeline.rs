@@ -51,6 +51,8 @@ impl ComputeStep for PressureIntegrationPipeline {
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
                 WriteDescriptorSet::buffer(3, physics_data.velocity_a.clone()),
                 WriteDescriptorSet::buffer(4, physics_data.position_a.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
             ],
             []
         ).unwrap());

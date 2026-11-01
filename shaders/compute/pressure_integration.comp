@@ -4,6 +4,9 @@
 
 layout(local_size_x = 256) in;
 
+// Closest a particle centre may get to a wall, in metres.
+#define WALL_SAFETY_MARGIN 0.005
+
 
 
 layout(std430, set = 0, binding = 0) readonly buffer Positions { vec4 positions[]; };
@@ -11,6 +14,8 @@ layout(std430, set = 0, binding = 1) readonly buffer PressureForces { vec4 press
 
 layout(std430, set = 0, binding = 3) buffer Velosities { vec4 velocities[]; };
 layout(std430, set = 0, binding = 4) buffer NewPosBuffer { vec4 new_positions[]; };
+layout(std430, set = 0, binding = 5) readonly buffer Pressures { float pressures[]; };
+layout(std430, set = 0, binding = 6) buffer WarmStart { vec2 warm_start[]; };
 
 
 void main() {
@@ -29,49 +34,24 @@ void main() {
     vec3 new_vel = vel + ap * dt;
     vec3 new_pos = pos + new_vel * dt;
 
-    vec3 min_b = sim_params.box_min.xyz;
-    vec3 max_b = sim_params.box_max.xyz;
-    float r = sim_params.particle_radius;
-
-    float restitution = 0.5;
-    float friction = 0.95;
-
-
-    float eps = 0.001;
-
-    if (new_pos.y < min_b.y + r) {
-        new_pos.y = min_b.y + r + eps;
-        new_vel.y *= -restitution;
-        new_vel.xz *= friction;
-    }
-    else if (new_pos.y > max_b.y - r) {
-        new_pos.y = max_b.y - r - eps;
-        new_vel.y *= -restitution;
-        new_vel.xz *= friction;
+    // The walls push particles away through the pressure solve (box_boundary
+    // in common.glsl), so this is only a safety net against leaving the box:
+    // it puts a particle back on the wall and removes the velocity component
+    // into the wall, without bouncing it back into the fluid.
+    vec3 min_b = sim_params.box_min.xyz + vec3(WALL_SAFETY_MARGIN);
+    vec3 max_b = sim_params.box_max.xyz - vec3(WALL_SAFETY_MARGIN);
+    vec3 wall_velocity_min = vec3(sim_params.piston_velocity, 0.0, 0.0);
+    for (int axis = 0; axis < 3; axis++) {
+        if (new_pos[axis] < min_b[axis]) {
+            new_pos[axis] = min_b[axis];
+            new_vel[axis] = max(new_vel[axis], wall_velocity_min[axis]);
+        } else if (new_pos[axis] > max_b[axis]) {
+            new_pos[axis] = max_b[axis];
+            new_vel[axis] = min(new_vel[axis], 0.0);
+        }
     }
 
-    if (new_pos.x < min_b.x + r) {
-        new_pos.x = min_b.x + r + eps;
-        new_vel.x *= -restitution;
-        new_vel.yz *= friction;
-    }
-    else if (new_pos.x > max_b.x - r) {
-        new_pos.x = max_b.x - r - eps;
-        new_vel.x *= -restitution;
-        new_vel.yz *= friction;
-    }
-
-    if (new_pos.z < min_b.z + r) {
-        new_pos.z = min_b.z + r + eps;
-        new_vel.z *= -restitution;
-        new_vel.xy *= friction;
-    }
-    else if (new_pos.z > max_b.z - r) {
-        new_pos.z = max_b.z - r - eps;
-        new_vel.z *= -restitution;
-        new_vel.xy *= friction;
-    }
-
+    warm_start[i].x = pressures[i] * dt * dt;
     new_positions[i] = vec4(new_pos, 1.0);
     velocities[i] = vec4(new_vel, 0.0);
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
-use vulkano::command_buffer::AutoCommandBufferBuilder;
+use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo};
 use vulkano::instance::debug::DebugUtilsLabel;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
@@ -41,6 +41,7 @@ pub struct NeighborSearch {
     reorder_set: Option<Arc<DescriptorSet>>,
 
     grid_start: Option<Subbuffer<[u32]>>,
+    warm_start: Option<(Subbuffer<[[f32; 2]]>, Subbuffer<[[f32; 2]]>)>,
 
     sort_buffer_len: u32,
     num_particles: u32,
@@ -101,6 +102,7 @@ impl NeighborSearch {
             offsets_set: None,
             reorder_set: None,
             grid_start: None,
+            warm_start: None,
             sort_buffer_len: 0,
             num_particles: 0,
         }
@@ -126,6 +128,7 @@ impl ComputeStep for NeighborSearch {
         self.num_particles = physics_data.count;
         self.sort_buffer_len = physics_data.grid_entries.len() as u32;
         self.grid_start = Some(physics_data.grid_start.clone());
+        self.warm_start = Some((physics_data.warm_start_sorted.clone(), physics_data.warm_start.clone()));
 
         {
             let layout = self.spatial_hash_pipeline.layout().set_layouts().get(0).unwrap();
@@ -165,6 +168,8 @@ impl ComputeStep for NeighborSearch {
                     WriteDescriptorSet::buffer(2, physics_data.velocity_a.clone()),
                     WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),
                     WriteDescriptorSet::buffer(5, physics_data.velocity_b.clone()),
+                    WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
+                    WriteDescriptorSet::buffer(7, physics_data.warm_start_sorted.clone()),
                 ],
                 [],
             ).unwrap());
@@ -227,6 +232,8 @@ impl ComputeStep for NeighborSearch {
                 .bind_descriptor_sets(PipelineBindPoint::Compute, self.reorder_pipeline.layout().clone(), 0, set.clone()).unwrap()
                 .push_constants(self.reorder_pipeline.layout().clone(), 0, pc).unwrap();
             unsafe { builder.dispatch([dispatch_count, 1, 1]).unwrap(); }
+            let (sorted, warm_start) = self.warm_start.clone().unwrap();
+            builder.copy_buffer(CopyBufferInfo::buffers(sorted, warm_start)).unwrap();
         }
     }
 }

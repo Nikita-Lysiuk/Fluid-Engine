@@ -1,6 +1,6 @@
 #![cfg(test)]
 //
-// Substep cost benchmark on the production scene (`Scene::new()`).
+// Substep cost benchmark on the production scene (`Scene::new`).
 //
 // For each sort algorithm it reports, per DFSPH substep:
 //   * CPU time spent recording commands into an `AutoCommandBufferBuilder`,
@@ -30,7 +30,7 @@ use vulkano::sync::{self, GpuFuture, PipelineStage};
 use super::convergence_benchmark::{make_context, prepare_all_pipelines};
 use crate::core::scene::Scene;
 use crate::entities::particle::GpuPhysicsData;
-use crate::renderer::pipelines::{ComputePipelines, ComputeStep, SortAlgorithm};
+use crate::renderer::pipelines::{ComputePipelines, ComputeStep, PressureSolve, SolverSettings, SortAlgorithm};
 
 const SUBSTEPS_PER_BATCH: u32 = 20;
 const WARMUP_BATCHES: u32 = 3;
@@ -41,14 +41,13 @@ fn record_batch(
     queue: &Arc<Queue>,
     pipelines: &ComputePipelines,
     usage: CommandBufferUsage,
-    density_iters: u32,
-    divergence_iters: u32,
+    solver: &SolverSettings,
 ) -> Arc<PrimaryAutoCommandBuffer> {
     let mut builder =
         AutoCommandBufferBuilder::primary(cb_alloc.clone(), queue.queue_family_index(), usage)
             .unwrap();
     for _ in 0..SUBSTEPS_PER_BATCH {
-        pipelines.record_substep(&mut builder, density_iters, divergence_iters);
+        pipelines.record_substep(&mut builder, solver);
     }
     builder.build().unwrap()
 }
@@ -69,8 +68,7 @@ fn profile_substep(
     cb_alloc: &Arc<StandardCommandBufferAllocator>,
     queue: &Arc<Queue>,
     pipelines: &ComputePipelines,
-    density_iters: u32,
-    divergence_iters: u32,
+    solver: &SolverSettings,
 ) -> Vec<(&'static str, f64)> {
     const MAX_QUERIES: u32 = 32;
     let device = queue.device().clone();
@@ -102,12 +100,8 @@ fn profile_substep(
     mark(&mut builder, "viscosity");
     pipelines.density_source_term.execute(&mut builder);
     mark(&mut builder, "density_source_term");
-    for _ in 0..density_iters {
-        pipelines.pressure_force.execute(&mut builder);
-        mark(&mut builder, "pressure_force (density)");
-        pipelines.pressure_update.execute(&mut builder);
-        mark(&mut builder, "pressure_update (density)");
-    }
+    pipelines.record_pressure_solve(&mut builder, &solver.density, PressureSolve::Density);
+    mark(&mut builder, "density_solve");
     pipelines.pressure_integration.execute(&mut builder);
     mark(&mut builder, "pressure_integration");
     pipelines.neighbor_search.execute(&mut builder);
@@ -116,12 +110,8 @@ fn profile_substep(
     mark(&mut builder, "density_alpha");
     pipelines.divergence_source_term.execute(&mut builder);
     mark(&mut builder, "divergence_source_term");
-    for _ in 0..divergence_iters {
-        pipelines.pressure_force.execute(&mut builder);
-        mark(&mut builder, "pressure_force (divergence)");
-        pipelines.pressure_update.execute(&mut builder);
-        mark(&mut builder, "pressure_update (divergence)");
-    }
+    pipelines.record_pressure_solve(&mut builder, &solver.divergence, PressureSolve::Divergence);
+    mark(&mut builder, "divergence_solve");
     pipelines.divergence_integration.execute(&mut builder);
     mark(&mut builder, "divergence_integration");
 
@@ -152,21 +142,26 @@ fn median(samples: &mut [f64]) -> f64 {
 #[test]
 #[ignore]
 fn substep_benchmark() {
+    for particle_count in [25_000, Scene::DEFAULT_PARTICLES] {
+        run_substep_benchmark(particle_count);
+    }
+}
+
+fn run_substep_benchmark(particle_count: u32) {
     let ctx = make_context();
     let device = ctx.device().clone();
     let memory_allocator = ctx.memory_allocator().clone();
     let queue = ctx.graphics_queue().clone();
 
-    let scene = Scene::new();
-    let density_iters = scene.sim_params.density_solver_iterations;
-    let divergence_iters = scene.sim_params.divergence_solver_iterations;
+    let scene = Scene::new(particle_count);
+    // Same solver settings as the application defaults.
+    let solver = crate::renderer::ui::AppUI::new().solver_settings(&scene.sim_params);
 
     println!(
-        "substep_benchmark: {} particles, dt={} s, iters={}+{}, {} substeps/batch",
+        "substep_benchmark: {} particles, dt={} s, {:?}, {} substeps/batch",
         scene.initial_positions.len(),
         scene.sim_params.dt,
-        density_iters,
-        divergence_iters,
+        solver,
         SUBSTEPS_PER_BATCH,
     );
     println!(
@@ -225,8 +220,7 @@ fn substep_benchmark() {
                 &queue,
                 &pipelines,
                 CommandBufferUsage::OneTimeSubmit,
-                density_iters,
-                divergence_iters,
+                &solver,
             );
             let t1 = Instant::now();
             submit_and_wait(&queue, cb);
@@ -244,8 +238,7 @@ fn substep_benchmark() {
             &queue,
             &pipelines,
             CommandBufferUsage::MultipleSubmit,
-            density_iters,
-            divergence_iters,
+            &solver,
         );
         let mut reused_ms = Vec::new();
         for batch in 0..WARMUP_BATCHES + TIMED_BATCHES {
@@ -256,9 +249,9 @@ fn substep_benchmark() {
             }
         }
 
-        let mut profile = profile_substep(&cb_alloc, &queue, &pipelines, density_iters, divergence_iters);
+        let mut profile = profile_substep(&cb_alloc, &queue, &pipelines, &solver);
         for _ in 0..4 {
-            let next = profile_substep(&cb_alloc, &queue, &pipelines, density_iters, divergence_iters);
+            let next = profile_substep(&cb_alloc, &queue, &pipelines, &solver);
             for (acc, (_, ms)) in profile.iter_mut().zip(next) {
                 acc.1 = acc.1.min(ms);
             }
@@ -269,6 +262,11 @@ fn substep_benchmark() {
             println!("    {label:<30} {ms:>8.3} ms  {:>5.1}%", ms / total * 100.0);
         }
         println!("    {:<30} {total:>8.3} ms", "total");
+        let stats = super::convergence_benchmark::read_stats(&physics_data, scene.sim_params.dt);
+        println!(
+            "    iterations: density {} (avg err {:.3} kg/m³), divergence {} (avg err {:.3} kg/m³/s)",
+            stats.density_iterations, stats.density_error, stats.divergence_iterations, stats.divergence_error,
+        );
 
         println!(
             "{:>8}  {:>14.3}  {:>14.3}  {:>16.3}",
@@ -278,4 +276,83 @@ fn substep_benchmark() {
             median(&mut reused_ms),
         );
     }
+}
+
+/// Solver iterations and errors over 3 s of the production scene (block
+/// falls, hits the floor, settles), one sample per 25 substeps.
+///
+///     cargo test --release -- --ignored solver_iterations_over_time --nocapture
+#[test]
+#[ignore]
+fn solver_iterations_over_time() {
+    let ctx = make_context();
+    let device = ctx.device().clone();
+    let memory_allocator = ctx.memory_allocator().clone();
+    let queue = ctx.graphics_queue().clone();
+
+    let particle_count = std::env::var("FLUID_PARTICLES").ok().and_then(|v| v.parse().ok()).unwrap_or(25_000);
+    let scene = Scene::new(particle_count);
+    let solver = crate::renderer::ui::AppUI::new().solver_settings(&scene.sim_params);
+    let dt = scene.sim_params.dt;
+
+    let cb_alloc = Arc::new(StandardCommandBufferAllocator::new(
+        device.clone(),
+        StandardCommandBufferAllocatorCreateInfo::default(),
+    ));
+    let ds_alloc = Arc::new(StandardDescriptorSetAllocator::new(
+        device.clone(),
+        StandardDescriptorSetAllocatorCreateInfo::default(),
+    ));
+    let physics_data = GpuPhysicsData::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let sim_params_buffer = Buffer::from_data(
+        memory_allocator.clone(),
+        BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
+        AllocationCreateInfo {
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+            ..Default::default()
+        },
+        scene.sim_params,
+    )
+    .unwrap();
+    let mut pipelines =
+        ComputePipelines::new(device.clone(), memory_allocator.clone(), physics_data.grid_entries.len() as u32);
+    prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
+
+    println!("{:>7} {:>6}  {:>9} {:>12}  {:>9} {:>14}", "t [s]", "substep", "dens_it", "dens_err", "div_it", "div_err");
+    let total_substeps = (3.0 / dt) as u32;
+    let mut sum_density_iters = 0u32;
+    let mut sum_divergence_iters = 0u32;
+    for substep in 0..total_substeps {
+        let mut builder = AutoCommandBufferBuilder::primary(
+            cb_alloc.clone(),
+            queue.queue_family_index(),
+            CommandBufferUsage::OneTimeSubmit,
+        )
+        .unwrap();
+        if substep == 0 {
+            pipelines.record_init(&mut builder);
+        }
+        pipelines.record_substep(&mut builder, &solver);
+        submit_and_wait(&queue, builder.build().unwrap());
+
+        let stats = super::convergence_benchmark::read_stats(&physics_data, dt);
+        sum_density_iters += stats.density_iterations;
+        sum_divergence_iters += stats.divergence_iterations;
+        if substep % 25 == 0 {
+            println!(
+                "{:>7.3} {:>6}  {:>9} {:>12.3}  {:>9} {:>14.1}",
+                substep as f32 * dt,
+                substep,
+                stats.density_iterations,
+                stats.density_error,
+                stats.divergence_iterations,
+                stats.divergence_error,
+            );
+        }
+    }
+    println!(
+        "mean iterations: density {:.2}, divergence {:.2}",
+        sum_density_iters as f32 / total_substeps as f32,
+        sum_divergence_iters as f32 / total_substeps as f32,
+    );
 }

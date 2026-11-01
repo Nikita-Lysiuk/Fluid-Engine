@@ -1,7 +1,8 @@
 use crate::core::scene::Scene;
+use crate::entities::particle::stats_layout;
 use crate::entities::sky::SkyData;
 use crate::entities::water::WaterRenderer;
-use crate::renderer::pipelines::{ComputePipelines, ComputeStep, Pipelines};
+use crate::renderer::pipelines::{ComputePipelines, ComputeStep, Pipelines, SolverSettings, SortAlgorithm};
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
 pub use crate::renderer::ui::RenderMode;
@@ -14,7 +15,7 @@ use vulkano::command_buffer::allocator::{
 };
 use vulkano::command_buffer::{
     AutoCommandBufferBuilder, ClearColorImageInfo, CommandBufferUsage, CopyBufferInfo,
-    RenderingAttachmentInfo, RenderingInfo,
+    PrimaryAutoCommandBuffer, RenderingAttachmentInfo, RenderingInfo,
 };
 use vulkano::descriptor_set::allocator::{
     StandardDescriptorSetAllocator, StandardDescriptorSetAllocatorCreateInfo,
@@ -54,6 +55,7 @@ pub struct Renderer {
 
     /// The neighbour grid and densities must be built once before the first substep.
     needs_init: bool,
+    substep_cache: Option<((SolverSettings, SortAlgorithm), Arc<PrimaryAutoCommandBuffer>)>,
 }
 
 impl Renderer {
@@ -148,47 +150,7 @@ impl Renderer {
             sort_buffer_size,
         );
 
-        gpu_physics.neighbor_search.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.density_alpha.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.viscosity.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.density_source_term.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.pressure_force.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.pressure_update.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.pressure_integration.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.divergence_source_term.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.divergence_integration.prepare(
+        gpu_physics.prepare(
             descriptor_set_allocator.clone(),
             &resources.physics_data,
             &resources.sim_params_buffer,
@@ -197,11 +159,6 @@ impl Renderer {
             descriptor_set_allocator.clone(),
             &resources.physics_data,
             resources.density_view.clone(),
-            &resources.sim_params_buffer,
-        );
-        gpu_physics.stats.prepare(
-            descriptor_set_allocator.clone(),
-            &resources.physics_data,
             &resources.sim_params_buffer,
         );
 
@@ -237,6 +194,7 @@ impl Renderer {
             gui,
             app_ui: AppUI::new(),
             needs_init: true,
+            substep_cache: None,
         }
     }
     pub fn step(
@@ -245,15 +203,24 @@ impl Renderer {
         max_dt: f32,
         previous_future: Box<dyn GpuFuture>,
     ) -> Box<dyn GpuFuture> {
-        const DENSITY_SCALE: f32 = 1.0;
-        const DIVERGENCE_SCALE: f32 = 10.0;
-
-        if let Ok(stats) = self.resources.physics_data.stats_buffer.read() {
-            let n = scene.initial_positions.len() as f32;
-            let max_speed = f32::from_bits(stats[0]);
+        if let Some(stats) = self.resources.oldest_stats() {
+            let solver_stats = |range: std::ops::Range<u64>| {
+                let state = &stats[range.start as usize..range.end as usize];
+                (
+                    state[stats_layout::ITERATIONS],
+                    f32::from_bits(state[stats_layout::AVG_ERROR]),
+                )
+            };
+            let max_speed = f32::from_bits(stats[stats_layout::MAX_SPEED]);
             self.app_ui.display_max_speed = max_speed;
-            self.app_ui.display_avg_density_error = stats[1] as f32 / (DENSITY_SCALE * n);
-            self.app_ui.display_avg_divergence_error = stats[2] as f32 / (DIVERGENCE_SCALE * n);
+            (
+                self.app_ui.display_density_iters_used,
+                self.app_ui.display_avg_density_error,
+            ) = solver_stats(stats_layout::DENSITY_SOLVER);
+            (
+                self.app_ui.display_divergence_iters_used,
+                self.app_ui.display_avg_divergence_error,
+            ) = solver_stats(stats_layout::DIVERGENCE_SOLVER);
 
             if self.app_ui.use_cfl {
                 let p = &scene.sim_params;
@@ -266,59 +233,48 @@ impl Renderer {
                 self.app_ui.display_cfl_dt = cfl_dt;
             }
         }
-        let rho0 = scene.sim_params.target_density;
-        let density_threshold_abs = self.app_ui.density_error_pct / 100.0 * rho0;
-        let divergence_threshold_abs = self.app_ui.divergence_error_pct / 100.0 * rho0;
+        let solver = self.app_ui.solver_settings(&scene.sim_params);
 
-        let density_iters = if self.app_ui.use_solver_error_threshold
-            && self.app_ui.display_avg_density_error < density_threshold_abs
-        {
-            2u32
-        } else {
-            scene.sim_params.density_solver_iterations
-        };
-        let divergence_iters = if self.app_ui.use_solver_error_threshold
-            && self.app_ui.display_avg_divergence_error < divergence_threshold_abs
-        {
-            1u32
-        } else {
-            scene.sim_params.divergence_solver_iterations
-        };
-        self.app_ui.display_density_iters_used = density_iters;
-        self.app_ui.display_divergence_iters_used = divergence_iters;
-
+        scene.sim_params.piston_velocity = scene.boundary.piston_velocity();
+        scene.sim_params.attractor = scene.attractor.to_gpu(&scene.camera);
+        scene.sim_params.attractor_radius = scene.attractor.radius;
         self.resources.sync_with_scene(scene);
 
-        let mut builder = AutoCommandBufferBuilder::primary(
-            self.command_buffer_allocator.clone(),
-            self.context.graphics_queue().queue_family_index(),
-            CommandBufferUsage::OneTimeSubmit,
-        )
-        .unwrap();
+        let queue = self.context.graphics_queue().clone();
 
-        self.physics_steps.neighbor_search.sort_algorithm = self.app_ui.sort_algorithm;
+        let mut builder = self.primary_builder(CommandBufferUsage::OneTimeSubmit);
+        builder
+            .update_buffer(self.resources.sim_params_buffer.clone(), Box::new(scene.sim_params))
+            .unwrap();
         if self.needs_init {
             self.physics_steps.record_init(&mut builder);
             self.needs_init = false;
         }
+        let mut future = previous_future
+            .then_execute(queue.clone(), builder.build().unwrap())
+            .unwrap()
+            .boxed();
 
         let wanted = (max_dt / scene.sim_params.dt).ceil() as u32;
-        let substeps = wanted.clamp(1, self.app_ui.max_substeps_per_frame);
+        // A cap of 0 pauses the simulation (used to measure rendering alone).
+        let substeps = wanted.max(1).min(self.app_ui.max_substeps_per_frame);
         self.app_ui.display_substeps = substeps;
         // Animate the box in simulated time so it stays in step with the fluid.
         scene.boundary.update(substeps as f32 * scene.sim_params.dt);
-        {
-            let _s = tracy_client::span!("record_substeps");
-            for _ in 0..substeps {
-                self.physics_steps
-                    .record_substep(&mut builder, density_iters, divergence_iters);
-            }
+
+        let substep = self.substep_command_buffer(solver);
+        for _ in 0..substeps {
+            future = future.then_execute(queue.clone(), substep.clone()).unwrap().boxed();
         }
 
-        {
-            let _s = tracy_client::span!("stats");
-            self.physics_steps.stats.execute(&mut builder);
-        }
+        let mut builder = self.primary_builder(CommandBufferUsage::OneTimeSubmit);
+        self.physics_steps.stats.execute(&mut builder);
+        builder
+            .copy_buffer(CopyBufferInfo::buffers(
+                self.resources.physics_data.stats_buffer.clone(),
+                self.resources.stats_readback[self.resources.current_frame_idx].clone(),
+            ))
+            .unwrap();
 
         let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
 
@@ -338,12 +294,43 @@ impl Renderer {
 
         let command_buffer = builder.build().unwrap();
 
-        previous_future
-            .then_execute(self.context.graphics_queue().clone(), command_buffer)
+        future
+            .then_execute(queue, command_buffer)
             .unwrap()
             .then_signal_semaphore()
             .boxed()
     }
+
+    fn primary_builder(&self, usage: CommandBufferUsage) -> AutoCommandBufferBuilder<PrimaryAutoCommandBuffer> {
+        AutoCommandBufferBuilder::primary(
+            self.command_buffer_allocator.clone(),
+            self.context.graphics_queue().queue_family_index(),
+            usage,
+        )
+        .unwrap()
+    }
+
+    /// One substep, recorded once and resubmitted every substep of every
+    /// frame. Everything that changes per frame (dt, box, attractor) lives in
+    /// the uniform buffer; only the solver settings and the sort algorithm are
+    /// baked into the commands, so the buffer is re-recorded when they change.
+    fn substep_command_buffer(&mut self, solver: SolverSettings) -> Arc<PrimaryAutoCommandBuffer> {
+        let key = (solver, self.app_ui.sort_algorithm);
+        if let Some((cached_key, command_buffer)) = &self.substep_cache {
+            if *cached_key == key {
+                return command_buffer.clone();
+            }
+        }
+        let _s = tracy_client::span!("record_substep");
+        self.physics_steps.neighbor_search.sort_algorithm = self.app_ui.sort_algorithm;
+        // SimultaneousUse: the same buffer is queued several times per frame.
+        let mut builder = self.primary_builder(CommandBufferUsage::SimultaneousUse);
+        self.physics_steps.record_substep(&mut builder, &solver);
+        let command_buffer = builder.build().unwrap();
+        self.substep_cache = Some((key, command_buffer.clone()));
+        command_buffer
+    }
+
     pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32, fps: u32) {
         self.gui.immediate_ui(|gui| {
             let ctx = gui.context();
@@ -470,6 +457,9 @@ impl Renderer {
             .gui
             .draw_on_image(render_future, self.window_renderer.swapchain_image_view());
 
+        // TODO: `false` would let the CPU prepare the next frame while the GPU
+        // still works on this one (~5 ms per frame), but vulkano 0.35 then
+        // panics with "Buffer/Image was not locked for GPU write".
         self.window_renderer.present(gui_future, true);
         self.resources.prepare_next_frame();
     }

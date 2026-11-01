@@ -10,6 +10,8 @@ layout(set = 0, binding = 3, std430) readonly buffer Positions { vec4 positions[
 
 layout(set = 0, binding = 4, std430) writeonly buffer Densities { float densities[]; };
 layout(set = 0, binding = 5, std430) writeonly buffer Alphas { float factors[]; };
+layout(set = 0, binding = 6, std430) writeonly buffer NeighborList { uint neighbor_list[]; };
+layout(set = 0, binding = 7, std430) writeonly buffer NeighborCounts { uint neighbor_counts[]; };
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -24,9 +26,15 @@ void main() {
     ivec3 cell_coords = ivec3(floor(pos_i / h));
     uint table_size = uint(grid_start.length());
 
-    float density = 0.0;
+    float density = mass * kernel_w(0.0, h);
     float sum_grad_sq = 0.0;
     vec3 grad_sum = vec3(0.0);
+    uint neighbor_count = 0u;
+
+    // Two of the 27 cells can hash to the same bucket; visiting it twice
+    // would count its particles twice.
+    uint visited[27];
+    uint visited_count = 0u;
 
     for (int z = -1; z <= 1; z++) {
         for (int y = -1; y <= 1; y++) {
@@ -34,18 +42,31 @@ void main() {
                 ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
                 uint hash = get_cell_hash(neighbor_cell, table_size);
 
+                bool seen = false;
+                for (uint v = 0u; v < visited_count; v++) {
+                    seen = seen || visited[v] == hash;
+                }
+                if (seen) continue;
+                visited[visited_count++] = hash;
+
                 uint start_idx = grid_start[hash];
 
                 if (start_idx == 0xFFFFFFFF) continue;
 
                 for (uint j = start_idx; j < num_particles; j++) {
                     if (entries[j].hash != hash) break;
+                    if (j == i) continue;
 
                     vec3 pos_j = positions[j].xyz;
                     vec3 r_vec = pos_i - pos_j;
                     float r2 = dot(r_vec, r_vec);
 
-                    if (r2 > h * h) continue;
+                    if (r2 >= h * h) continue;
+
+                    if (neighbor_count < MAX_NEIGHBORS) {
+                        neighbor_list[neighbor_count * num_particles + i] = j;
+                        neighbor_count++;
+                    }
 
                     float r = sqrt(r2);
                     float w = kernel_w(r, h);
@@ -61,6 +82,15 @@ void main() {
             }
         }
     }
+    neighbor_counts[i] = neighbor_count;
+
+    // Walls act as a neighbour of mass rho0 * V (see box_boundary). As in
+    // SPlisHSPlasH they enter the first sum of the DFSPH factor only.
+    float wall_volume_i;
+    vec3 wall_grad_i;
+    box_boundary(pos_i, wall_volume_i, wall_grad_i);
+    density += sim_params.target_density * wall_volume_i;
+    grad_sum += sim_params.target_density * wall_grad_i;
 
     densities[i] = density;
     float alpha = sum_grad_sq + dot(grad_sum, grad_sum);

@@ -13,6 +13,8 @@ pub struct CollisionBox {
     pub max: Vec3,
     pub wave_amplitude: f32,
     pub wave_frequency: f32,
+    /// Whether the `min.x` wall oscillates; toggled from the UI.
+    pub animate: bool,
     time: f32,
     base_min_x: f32,
 }
@@ -25,13 +27,25 @@ impl CollisionBox {
             max,
             wave_amplitude: 0.0,
             wave_frequency: 1.0,
+            animate: true,
             time: 0.0,
         }
     }
     pub fn update(&mut self, dt: f32) {
+        if !self.animate {
+            return;
+        }
         self.time += dt;
         let offset = self.wave_amplitude * (self.time * self.wave_frequency * TAU).sin();
         self.min.x = self.base_min_x + offset;
+    }
+    /// Velocity of the `min.x` wall along +x.
+    pub fn piston_velocity(&self) -> f32 {
+        if !self.animate {
+            return 0.0;
+        }
+        let omega = self.wave_frequency * TAU;
+        self.wave_amplitude * omega * (self.time * omega).cos()
     }
     pub fn contains(&self, actor: &impl Actor) -> bool {
         actor.location().x >= self.min.x && actor.location().x <= self.max.x &&
