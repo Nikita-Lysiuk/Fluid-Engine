@@ -1,7 +1,6 @@
-use glam::{IVec3, Vec3};
+use glam::{IVec3, Vec2, Vec3};
 use log::info;
 use crate::entities::camera::Camera;
-use crate::entities::Actor;
 use crate::entities::collision::CollisionBox;
 use crate::entities::particle::{ParticleGenerator, SimulationParams};
 
@@ -13,26 +12,44 @@ pub struct Scene {
     pub attractor: Attractor,
 }
 
-/// Pulls fluid towards a point in front of the camera while the right mouse
-/// button is held.
+/// Pulls fluid towards the point under the mouse cursor while the left
+/// mouse button is held.
 pub struct Attractor {
     pub active: bool,
-    /// Distance of the attraction point in front of the camera, in metres.
+    /// The cursor is over the scene (not over the UI); used to show a preview.
+    pub hovered: bool,
+    /// Distance of the attraction point from the camera along the cursor ray.
+    /// While inactive it follows the plane through the box centre facing the
+    /// camera; while active it is kept (and changed with the mouse wheel).
     pub distance: f32,
+    pub centre: Vec3,
     /// Acceleration towards the point at its centre, in m/s².
     pub strength: f32,
     pub radius: f32,
 }
 
 impl Attractor {
+    /// Places the attraction point on the ray through the cursor.
+    pub fn aim(&mut self, camera: &Camera, cursor: Vec2, window_size: Vec2, boundary: &CollisionBox) {
+        let (origin, direction) = camera.ray_through(cursor, window_size);
+        if !self.active {
+            let box_centre = 0.5 * (boundary.min + boundary.max);
+            let forward = camera.forward();
+            let facing = direction.dot(forward);
+            if facing > 1e-3 {
+                self.distance = ((box_centre - origin).dot(forward) / facing).max(0.3);
+            }
+        }
+        self.centre = origin + direction * self.distance;
+    }
+
     /// `[x, y, z, strength]` as expected by `SimulationParams::attractor`;
     /// strength 0 when inactive.
-    pub fn to_gpu(&self, camera: &Camera) -> [f32; 4] {
+    pub fn to_gpu(&self) -> [f32; 4] {
         if !self.active {
             return [0.0; 4];
         }
-        let centre = camera.location() + camera.forward() * self.distance;
-        [centre.x, centre.y, centre.z, self.strength]
+        [self.centre.x, self.centre.y, self.centre.z, self.strength]
     }
 }
 
@@ -114,7 +131,14 @@ impl Scene {
             sim_params,
             camera,
             boundary: collision_box,
-            attractor: Attractor { active: false, distance: 2.0, strength: 40.0, radius: 0.6 },
+            attractor: Attractor {
+                active: false,
+                hovered: false,
+                distance: 3.5,
+                centre: Vec3::ZERO,
+                strength: 40.0,
+                radius: 0.6,
+            },
         }
     }
 }

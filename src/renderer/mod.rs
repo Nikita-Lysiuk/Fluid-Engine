@@ -236,7 +236,7 @@ impl Renderer {
         let solver = self.app_ui.solver_settings(&scene.sim_params);
 
         scene.sim_params.piston_velocity = scene.boundary.piston_velocity();
-        scene.sim_params.attractor = scene.attractor.to_gpu(&scene.camera);
+        scene.sim_params.attractor = scene.attractor.to_gpu();
         scene.sim_params.attractor_radius = scene.attractor.radius;
         self.resources.sync_with_scene(scene);
 
@@ -332,9 +332,11 @@ impl Renderer {
     }
 
     pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32, fps: u32) {
+        let window_size = glam::Vec2::from(self.window_renderer.window_size());
         self.gui.immediate_ui(|gui| {
             let ctx = gui.context();
             self.app_ui.render(&ctx, scene, fps);
+            ui::draw_attractor(&ctx, scene, window_size);
         });
 
         let acquire_future = self

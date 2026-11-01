@@ -24,6 +24,9 @@ impl Controller {
             KeyboardAction::Released => { self.pressed_keys.remove(&key); },
         }
     }
+    pub fn release_all_keys(&mut self) {
+        self.pressed_keys.clear();
+    }
     pub fn update_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
         self.mouse_delta.0 += delta_x;
         self.mouse_delta.1 += delta_y;

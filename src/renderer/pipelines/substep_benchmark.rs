@@ -356,3 +356,81 @@ fn solver_iterations_over_time() {
         sum_divergence_iters as f32 / total_substeps as f32,
     );
 }
+
+/// Settles 25k particles, then turns the attractor on inside the water and
+/// checks that particles gather around it.
+///
+///     cargo test --release -- --ignored attractor_gathers_water --nocapture
+#[test]
+#[ignore]
+fn attractor_gathers_water() {
+    let ctx = make_context();
+    let device = ctx.device().clone();
+    let memory_allocator = ctx.memory_allocator().clone();
+    let queue = ctx.graphics_queue().clone();
+
+    let mut scene = Scene::new(25_000);
+    let solver = crate::renderer::ui::AppUI::new().solver_settings(&scene.sim_params);
+    let cb_alloc = Arc::new(StandardCommandBufferAllocator::new(
+        device.clone(),
+        StandardCommandBufferAllocatorCreateInfo::default(),
+    ));
+    let ds_alloc = Arc::new(StandardDescriptorSetAllocator::new(
+        device.clone(),
+        StandardDescriptorSetAllocatorCreateInfo::default(),
+    ));
+    let physics_data = GpuPhysicsData::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let sim_params_buffer = Buffer::from_data(
+        memory_allocator.clone(),
+        BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
+        AllocationCreateInfo {
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+            ..Default::default()
+        },
+        scene.sim_params,
+    )
+    .unwrap();
+    let mut pipelines =
+        ComputePipelines::new(device.clone(), memory_allocator.clone(), physics_data.grid_entries.len() as u32);
+    prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
+
+    let run = |substeps: u32, init: bool| {
+        let mut builder = AutoCommandBufferBuilder::primary(
+            cb_alloc.clone(),
+            queue.queue_family_index(),
+            CommandBufferUsage::OneTimeSubmit,
+        )
+        .unwrap();
+        if init {
+            pipelines.record_init(&mut builder);
+        }
+        for _ in 0..substeps {
+            pipelines.record_substep(&mut builder, &solver);
+        }
+        submit_and_wait(&queue, builder.build().unwrap());
+    };
+    let p = &scene.sim_params;
+    let centre = glam::Vec3::new(0.5 * (p.box_min[0] + p.box_max[0]), 0.6, 0.0);
+    let radius = 0.6;
+    let count_inside = || {
+        physics_data
+            .position_a
+            .read()
+            .unwrap()
+            .iter()
+            .filter(|q| glam::Vec3::new(q[0], q[1], q[2]).distance(centre) < radius * 0.5)
+            .count()
+    };
+
+    run(400, true);
+    let before = count_inside();
+
+    scene.sim_params.attractor = [centre.x, centre.y, centre.z, 40.0];
+    scene.sim_params.attractor_radius = radius;
+    *sim_params_buffer.write().unwrap() = scene.sim_params;
+    run(200, false);
+    let after = count_inside();
+
+    println!("particles within {:.2} m of the attractor: {before} -> {after}", radius * 0.5);
+    assert!(after > before, "attractor did not gather water: {before} -> {after}");
+}

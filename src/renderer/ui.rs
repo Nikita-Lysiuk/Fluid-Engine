@@ -1,8 +1,8 @@
 use crate::core::scene::Scene;
 use crate::entities::particle::SimulationParams;
 use crate::renderer::pipelines::{SolveSettings, SolverSettings, SortAlgorithm};
-use egui::{Context, Slider, Window};
-use glam::Vec4;
+use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
+use glam::{Vec2, Vec4};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum RenderMode {
@@ -95,6 +95,7 @@ impl AppUI {
             .default_width(150.0)
             .resizable(true)
             .collapsible(true)
+            .vscroll(true)
             .show(ctx, |ui| {
                 ui.heading("Simulation Parameters");
                 ui.add(Slider::new(&mut scene.sim_params.viscosity, 0.0..=0.5).text("Viscosity"));
@@ -176,7 +177,8 @@ impl AppUI {
                 ui.separator();
 
                 ui.heading("External Forces");
-                ui.label("Hold right mouse button to pull water, wheel = distance");
+                ui.label("Left mouse: pull water (wheel = closer / further)");
+                ui.label("Right mouse held: rotate camera, WASD / QE: move");
                 ui.add(Slider::new(&mut scene.attractor.strength, 0.0..=150.0).text("Pull strength"));
                 ui.add(Slider::new(&mut scene.attractor.radius, 0.1..=1.5).text("Pull radius"));
                 ui.add(
@@ -308,4 +310,34 @@ impl AppUI {
                 }
             });
     }
+}
+
+/// Circle showing where and how far the mouse attractor pulls: faint while
+/// the cursor hovers the scene, solid while the left button is held.
+pub fn draw_attractor(ctx: &Context, scene: &Scene, window_size: Vec2) {
+    let attractor = &scene.attractor;
+    if !attractor.active && !attractor.hovered {
+        return;
+    }
+    let camera = &scene.camera;
+    let edge = attractor.centre + camera.right() * attractor.radius;
+    let (Some(centre), Some(edge)) = (
+        camera.project(attractor.centre, window_size),
+        camera.project(edge, window_size),
+    ) else {
+        return;
+    };
+    // Projection is in physical pixels, egui paints in points.
+    let points_per_pixel = 1.0 / ctx.pixels_per_point();
+    let centre = Pos2::new(centre.x, centre.y) * points_per_pixel;
+    let radius = centre.distance(Pos2::new(edge.x, edge.y) * points_per_pixel);
+
+    let color = if attractor.active {
+        Color32::from_rgb(90, 190, 255)
+    } else {
+        Color32::from_white_alpha(90)
+    };
+    let painter = ctx.layer_painter(LayerId::new(Order::Background, Id::new("attractor")));
+    painter.circle_stroke(centre, radius, Stroke::new(2.0, color));
+    painter.circle_filled(centre, 3.0, color);
 }

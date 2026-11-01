@@ -1,10 +1,11 @@
+use glam::Vec2;
 use log::{info, debug, error};
 use simple_logger::SimpleLogger;
 use winit::application::ApplicationHandler;
 use winit::dpi::PhysicalSize;
 use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, MouseScrollDelta, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::keyboard::{KeyCode, PhysicalKey};
+use winit::keyboard::PhysicalKey;
 use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{CursorGrabMode, Icon, WindowAttributes, WindowId};
 use crate::core::controller::{Controller, KeyboardAction};
@@ -36,7 +37,11 @@ pub struct Engine {
     scene: Scene,
     controller: Controller,
     fps_counter: FpsCounter,
-    is_focused: bool,
+    /// Right mouse button held: mouse motion rotates the camera.
+    rotating_camera: bool,
+    /// Cursor position in physical pixels.
+    cursor: Vec2,
+    pointer_over_ui: bool,
     benchmark: Option<FrameBenchmark>,
 }
 
@@ -61,9 +66,29 @@ impl Engine {
             scene,
             fps_counter: FpsCounter::new(PREFERRED_FPS),
             controller: Controller::new(),
-            is_focused: false,
+            rotating_camera: false,
+            cursor: Vec2::ZERO,
+            pointer_over_ui: true,
             benchmark: FrameBenchmark::from_env(),
         })
+    }
+
+    /// Starts or stops camera rotation; the cursor is hidden and kept in the
+    /// window while rotating.
+    fn set_camera_rotation(&mut self, rotating: bool) {
+        self.rotating_camera = rotating;
+        if let Some(renderer) = self.renderer.as_ref() {
+            let window = renderer.window_renderer.window();
+            if rotating {
+                window
+                    .set_cursor_grab(CursorGrabMode::Locked)
+                    .or_else(|_| window.set_cursor_grab(CursorGrabMode::Confined))
+                    .unwrap_or_else(|e| error!("Failed to grab cursor: {}", e));
+            } else {
+                window.set_cursor_grab(CursorGrabMode::None).ok();
+            }
+            window.set_cursor_visible(!rotating);
+        }
     }
 
     pub fn run(&mut self) {
@@ -108,14 +133,14 @@ impl ApplicationHandler for Engine {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        let mut egui_wants_input = false;
+        let mut egui_wants_pointer = false;
+        let mut egui_wants_keyboard = false;
 
         if let Some(renderer) = self.renderer.as_mut() {
             renderer.gui.update(&event);
-
-            if renderer.gui.context().wants_pointer_input() || renderer.gui.context().wants_keyboard_input() {
-                egui_wants_input = true;
-            }
+            let ctx = renderer.gui.context();
+            egui_wants_pointer = ctx.wants_pointer_input() || ctx.is_pointer_over_area();
+            egui_wants_keyboard = ctx.wants_keyboard_input();
         }
 
         match event {
@@ -123,47 +148,37 @@ impl ApplicationHandler for Engine {
                 info!("[Engine] Exit requested.");
                 event_loop.exit();
             }
-            WindowEvent::Focused(focused) => {
-                self.is_focused = focused;
-
-                if let Some(renderer) = self.renderer.as_mut() {
-                    let window = renderer.window_renderer.window();
-                    if focused {
-                        window.set_cursor_grab(CursorGrabMode::Locked)
-                            .or_else(|_| window.set_cursor_grab(CursorGrabMode::Confined))
-                            .unwrap_or_else(|e| error!("Failed to grab cursor: {}", e));
-                        window.set_cursor_visible(false);
-                    } else {
-                        window.set_cursor_grab(CursorGrabMode::None).ok();
-                        window.set_cursor_visible(true);
-                    }
-                }
+            WindowEvent::Focused(false) => {
+                self.set_camera_rotation(false);
+                self.scene.attractor.active = false;
+                self.controller.release_all_keys();
             }
-            WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. } => {
-                if !egui_wants_input && !self.is_focused {
-                    self.is_focused = true;
-                    if let Some(renderer) = self.renderer.as_mut() {
-                        let window = renderer.window_renderer.window();
-                        window.set_cursor_grab(CursorGrabMode::Confined)
-                            .or_else(|_| window.set_cursor_grab(CursorGrabMode::Locked))
-                            .ok();
-                        window.set_cursor_visible(false);
-                    }
-                    info!("[Input] Mouse Locked");
-                }
+            WindowEvent::CursorMoved { position, .. } => {
+                self.cursor = Vec2::new(position.x as f32, position.y as f32);
+                self.pointer_over_ui = egui_wants_pointer;
             }
-            WindowEvent::MouseInput { state, button: MouseButton::Right, .. } => {
-                if self.is_focused {
-                    self.scene.attractor.active = state == ElementState::Pressed;
-                }
+            WindowEvent::CursorLeft { .. } => {
+                self.pointer_over_ui = true;
             }
+            // Left button on the scene pulls water towards the cursor.
+            WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => match state {
+                ElementState::Pressed if !egui_wants_pointer => self.scene.attractor.active = true,
+                ElementState::Released => self.scene.attractor.active = false,
+                _ => {}
+            },
+            // Right button held rotates the camera.
+            WindowEvent::MouseInput { state, button: MouseButton::Right, .. } => match state {
+                ElementState::Pressed if !egui_wants_pointer => self.set_camera_rotation(true),
+                ElementState::Released => self.set_camera_rotation(false),
+                _ => {}
+            },
             WindowEvent::MouseWheel { delta, .. } => {
-                if self.is_focused {
+                if self.scene.attractor.active {
                     let lines = match delta {
                         MouseScrollDelta::LineDelta(_, y) => y,
                         MouseScrollDelta::PixelDelta(p) => p.y as f32 / 40.0,
                     };
-                    self.scene.attractor.distance = (self.scene.attractor.distance + 0.2 * lines).clamp(0.3, 8.0);
+                    self.scene.attractor.distance = (self.scene.attractor.distance + 0.2 * lines).clamp(0.3, 20.0);
                 }
             }
             WindowEvent::Resized(_new_size) => {
@@ -171,28 +186,15 @@ impl ApplicationHandler for Engine {
                     renderer.window_renderer.resize();
                 }
             }
-            WindowEvent::KeyboardInput {
-                event: key_event,
-                ..
-            } => {
-                match (key_event.physical_key, key_event.state) {
-                    (PhysicalKey::Code(KeyCode::Escape), ElementState::Pressed) => {
-                        self.is_focused = false;
-                        if let Some(renderer) = self.renderer.as_mut() {
-                            renderer.window_renderer.window().set_cursor_grab(CursorGrabMode::None).ok();
-                            renderer.window_renderer.window().set_cursor_visible(true);
+            WindowEvent::KeyboardInput { event: key_event, .. } => {
+                if let PhysicalKey::Code(code) = key_event.physical_key {
+                    match key_event.state {
+                        // Releases always count, so keys never stay stuck.
+                        ElementState::Released => self.controller.update_key(code, KeyboardAction::Released),
+                        ElementState::Pressed if !egui_wants_keyboard => {
+                            self.controller.update_key(code, KeyboardAction::Pressed)
                         }
-                    }
-                    (physical_key, state) => {
-                        if self.is_focused {
-                            if let PhysicalKey::Code(code) = physical_key {
-                                let action = match state {
-                                    ElementState::Pressed => KeyboardAction::Pressed,
-                                    ElementState::Released => KeyboardAction::Released,
-                                };
-                                self.controller.update_key(code, action);
-                            }
-                        }
+                        ElementState::Pressed => {}
                     }
                 }
             }
@@ -201,16 +203,18 @@ impl ApplicationHandler for Engine {
                 let dt = frame_time.as_secs_f32();
                 let safe_dt = dt.min(0.1);
 
-                if self.is_focused {
-                    for command in self.controller.get_active_commands() {
-                        command.execute(&mut self.scene, safe_dt);
-                    }
-                    if let Some(cmd) = self.controller.get_mouse_command() {
-                        cmd.execute(&mut self.scene, safe_dt);
-                    }
+                for command in self.controller.get_active_commands() {
+                    command.execute(&mut self.scene, safe_dt);
+                }
+                if let Some(cmd) = self.controller.get_mouse_command() {
+                    cmd.execute(&mut self.scene, safe_dt);
                 }
 
                 if let Some(renderer) = self.renderer.as_mut() {
+                    let window_size = Vec2::from(renderer.window_renderer.window_size());
+                    self.scene.attractor.aim(&self.scene.camera, self.cursor, window_size, &self.scene.boundary);
+                    self.scene.attractor.hovered = !self.pointer_over_ui && !self.rotating_camera;
+
                     renderer.update_and_render(&mut self.scene, safe_dt, self.fps_counter.fps());
 
                     if let Some(benchmark) = self.benchmark.as_mut() {
@@ -220,36 +224,21 @@ impl ApplicationHandler for Engine {
                         }
                     }
                 }
-
-                // if IS_PAINT_FPS_COUNTER {
-                //     if let Some(renderer) = self.renderer.as_ref() {
-                //         let title = format!("{} | FPS: {}", WINDOW_TITLE, self.fps_counter.fps());
-                //         renderer.window_renderer.window().set_title(&title);
-                //     }
-                // }
             }
 
             _ => (),
         }
 
-        if self.renderer.is_some() {
-            if let Some(renderer) = self.renderer.as_ref() {
-                renderer.window_renderer.window().request_redraw();
-            }
+        if let Some(renderer) = self.renderer.as_ref() {
+            renderer.window_renderer.window().request_redraw();
         }
     }
     fn device_event(&mut self, _event_loop: &ActiveEventLoop, _device_id: DeviceId, event: DeviceEvent) {
-        match event {
-            DeviceEvent::MouseMotion { delta } => {
-                if self.is_focused {
-                    let sensitivity = 0.1;
-                    let dx = delta.0 as f32 * sensitivity;
-                    let dy = delta.1 as f32 * sensitivity;
-
-                    self.controller.update_mouse_delta(dx, dy);
-                }
+        if let DeviceEvent::MouseMotion { delta } = event {
+            if self.rotating_camera {
+                let sensitivity = 0.1;
+                self.controller.update_mouse_delta(delta.0 as f32 * sensitivity, delta.1 as f32 * sensitivity);
             }
-            _ => {}
         }
     }
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {

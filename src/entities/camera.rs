@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use glam::{EulerRot, Mat4, Quat, Vec3};
+use glam::{EulerRot, Mat4, Quat, Vec2, Vec3};
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use crate::entities::Actor;
@@ -104,6 +104,28 @@ impl Camera {
     pub fn up(&self) -> Vec3 {
         (self.orientation * Vec3::Y).normalize()
     }
+    pub fn view_projection(&self) -> Mat4 {
+        self.get_projection_matrix() * self.get_view_matrix()
+    }
+    /// Origin and direction of the ray through a window pixel (origin at the
+    /// top-left corner, same units as `window_size`).
+    pub fn ray_through(&self, pixel: Vec2, window_size: Vec2) -> (Vec3, Vec3) {
+        let ndc = Vec2::new(2.0 * pixel.x / window_size.x - 1.0, 1.0 - 2.0 * pixel.y / window_size.y);
+        let inverse = self.view_projection().inverse();
+        let near = inverse.project_point3(ndc.extend(0.0));
+        let far = inverse.project_point3(ndc.extend(1.0));
+        (near, (far - near).normalize())
+    }
+    /// Window pixel of a world point, `None` if it is behind the camera. The
+    /// renderer flips the viewport, so NDC y = +1 is the top of the window.
+    pub fn project(&self, world: Vec3, window_size: Vec2) -> Option<Vec2> {
+        let clip = self.view_projection() * world.extend(1.0);
+        if clip.w <= 1e-6 {
+            return None;
+        }
+        let ndc = clip.truncate() / clip.w;
+        Some(Vec2::new((ndc.x + 1.0) * 0.5 * window_size.x, (1.0 - ndc.y) * 0.5 * window_size.y))
+    }
     fn get_view_matrix(&self) -> Mat4 {
         let target = self.position + self.forward();
         Mat4::look_at_lh(self.position, target, Vec3::Y)
@@ -166,5 +188,37 @@ impl CameraData {
             .map_err(|e| panic!("[Camera Data] Failed to get uniform buffer device address:\n{:?}", e))
             .unwrap()
             .get()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const WINDOW: Vec2 = Vec2::new(1920.0, 1080.0);
+
+    #[test]
+    fn ray_through_window_centre_points_forward() {
+        let camera = Camera::new(Vec3::new(0.0, 1.5, -3.5));
+        let (origin, direction) = camera.ray_through(WINDOW * 0.5, WINDOW);
+        assert!(direction.dot(camera.forward()) > 0.999, "direction {direction:?}");
+        assert!(origin.distance(camera.position) < 0.2);
+    }
+
+    #[test]
+    fn project_inverts_ray_through() {
+        let camera = Camera::new(Vec3::new(0.0, 1.5, -3.5));
+        for pixel in [Vec2::new(100.0, 200.0), Vec2::new(1500.0, 900.0), Vec2::new(960.0, 10.0)] {
+            let (origin, direction) = camera.ray_through(pixel, WINDOW);
+            let projected = camera.project(origin + direction * 4.0, WINDOW).unwrap();
+            assert!(projected.distance(pixel) < 0.5, "{pixel:?} -> {projected:?}");
+        }
+    }
+
+    #[test]
+    fn points_above_the_camera_are_in_the_upper_half() {
+        let camera = Camera::new(Vec3::ZERO);
+        let above = camera.project(camera.forward() * 5.0 + Vec3::Y, WINDOW).unwrap();
+        assert!(above.y < WINDOW.y * 0.5, "{above:?}");
     }
 }
