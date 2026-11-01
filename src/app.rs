@@ -100,6 +100,51 @@ impl App {
     }
 }
 
+impl App {
+    fn on_mouse_button(&mut self, button: MouseButton, state: ElementState, over_ui: bool) {
+        match (button, state) {
+            (MouseButton::Left, ElementState::Pressed) if !over_ui => self.scene.attractor.active = true,
+            (MouseButton::Left, ElementState::Released) => self.scene.attractor.active = false,
+            (MouseButton::Right, ElementState::Pressed) if !over_ui => self.set_camera_rotation(true),
+            (MouseButton::Right, ElementState::Released) => self.set_camera_rotation(false),
+            _ => {}
+        }
+    }
+
+    fn on_key(&mut self, key: PhysicalKey, state: ElementState, ui_wants_keyboard: bool) {
+        if let PhysicalKey::Code(code) = key {
+            match state {
+                ElementState::Released => self.input.key_event(code, state),
+                ElementState::Pressed if !ui_wants_keyboard => self.input.key_event(code, state),
+                ElementState::Pressed => {}
+            }
+        }
+    }
+
+    fn on_redraw(&mut self, event_loop: &ActiveEventLoop) {
+        let frame_time = self.fps_counter.tick();
+        let dt = frame_time.as_secs_f32();
+        let safe_dt = dt.min(0.1);
+
+        self.input.apply_to_camera(&mut self.scene.camera, safe_dt);
+
+        if let Some(renderer) = self.renderer.as_mut() {
+            let window_size = Vec2::from(renderer.window_renderer.window_size());
+            self.scene.attractor.aim(&self.scene.camera, self.cursor, window_size, &self.scene.boundary);
+            self.scene.attractor.hovered = !self.pointer_over_ui && !self.rotating_camera;
+
+            renderer.update_and_render(&mut self.scene, safe_dt, self.fps_counter.fps());
+
+            if let Some(benchmark) = self.benchmark.as_mut() {
+                if benchmark.record(frame_time, renderer.app_ui.display_substeps) {
+                    benchmark.report();
+                    event_loop.exit();
+                }
+            }
+        }
+    }
+}
+
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.renderer.is_none() {
@@ -160,18 +205,7 @@ impl ApplicationHandler for App {
             WindowEvent::CursorLeft { .. } => {
                 self.pointer_over_ui = true;
             }
-            // Left button on the scene pulls water towards the cursor.
-            WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => match state {
-                ElementState::Pressed if !egui_wants_pointer => self.scene.attractor.active = true,
-                ElementState::Released => self.scene.attractor.active = false,
-                _ => {}
-            },
-            // Right button held rotates the camera.
-            WindowEvent::MouseInput { state, button: MouseButton::Right, .. } => match state {
-                ElementState::Pressed if !egui_wants_pointer => self.set_camera_rotation(true),
-                ElementState::Released => self.set_camera_rotation(false),
-                _ => {}
-            },
+            WindowEvent::MouseInput { state, button, .. } => self.on_mouse_button(button, state, egui_wants_pointer),
             WindowEvent::MouseWheel { delta, .. } => {
                 if self.scene.attractor.active {
                     let lines = match delta {
@@ -187,39 +221,9 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::KeyboardInput { event: key_event, .. } => {
-                if let PhysicalKey::Code(code) = key_event.physical_key {
-                    match key_event.state {
-                        // Releases always count, so keys never stay stuck.
-                        ElementState::Released => self.input.key_event(code, ElementState::Released),
-                        ElementState::Pressed if !egui_wants_keyboard => {
-                            self.input.key_event(code, ElementState::Pressed)
-                        }
-                        ElementState::Pressed => {}
-                    }
-                }
+                self.on_key(key_event.physical_key, key_event.state, egui_wants_keyboard);
             }
-            WindowEvent::RedrawRequested => {
-                let frame_time = self.fps_counter.tick();
-                let dt = frame_time.as_secs_f32();
-                let safe_dt = dt.min(0.1);
-
-                self.input.apply_to_camera(&mut self.scene.camera, safe_dt);
-
-                if let Some(renderer) = self.renderer.as_mut() {
-                    let window_size = Vec2::from(renderer.window_renderer.window_size());
-                    self.scene.attractor.aim(&self.scene.camera, self.cursor, window_size, &self.scene.boundary);
-                    self.scene.attractor.hovered = !self.pointer_over_ui && !self.rotating_camera;
-
-                    renderer.update_and_render(&mut self.scene, safe_dt, self.fps_counter.fps());
-
-                    if let Some(benchmark) = self.benchmark.as_mut() {
-                        if benchmark.record(frame_time, renderer.app_ui.display_substeps) {
-                            benchmark.report();
-                            event_loop.exit();
-                        }
-                    }
-                }
-            }
+            WindowEvent::RedrawRequested => self.on_redraw(event_loop),
 
             _ => (),
         }
