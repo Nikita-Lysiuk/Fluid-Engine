@@ -8,4 +8,5 @@ pub mod input;
 mod render;
 pub mod scene;
 mod shader_loader;
+pub mod showcase;
 mod sim;

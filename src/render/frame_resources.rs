@@ -42,11 +42,11 @@ impl GpuSceneResources {
             scene.sim_params.particle_radius,
         );
 
-        let spacing = 1.5 * scene.sim_params.particle_radius;
+        let spacing = scene.sim_params.particle_radius;
         let pillar_height = scene.boundary.max.y - scene.boundary.min.y;
         let points = pillar_surface_points(&scene.pillar, pillar_height, spacing);
         let pillar_points =
-            GpuRenderData::with_color(allocator.clone(), &points, spacing, PILLAR_COLOR);
+            GpuRenderData::with_color(allocator.clone(), &points, 2.0 * spacing, PILLAR_COLOR);
 
         let grid_res = scene.sim_params.grid_res;
 

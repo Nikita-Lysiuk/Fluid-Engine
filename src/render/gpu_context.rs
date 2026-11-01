@@ -34,31 +34,7 @@ pub struct GpuContext {
 impl GpuContext {
     /// Creates the window renderer, device context and allocators.
     pub fn new(window: Window) -> Self {
-        let config = VulkanoConfig {
-            instance_create_info: InstanceCreateInfo {
-                enabled_extensions: InstanceExtensions {
-                    ext_debug_utils: true,
-                    ..InstanceExtensions::default()
-                },
-                application_name: Some("Fluid Simulation Engine".into()),
-                application_version: Version::V1_3,
-                ..Default::default()
-            },
-            device_features: DeviceFeatures {
-                sampler_anisotropy: true,
-                dynamic_rendering: true,
-                synchronization2: true,
-                scalar_block_layout: true,
-                buffer_device_address: true,
-                shader_int64: true,
-                large_points: true,
-                fill_mode_non_solid: true,
-                ..DeviceFeatures::empty()
-            },
-            ..VulkanoConfig::default()
-        };
-
-        let context = Arc::new(VulkanoContext::new(config));
+        let context = Arc::new(VulkanoContext::new(vulkano_config()));
 
         let mut window_renderer = VulkanoWindowRenderer::new(
             &context,
@@ -101,5 +77,33 @@ impl GpuContext {
             descriptor_set_allocator,
             depth_format,
         }
+    }
+}
+
+/// Instance and device setup shared by the window renderer and the offline
+/// renderer.
+pub fn vulkano_config() -> VulkanoConfig {
+    VulkanoConfig {
+        instance_create_info: InstanceCreateInfo {
+            enabled_extensions: InstanceExtensions {
+                ext_debug_utils: true,
+                ..InstanceExtensions::default()
+            },
+            application_name: Some("Fluid Simulation Engine".into()),
+            application_version: Version::V1_3,
+            ..Default::default()
+        },
+        device_features: DeviceFeatures {
+            sampler_anisotropy: true,
+            dynamic_rendering: true,
+            synchronization2: true,
+            scalar_block_layout: true,
+            buffer_device_address: true,
+            shader_int64: true,
+            large_points: true,
+            fill_mode_non_solid: true,
+            ..DeviceFeatures::empty()
+        },
+        ..VulkanoConfig::default()
     }
 }

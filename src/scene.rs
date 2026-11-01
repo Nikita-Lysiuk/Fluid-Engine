@@ -138,22 +138,22 @@ impl Scene {
     /// interactive scene (about 150k), so it is meant for offline rendering.
     pub fn showcase() -> Self {
         let box_min = Vec3::new(-2.0, 0.0, -0.7);
-        let box_max = Vec3::new(1.2, 2.0, 0.7);
+        let box_max = Vec3::new(1.2, 1.2, 0.7);
         Self::build(SceneSetup {
             particle_radius: 0.012,
             box_min,
             box_max,
             water_origin: box_min + Vec3::new(0.2, 0.0, 0.0),
-            water_size: Vec3::new(3.0, 0.45, 1.4),
+            water_size: Vec3::new(3.0, 0.55, 1.4),
             pillar: Pillar {
                 centre: Vec2::new(0.35, 0.0),
                 radius: 0.18,
                 enabled: true,
             },
-            wave_amplitude: 0.35,
+            wave_amplitude: 0.3,
             wave_frequency: 0.4,
-            camera_position: Vec3::new(-1.6, 2.1, -2.9),
-            camera_target: Vec3::new(-0.1, 0.25, 0.0),
+            camera_position: Vec3::new(-0.6, 1.45, -3.4),
+            camera_target: Vec3::new(-0.35, 0.35, 0.1),
             dt: 0.0025,
         })
     }
