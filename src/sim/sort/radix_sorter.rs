@@ -269,6 +269,7 @@ impl RadixSorter {
                     },
                 )
                 .unwrap();
+            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the debug label is open.
             unsafe {
                 builder.dispatch([num_work_groups, 1, 1]).unwrap();
                 builder.end_debug_utils_label().unwrap();
@@ -300,6 +301,7 @@ impl RadixSorter {
                     },
                 )
                 .unwrap();
+            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the debug label is open.
             unsafe {
                 builder.dispatch([1, 1, 1]).unwrap();
                 builder.end_debug_utils_label().unwrap();
@@ -339,11 +341,13 @@ impl RadixSorter {
                     },
                 )
                 .unwrap();
+            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the debug label is open.
             unsafe {
                 builder.dispatch([num_work_groups, 1, 1]).unwrap();
                 builder.end_debug_utils_label().unwrap();
             }
 
+            // SAFETY: the enclosing radix pass debug label was opened above.
             unsafe {
                 builder.end_debug_utils_label().unwrap();
             }

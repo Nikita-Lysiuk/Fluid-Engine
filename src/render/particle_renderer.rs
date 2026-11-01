@@ -105,6 +105,7 @@ impl GpuRenderData {
         count: u32,
     ) {
 
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipelines.point_pipeline.inner.clone()).unwrap()

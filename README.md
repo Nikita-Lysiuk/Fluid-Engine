@@ -127,21 +127,16 @@ Shaders are compiled to SPIR-V at build time by `vulkano-shaders` — no manual 
 
 ## Project structure
 
-```
+```text
 src/
-├── core/            # winit event loop, scene state, input controller (Command pattern)
-├── entities/        # camera (quaternion FPS-style), particles, water, sky, collision box
-├── renderer/
-│   ├── pipelines/   # one module per GPU pass: neighbor search, sorters, DFSPH steps,
-│   │                #   splatting, raymarching, sky, stats — all behind the ComputeStep trait
-│   ├── resources.rs # SOA particle buffers, double buffering, descriptor management
-│   └── ui.rs        # egui control panel
-└── utils/           # constants, FPS counter, shader loading
-shaders/
-├── compute/         # 17 compute shaders (solver, hashing, two sorters, splatting, stats)
-└── *.vert/.frag     # sky, particle, collision-box and raymarching pipelines
-scripts/             # Python benchmark/analysis plots (matplotlib) + measured CSV data
-docs/                # in-depth technical write-up and figures
+  app.rs, input.rs, camera.rs, scene.rs  # window events, controls and scene state
+  sim/                                   # particle buffers, solver passes and statistics
+    sort/                                # bitonic and radix GPU sorters
+    benchmarks/                          # simulation diagnostics and benchmarks
+  render/                                # Vulkan setup, frame resources, graphics and UI
+shaders/                                 # compute, vertex and fragment shaders
+scripts/                                 # benchmark and plotting tools
+docs/                                    # technical write-up and refactoring plan
 ```
 
 **Stack:** [vulkano](https://github.com/vulkano-rs/vulkano) (safe Vulkan wrapper), [winit](https://github.com/rust-windowing/winit), [egui](https://github.com/emilk/egui), [glam](https://github.com/bitshifter/glam-rs) (SIMD math), [tracy-client](https://github.com/wolfpld/tracy) (profiling).

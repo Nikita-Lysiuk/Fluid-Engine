@@ -91,6 +91,7 @@ fn profile_substep(
     let mut labels: Vec<&'static str> = Vec::new();
     let mut mark = |builder: &mut AutoCommandBufferBuilder<_>, label: &'static str| {
         let idx = labels.len() as u32;
+        // SAFETY: each index is reset above and written once before the pool is read.
         unsafe { builder.write_timestamp(pool.clone(), idx, PipelineStage::AllCommands).unwrap() };
         labels.push(label);
     };

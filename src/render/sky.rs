@@ -202,6 +202,7 @@ impl SkyData {
     }
     
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64) {
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder.bind_pipeline_graphics(pipelines.sky_pipeline.inner.clone()).map_err(|e| panic!("[Renderer] Failed to bind sky pipeline: {:?}", e)).unwrap()
                 .bind_descriptor_sets(PipelineBindPoint::Graphics, pipelines.sky_layout.clone(), 0, self.descriptor_set.clone()).map_err(|e| panic!("[Renderer] Failed to bind sky descriptor set: {:?}", e)).unwrap()

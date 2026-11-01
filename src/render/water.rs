@@ -152,6 +152,7 @@ impl WaterRenderer {
             model: model_matrix.to_cols_array_2d(),
         };
 
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipeline.clone()).unwrap()

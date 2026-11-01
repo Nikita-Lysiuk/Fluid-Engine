@@ -1,8 +1,7 @@
 use crate::sim::particle_buffers::stats_layout;
 use crate::sim::particle_buffers::ParticleBuffers;
 use crate::sim::params::SimulationParams;
-#[path = "shaders.rs"]
-mod shaders;
+use crate::sim::shaders;
 use std::sync::Arc;
 use crate::sim::compute_pass::{ComputePass, new_pipeline};
 use crate::sim::shader_loader::load_shader_entry_point;

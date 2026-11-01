@@ -16,18 +16,7 @@ use crate::sim::pipelines::SortAlgorithm;
 use crate::sim::sort::{BitonicSorter, RadixSorter};
 use crate::sim::shader_loader::load_shader_entry_point;
 
-mod cs_hash {
-    use vulkano_shaders::shader;
-    shader!(ty: "compute", path: "shaders\\compute\\spatial_hash.comp");
-}
-mod cs_offsets {
-    use vulkano_shaders::shader;
-    shader!(ty: "compute", path: "shaders\\compute\\grid_offsets.comp");
-}
-mod cs_reorder {
-    use vulkano_shaders::shader;
-    shader!(ty: "compute", path: "shaders\\compute\\reorder.comp");
-}
+use crate::sim::shaders::{cs_hash, cs_offsets, cs_reorder};
 
 pub struct NeighborSearch {
     spatial_hash_pipeline: Arc<ComputePipeline>,
@@ -161,6 +150,7 @@ impl NeighborSearch {
                     ..Default::default()
                 }).unwrap();
                 self.radix_sorter.execute(builder);
+                // SAFETY: the radix sort debug label was opened before recording the sort.
                 unsafe {
                     builder.end_debug_utils_label().unwrap();
                 }

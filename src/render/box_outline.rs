@@ -95,6 +95,7 @@ impl CollisionBoxData {
     }
 
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone()).unwrap()

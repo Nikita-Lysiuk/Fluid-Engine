@@ -96,6 +96,7 @@ impl BitonicSorter {
                 let group_size = 256;
                 let dispatch_count = (threads_needed + group_size - 1) / group_size;
 
+                // SAFETY: the compute pipeline, descriptors, and sort constants are bound above.
                 unsafe {
                     builder.dispatch([dispatch_count, 1, 1]).unwrap();
                 }
