@@ -2,7 +2,8 @@ use crate::core::scene::Scene;
 use crate::simulation_stats::{SimulationStats, cfl_time_step};
 use crate::entities::sky::SkyData;
 use crate::entities::water::WaterRenderer;
-use crate::renderer::pipelines::{ComputePipelines, Pipelines, SolverSettings, SortAlgorithm};
+use crate::renderer::pipelines::{ComputePipelines, Pipelines};
+use crate::simulation::Simulation;
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
 pub use crate::renderer::ui::RenderMode;
@@ -38,7 +39,7 @@ pub struct Renderer {
     context: Arc<VulkanoContext>,
     command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
     pipelines: Pipelines,
-    physics_steps: ComputePipelines,
+    simulation: Simulation,
     sky_data: SkyData,
     water_renderer: WaterRenderer,
 
@@ -47,9 +48,7 @@ pub struct Renderer {
     pub gui: Gui,
     pub app_ui: AppUI,
 
-    /// The neighbour grid and densities must be built once before the first substep.
-    needs_init: bool,
-    substep_cache: Option<((SolverSettings, SortAlgorithm), Arc<PrimaryAutoCommandBuffer>)>,
+
 }
 
 impl Renderer {
@@ -119,18 +118,16 @@ impl Renderer {
         );
 
         Self {
-            context,
+            context: context.clone(),
             window_renderer,
-            command_buffer_allocator,
+            command_buffer_allocator: command_buffer_allocator.clone(),
             pipelines,
             resources,
             sky_data,
             water_renderer,
-            physics_steps: gpu_physics,
+            simulation: Simulation::new(gpu_physics, command_buffer_allocator.clone(), context.graphics_queue().queue_family_index()),
             gui,
             app_ui: AppUI::new(),
-            needs_init: true,
-            substep_cache: None,
         }
     }
     pub fn step(
@@ -166,10 +163,7 @@ impl Renderer {
         builder
             .update_buffer(self.resources.sim_params_buffer.clone(), Box::new(scene.sim_params))
             .unwrap();
-        if self.needs_init {
-            self.physics_steps.record_init(&mut builder);
-            self.needs_init = false;
-        }
+        self.simulation.record_init(&mut builder);
         let mut future = previous_future
             .then_execute(queue.clone(), builder.build().unwrap())
             .unwrap()
@@ -182,13 +176,13 @@ impl Renderer {
         // Animate the box in simulated time so it stays in step with the fluid.
         scene.boundary.update(substeps as f32 * scene.sim_params.dt);
 
-        let substep = self.substep_command_buffer(solver);
+        let substep = self.simulation.substep_command_buffer(solver, self.app_ui.sort_algorithm);
         for _ in 0..substeps {
             future = future.then_execute(queue.clone(), substep.clone()).unwrap().boxed();
         }
 
         let mut builder = self.primary_builder(CommandBufferUsage::OneTimeSubmit);
-        self.physics_steps.stats.execute(&mut builder);
+        self.simulation.pipelines.stats.execute(&mut builder);
         builder
             .copy_buffer(CopyBufferInfo::buffers(
                 self.resources.physics_data.stats_buffer.clone(),
@@ -230,27 +224,6 @@ impl Renderer {
         .unwrap()
     }
 
-    /// One substep, recorded once and resubmitted every substep of every
-    /// frame. Everything that changes per frame (dt, box, attractor) lives in
-    /// the uniform buffer; only the solver settings and the sort algorithm are
-    /// baked into the commands, so the buffer is re-recorded when they change.
-    fn substep_command_buffer(&mut self, solver: SolverSettings) -> Arc<PrimaryAutoCommandBuffer> {
-        let key = (solver, self.app_ui.sort_algorithm);
-        if let Some((cached_key, command_buffer)) = &self.substep_cache {
-            if *cached_key == key {
-                return command_buffer.clone();
-            }
-        }
-        let _s = tracy_client::span!("record_substep");
-        self.physics_steps.neighbor_search.sort_algorithm = self.app_ui.sort_algorithm;
-        // SimultaneousUse: the same buffer is queued several times per frame.
-        let mut builder = self.primary_builder(CommandBufferUsage::SimultaneousUse);
-        self.physics_steps.record_substep(&mut builder, &solver);
-        let command_buffer = builder.build().unwrap();
-        self.substep_cache = Some((key, command_buffer.clone()));
-        command_buffer
-    }
-
     pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32, fps: u32) {
         let window_size = glam::Vec2::from(self.window_renderer.window_size());
         self.gui.immediate_ui(|gui| {
@@ -284,7 +257,7 @@ impl Renderer {
             let mut clear_info = ClearColorImageInfo::image(self.resources.density_texture.clone());
             clear_info.clear_value = ClearColorValue::Uint([0; 4]);
             builder.clear_color_image(clear_info).unwrap();
-            self.physics_steps.density_texture.execute(&mut builder);
+            self.simulation.pipelines.density_texture.execute(&mut builder);
         }
 
         let extent = self.window_renderer.window_size();

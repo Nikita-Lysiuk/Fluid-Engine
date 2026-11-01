@@ -38,3 +38,6 @@ mod gpu_context;
 
 #[path = "sim/stats.rs"]
 mod simulation_stats;
+
+#[path = "sim/simulation.rs"]
+mod simulation;
