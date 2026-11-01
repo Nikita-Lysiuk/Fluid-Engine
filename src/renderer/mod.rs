@@ -36,7 +36,9 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
 pub mod pipelines;
+#[path = "../render/frame_resources.rs"]
 mod resources;
+#[path = "../render/ui.rs"]
 mod ui;
 
 pub struct Renderer {

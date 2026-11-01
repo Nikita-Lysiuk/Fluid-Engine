@@ -34,6 +34,7 @@ use vulkano::shader::{EntryPoint, ShaderStages};
 use vulkano_util::context::VulkanoContext;
 
 pub mod collision_pipeline;
+#[path = "../../sim/neighbor_search.rs"]
 mod neighbor_search;
 pub mod point_pipeline;
 pub mod sky_pipeline;

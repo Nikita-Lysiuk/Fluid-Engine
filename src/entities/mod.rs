@@ -3,6 +3,7 @@ use vulkano::buffer::BufferContents;
 use vulkano::pipeline::graphics::vertex_input::Vertex;
 
 pub mod particle;
+#[path = "../camera.rs"]
 pub mod camera;
 pub mod sky;
 pub mod collision;
