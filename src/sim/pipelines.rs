@@ -1,28 +1,18 @@
 use crate::entities::particle::{stats_layout, ParticleBuffers, SimulationParams};
+#[path = "shaders.rs"]
+mod shaders;
 use std::sync::Arc;
+use crate::compute_pass::{ComputePass, new_pipeline};
+use crate::utils::shader_loader::load_shader_entry_point;
+use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo, DispatchIndirectCommand};
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Device;
 use vulkano::memory::allocator::StandardMemoryAllocator;
-#[path = "passes/density_alpha.rs"]
-mod density_alpha;
-use density_alpha::DensityAlphaPipeline;
-#[path = "passes/density_source_term.rs"]
-mod density_source_term;
-use density_source_term::DensitySourceTermPipeline;
-#[path = "passes/divergence_integration.rs"]
-mod divergence_integration;
-use divergence_integration::DivergenceIntegrationPipeline;
-#[path = "passes/divergence_source_term.rs"]
-mod divergence_source_term;
-use divergence_source_term::DivergenceSourceTermPipeline;
 #[path = "passes/pressure_force_pipeline.rs"]
 mod pressure_force_pipeline;
 use pressure_force_pipeline::PressureForcePipeline;
-#[path = "passes/pressure_integration_pipeline.rs"]
-mod pressure_integration_pipeline;
-use pressure_integration_pipeline::PressureIntegrationPipeline;
 #[path = "passes/pressure_update_pipeline.rs"]
 mod pressure_update_pipeline;
 use pressure_update_pipeline::PressureUpdatePipeline;
@@ -32,9 +22,6 @@ use solver_check::SolverCheckPipeline;
 #[path = "passes/stats_pipeline.rs"]
 mod stats_pipeline;
 use stats_pipeline::StatsPipeline;
-#[path = "passes/viscosity.rs"]
-mod viscosity;
-use viscosity::ViscosityPipeline;
 #[path = "neighbor_search.rs"]
 mod neighbor_search;
 use neighbor_search::NeighborSearch;
@@ -49,15 +36,16 @@ mod convergence_benchmark;
 mod substep_benchmark;
 
 pub struct ComputePipelines {
+    device: Arc<Device>,
     pub neighbor_search: NeighborSearch,
-    pub density_alpha: DensityAlphaPipeline,
-    pub viscosity: ViscosityPipeline,
-    pub density_source_term: DensitySourceTermPipeline,
+    pub density_alpha: Option<ComputePass>,
+    pub viscosity: Option<ComputePass>,
+    pub density_source_term: Option<ComputePass>,
     pub pressure_force: PressureForcePipeline,
     pub pressure_update: PressureUpdatePipeline,
-    pub pressure_integration: PressureIntegrationPipeline,
-    pub divergence_source_term: DivergenceSourceTermPipeline,
-    pub divergence_integration: DivergenceIntegrationPipeline,
+    pub pressure_integration: Option<ComputePass>,
+    pub divergence_source_term: Option<ComputePass>,
+    pub divergence_integration: Option<ComputePass>,
     pub stats: StatsPipeline,
     pub solver_check: SolverCheckPipeline,
 
@@ -115,18 +103,19 @@ impl ComputePipelines {
     ) -> Self {
         let neighbor_search =
             NeighborSearch::new_with_allocator(device.clone(), memory_allocator, sort_buffer_size);
-        let density_alpha = DensityAlphaPipeline::new(device.clone());
-        let viscosity = ViscosityPipeline::new(device.clone());
-        let density_source_term = DensitySourceTermPipeline::new(device.clone());
+        let density_alpha = None;
+        let viscosity = None;
+        let density_source_term = None;
         let pressure_force = PressureForcePipeline::new(device.clone());
         let pressure_update = PressureUpdatePipeline::new(device.clone());
-        let pressure_integration = PressureIntegrationPipeline::new(device.clone());
-        let divergence_source_term = DivergenceSourceTermPipeline::new(device.clone());
-        let divergence_integration = DivergenceIntegrationPipeline::new(device.clone());
+        let pressure_integration = None;
+        let divergence_source_term = None;
+        let divergence_integration = None;
         let stats = StatsPipeline::new(device.clone());
         let solver_check = SolverCheckPipeline::new(device.clone());
 
         Self {
+            device,
             neighbor_search,
             density_alpha,
             viscosity,
@@ -153,14 +142,96 @@ impl ComputePipelines {
         sim_params: &Subbuffer<SimulationParams>,
     ) {
         self.neighbor_search.prepare(allocator.clone(), physics_data, sim_params);
-        self.density_alpha.prepare(allocator.clone(), physics_data, sim_params);
-        self.viscosity.prepare(allocator.clone(), physics_data, sim_params);
-        self.density_source_term.prepare(allocator.clone(), physics_data, sim_params);
+        self.density_alpha = Some(ComputePass::new(
+            new_pipeline(self.device.clone(), load_shader_entry_point(self.device.clone(), shaders::density_alpha_shader::load, "main")),
+            allocator.clone(),
+            [
+                WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+                WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.densities.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.factors.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(7, physics_data.neighbor_counts.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
+        self.viscosity = Some(ComputePass::new(
+            new_pipeline(self.device.clone(), load_shader_entry_point(self.device.clone(), shaders::viscosity_shader::load, "main")),
+            allocator.clone(),
+            [
+                WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+                WriteDescriptorSet::buffer(3, physics_data.velocity_b.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.position_b.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.densities.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.velocity_a.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
+        self.density_source_term = Some(ComputePass::new(
+            new_pipeline(self.device.clone(), load_shader_entry_point(self.device.clone(), shaders::density_source_term_shader::load, "main")),
+            allocator.clone(),
+            [
+                WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+                WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.densities.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.velocity_a.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(7, physics_data.source_terms.clone()),
+                WriteDescriptorSet::buffer(8, physics_data.warm_start.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
         self.pressure_force.prepare(allocator.clone(), physics_data, sim_params);
         self.pressure_update.prepare(allocator.clone(), physics_data, sim_params);
-        self.pressure_integration.prepare(allocator.clone(), physics_data, sim_params);
-        self.divergence_source_term.prepare(allocator.clone(), physics_data, sim_params);
-        self.divergence_integration.prepare(allocator.clone(), physics_data, sim_params);
+        self.pressure_integration = Some(ComputePass::new(
+            new_pipeline(self.device.clone(), load_shader_entry_point(self.device.clone(), shaders::pressure_integration_shader::load, "main")),
+            allocator.clone(),
+            [
+                WriteDescriptorSet::buffer(0, physics_data.position_b.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.pressure_accelerations.clone()),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+                WriteDescriptorSet::buffer(3, physics_data.velocity_a.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.position_a.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
+        self.divergence_source_term = Some(ComputePass::new(
+            new_pipeline(self.device.clone(), load_shader_entry_point(self.device.clone(), shaders::divergence_source_term_shader::load, "main")),
+            allocator.clone(),
+            [
+                WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+                WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.velocity_a.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.source_terms.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(7, physics_data.warm_start.clone()),
+                WriteDescriptorSet::buffer(8, physics_data.densities.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
+        self.divergence_integration = Some(ComputePass::new(
+            new_pipeline(self.device.clone(), load_shader_entry_point(self.device.clone(), shaders::divergence_integration_shader::load, "main")),
+            allocator.clone(),
+            [
+                WriteDescriptorSet::buffer(0, physics_data.velocity_a.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.pressure_accelerations.clone()),
+                WriteDescriptorSet::buffer(2, sim_params.clone()),
+                WriteDescriptorSet::buffer(4, physics_data.colors.clone()),
+                WriteDescriptorSet::buffer(5, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
+            ],
+            physics_data.count.div_ceil(256),
+        ));
         self.stats.prepare(allocator.clone(), physics_data, sim_params);
         self.solver_check.prepare(allocator, physics_data);
 
@@ -172,22 +243,22 @@ impl ComputePipelines {
 
     pub fn record_init<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         self.neighbor_search.execute(builder);
-        self.density_alpha.execute(builder);
+        self.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(builder);
     }
 
     /// Records one DFSPH substep: non-pressure forces, density solve,
     /// position update, neighbour rebuild, divergence solve.
     pub fn record_substep<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, solver: &SolverSettings) {
-        self.viscosity.execute(builder);
-        self.density_source_term.execute(builder);
+        self.viscosity.as_ref().expect("prepare viscosity before dispatch").dispatch(builder);
+        self.density_source_term.as_ref().expect("prepare density_source_term before dispatch").dispatch(builder);
         self.record_pressure_solve(builder, &solver.density, PressureSolve::Density);
-        self.pressure_integration.execute(builder);
+        self.pressure_integration.as_ref().expect("prepare pressure_integration before dispatch").dispatch(builder);
 
         self.neighbor_search.execute(builder);
-        self.density_alpha.execute(builder);
-        self.divergence_source_term.execute(builder);
+        self.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(builder);
+        self.divergence_source_term.as_ref().expect("prepare divergence_source_term before dispatch").dispatch(builder);
         self.record_pressure_solve(builder, &solver.divergence, PressureSolve::Divergence);
-        self.divergence_integration.execute(builder);
+        self.divergence_integration.as_ref().expect("prepare divergence_integration before dispatch").dispatch(builder);
     }
 
     /// Jacobi iterations on the pressure in `physics_data.pressures`, starting

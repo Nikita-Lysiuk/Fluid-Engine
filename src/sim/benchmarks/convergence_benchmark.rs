@@ -502,7 +502,7 @@ fn rest_density_diagnostic() {
     )
     .unwrap();
     pipelines.neighbor_search.execute(&mut builder);
-    pipelines.density_alpha.execute(&mut builder);
+    pipelines.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(&mut builder);
     builder
         .copy_buffer(CopyBufferInfo::buffers(
             physics_data.densities.clone(),
@@ -652,7 +652,7 @@ fn density_after_warmup_diagnostic() {
         )
         .unwrap();
         pipelines.neighbor_search.execute(&mut builder);
-        pipelines.density_alpha.execute(&mut builder);
+        pipelines.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(&mut builder);
         builder
             .copy_buffer(CopyBufferInfo::buffers(
                 physics_data.densities.clone(),

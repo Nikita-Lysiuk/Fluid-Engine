@@ -96,23 +96,23 @@ fn profile_substep(
     };
 
     mark(&mut builder, "start");
-    pipelines.viscosity.execute(&mut builder);
+    pipelines.viscosity.as_ref().expect("prepare viscosity before dispatch").dispatch(&mut builder);
     mark(&mut builder, "viscosity");
-    pipelines.density_source_term.execute(&mut builder);
+    pipelines.density_source_term.as_ref().expect("prepare density_source_term before dispatch").dispatch(&mut builder);
     mark(&mut builder, "density_source_term");
     pipelines.record_pressure_solve(&mut builder, &solver.density, PressureSolve::Density);
     mark(&mut builder, "density_solve");
-    pipelines.pressure_integration.execute(&mut builder);
+    pipelines.pressure_integration.as_ref().expect("prepare pressure_integration before dispatch").dispatch(&mut builder);
     mark(&mut builder, "pressure_integration");
     pipelines.neighbor_search.execute(&mut builder);
     mark(&mut builder, "neighbor_search");
-    pipelines.density_alpha.execute(&mut builder);
+    pipelines.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(&mut builder);
     mark(&mut builder, "density_alpha");
-    pipelines.divergence_source_term.execute(&mut builder);
+    pipelines.divergence_source_term.as_ref().expect("prepare divergence_source_term before dispatch").dispatch(&mut builder);
     mark(&mut builder, "divergence_source_term");
     pipelines.record_pressure_solve(&mut builder, &solver.divergence, PressureSolve::Divergence);
     mark(&mut builder, "divergence_solve");
-    pipelines.divergence_integration.execute(&mut builder);
+    pipelines.divergence_integration.as_ref().expect("prepare divergence_integration before dispatch").dispatch(&mut builder);
     mark(&mut builder, "divergence_integration");
 
     submit_and_wait(queue, builder.build().unwrap());
