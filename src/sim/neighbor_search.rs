@@ -13,7 +13,7 @@ use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use crate::sim::particle_buffers::ParticleBuffers;
 use crate::sim::params::SimulationParams;
 use crate::sim::pipelines::SortAlgorithm;
-use crate::sim::pipelines::sorter::{BitonicSorter, RadixSorter};
+use crate::sim::sort::{BitonicSorter, RadixSorter};
 use crate::sim::shader_loader::load_shader_entry_point;
 
 mod cs_hash {

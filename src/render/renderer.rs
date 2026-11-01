@@ -7,7 +7,7 @@ use crate::sim::simulation::Simulation;
 use crate::sim::simulation_resources::SimulationResources;
 use crate::render::density_texture::DensityTexturePipeline;
 use crate::render::frame_resources::GpuSceneResources;
-use crate::render::ui::AppUI;
+use crate::render::ui::AppUi;
 use crate::render::ui;
 pub use crate::render::ui::RenderMode;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
@@ -44,7 +44,7 @@ pub struct Renderer {
     resources: GpuSceneResources,
 
     pub gui: Gui,
-    pub app_ui: AppUI,
+    pub app_ui: AppUi,
 
 
 }
@@ -128,7 +128,7 @@ impl Renderer {
             density_texture,
             simulation: Simulation::new(gpu_physics, simulation_resources, command_buffer_allocator.clone(), context.graphics_queue().queue_family_index()),
             gui,
-            app_ui: AppUI::new(),
+            app_ui: AppUi::new(),
         }
     }
     pub fn step(

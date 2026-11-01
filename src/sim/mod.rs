@@ -8,3 +8,5 @@ pub(crate) mod simulation_resources;
 pub(crate) mod spawn;
 pub(crate) mod stats;
 pub(crate) mod shader_loader;
+pub(crate) mod sort;
+pub(crate) mod solver_settings;

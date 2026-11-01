@@ -10,7 +10,7 @@ pub enum RenderMode {
     Particles,
 }
 
-pub struct AppUI {
+pub struct AppUi {
     pub show_controls: bool,
     pub render_mode: RenderMode,
     pub sort_algorithm: SortAlgorithm,
@@ -36,7 +36,7 @@ pub struct AppUI {
     pub display_divergence_iters_used: u32,
 }
 
-impl AppUI {
+impl AppUi {
     pub fn new() -> Self {
         Self {
             show_controls: true,

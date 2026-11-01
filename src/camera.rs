@@ -100,7 +100,7 @@ impl Camera {
         (self.orientation * Vec3::Y).normalize()
     }
     pub fn view_projection(&self) -> Mat4 {
-        self.get_projection_matrix() * self.get_view_matrix()
+        self.projection_matrix() * self.view_matrix()
     }
     /// Origin and direction of the ray through a window pixel (origin at the
     /// top-left corner, same units as `window_size`).
@@ -121,11 +121,11 @@ impl Camera {
         let ndc = clip.truncate() / clip.w;
         Some(Vec2::new((ndc.x + 1.0) * 0.5 * window_size.x, (1.0 - ndc.y) * 0.5 * window_size.y))
     }
-    fn get_view_matrix(&self) -> Mat4 {
+    fn view_matrix(&self) -> Mat4 {
         let target = self.position + self.forward();
         Mat4::look_at_lh(self.position, target, Vec3::Y)
     }
-    fn get_projection_matrix(&self) -> Mat4 {
+    fn projection_matrix(&self) -> Mat4 {
         Mat4::perspective_lh(self.fov.to_radians(), self.aspect_ratio, self.near, self.far)
     }
 }
@@ -159,8 +159,8 @@ impl CameraData {
         }
     }
     pub fn write_to_buffer(&self, camera: &Camera, current_frame_idx: usize) {
-        let view = camera.get_view_matrix();
-        let proj = camera.get_projection_matrix();
+        let view = camera.view_matrix();
+        let proj = camera.projection_matrix();
         let view_proj = proj * view;
         let inv_view_proj = view_proj.inverse();
 
