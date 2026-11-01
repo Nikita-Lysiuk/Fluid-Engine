@@ -1,4 +1,4 @@
-use crate::render::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 use crate::sim::compute_pass::ComputePass;
 use crate::sim::params::SimulationParams;
 use crate::sim::particle_buffers::ParticleBuffers;

@@ -1,4 +1,4 @@
-use crate::render::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::device::Device;
 use vulkano::format::Format;
@@ -98,13 +98,12 @@ impl CollisionPipeline {
                 ..GraphicsPipelineCreateInfo::layout(layout)
             },
         )
-        .map_err(|e| {
+        .unwrap_or_else(|e| {
             panic!(
                 "[Collision Pipeline] Failed to create graphics pipeline:\n{:?}",
                 e
             )
-        })
-        .unwrap();
+        });
 
         Self { inner: pipeline }
     }

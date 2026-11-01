@@ -179,10 +179,9 @@ impl CameraData {
                     ..AllocationCreateInfo::default()
                 },
             )
-            .map_err(|e| {
+            .unwrap_or_else(|e| {
                 panic!("[Camera Data] Failed to create uniform buffer:\n{:?}", e);
-            })
-            .unwrap();
+            });
             uniform_buffers.push(ub);
         }
 
@@ -204,20 +203,18 @@ impl CameraData {
 
         self.uniform_buffers[current_frame_idx]
             .write()
-            .map_err(|e| panic!("[Camera Data] Failed to write to uniform buffer:\n{:?}", e))
-            .unwrap()
+            .unwrap_or_else(|e| panic!("[Camera Data] Failed to write to uniform buffer:\n{:?}", e))
             .clone_from(&camera_gpu);
     }
     pub fn uniform_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.uniform_buffers[current_frame_idx]
             .device_address()
-            .map_err(|e| {
+            .unwrap_or_else(|e| {
                 panic!(
                     "[Camera Data] Failed to get uniform buffer device address:\n{:?}",
                     e
                 )
             })
-            .unwrap()
             .get()
     }
 }

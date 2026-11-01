@@ -76,7 +76,8 @@ impl ComputePass {
         builder: &mut AutoCommandBufferBuilder<Cb>,
         args: Subbuffer<[DispatchIndirectCommand]>,
     ) {
-        // SAFETY: the caller bound the pass and constants, and the solver writes valid workgroup counts.
+        // SAFETY: the caller bound the pass and constants, and the solver writes valid workgroup
+        //         counts.
         unsafe {
             builder
                 .dispatch_indirect(args)
@@ -102,7 +103,8 @@ impl ComputePass {
         args: Subbuffer<[DispatchIndirectCommand]>,
     ) {
         self.bind(builder);
-        // SAFETY: the bound pipeline and descriptors match, and the solver writes a valid workgroup count.
+        // SAFETY: the bound pipeline and descriptors match, and the solver writes a valid workgroup
+        //         count.
         unsafe {
             builder
                 .dispatch_indirect(args)

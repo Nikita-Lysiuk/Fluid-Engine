@@ -37,8 +37,7 @@ impl CollisionBoxData {
                 },
                 8,
             )
-            .map_err(|e| panic!("[CollisionBox] Failed to create vertex buffer:\n{:?}", e))
-            .unwrap();
+            .unwrap_or_else(|e| panic!("[CollisionBox] Failed to create vertex buffer:\n{:?}", e));
 
             let ib = Buffer::from_iter(
                 memory_allocator.clone(),
@@ -53,8 +52,7 @@ impl CollisionBoxData {
                 },
                 indices.iter().cloned(),
             )
-            .map_err(|e| panic!("[CollisionBox] Failed to create index buffer:\n{:?}", e))
-            .unwrap();
+            .unwrap_or_else(|e| panic!("[CollisionBox] Failed to create index buffer:\n{:?}", e));
 
             vertex_buffer.push(vb);
             index_buffer.push(ib);
@@ -98,8 +96,7 @@ impl CollisionBoxData {
 
         self.vertex_buffer[current_frame_idx]
             .write()
-            .map_err(|e| panic!("[CollisionBox] Failed to write to vertex buffer:\n{:?}", e))
-            .unwrap()
+            .unwrap_or_else(|e| panic!("[CollisionBox] Failed to write to vertex buffer:\n{:?}", e))
             .copy_from_slice(&vertices);
     }
 
@@ -110,13 +107,12 @@ impl CollisionBoxData {
     pub fn vertex_buffer_addr(&self, current_frame_idx: usize) -> u64 {
         self.vertex_buffer[current_frame_idx]
             .device_address()
-            .map_err(|e| {
+            .unwrap_or_else(|e| {
                 panic!(
                     "[CollisionBox] Failed to get vertex buffer device address:\n{:?}",
                     e
                 )
             })
-            .unwrap()
             .get()
     }
 
@@ -128,21 +124,22 @@ impl CollisionBoxData {
         camera_addr: u64,
         current_frame_idx: usize,
     ) {
-        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound
+        //         before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipelines.collision_pipeline.inner.clone())
-                .unwrap()
+                .expect("graphics pipeline can be bound")
                 .push_constants(
                     pipelines.common_layout.clone(),
                     0,
                     [camera_addr, self.vertex_buffer_addr(current_frame_idx)],
                 )
-                .unwrap()
+                .expect("push constants match the shader")
                 .bind_index_buffer(self.index_buffer[current_frame_idx].clone())
-                .unwrap()
+                .expect("index buffer can be bound")
                 .draw_indexed(self.index_len(current_frame_idx), 1, 0, 0, 0)
-                .unwrap();
+                .expect("indexed draw call is valid");
         }
     }
 }

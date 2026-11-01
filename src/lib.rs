@@ -7,4 +7,5 @@ pub mod frame_timer;
 pub mod input;
 mod render;
 pub mod scene;
+mod shader_loader;
 mod sim;

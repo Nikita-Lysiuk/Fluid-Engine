@@ -124,11 +124,12 @@ impl GpuRenderData {
         frame_idx: usize,
         count: u32,
     ) {
-        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound
+        //         before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipelines.point_pipeline.inner.clone())
-                .unwrap()
+                .expect("graphics pipeline can be bound")
                 .bind_vertex_buffers(
                     0,
                     (
@@ -137,13 +138,13 @@ impl GpuRenderData {
                         self.attribute_buffer.clone(),
                     ),
                 )
-                .unwrap()
+                .expect("vertex buffers can be bound")
                 .push_constants(
                     pipelines.point_pipeline.inner.layout().clone(),
                     0,
                     camera_addr,
                 )
-                .unwrap()
+                .expect("push constants match the shader")
                 .draw(count, 1, 0, 0)
                 .expect("Failed to bind particle vertex buffers");
         }

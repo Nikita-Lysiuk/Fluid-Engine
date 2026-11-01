@@ -102,7 +102,7 @@ impl Pipelines {
                 ..Default::default()
             },
         )
-        .unwrap();
+        .expect("descriptor set layout can be created");
 
         PipelineLayout::new(
             device,
@@ -112,7 +112,7 @@ impl Pipelines {
                 ..Default::default()
             },
         )
-        .unwrap()
+        .expect("pipeline layout can be created")
     }
     fn create_common_layout(device: Arc<Device>, pc: PushConstantRange) -> Arc<PipelineLayout> {
         PipelineLayout::new(
@@ -123,6 +123,6 @@ impl Pipelines {
                 ..Default::default()
             },
         )
-        .unwrap()
+        .expect("pipeline layout can be created")
     }
 }

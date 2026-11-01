@@ -1,8 +1,9 @@
+use crate::shader_loader::load_shader_entry_point;
 use crate::sim::compute_pass::{ComputePass, new_pipeline};
+use crate::sim::neighbor_search::NeighborSearch;
 use crate::sim::params::SimulationParams;
 use crate::sim::particle_buffers::ParticleBuffers;
 use crate::sim::particle_buffers::stats_layout;
-use crate::sim::shader_loader::load_shader_entry_point;
 use crate::sim::shaders;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
@@ -11,101 +12,59 @@ use vulkano::descriptor_set::WriteDescriptorSet;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Device;
 use vulkano::memory::allocator::StandardMemoryAllocator;
-#[path = "neighbor_search.rs"]
-mod neighbor_search;
-pub use crate::sim::sort::SortAlgorithm;
-use neighbor_search::NeighborSearch;
-#[cfg(test)]
-#[path = "benchmarks/convergence_benchmark.rs"]
-mod convergence_benchmark;
-#[cfg(test)]
-#[path = "benchmarks/substep_benchmark.rs"]
-mod substep_benchmark;
-
-/// Compute passes used by the fluid solver.
-pub struct ComputePipelines {
-    device: Arc<Device>,
-    num_particles: u32,
-    pub neighbor_search: NeighborSearch,
-    pub density_alpha: Option<ComputePass>,
-    pub viscosity: Option<ComputePass>,
-    pub density_source_term: Option<ComputePass>,
-    pub pressure_force: Option<ComputePass>,
-    pub pressure_update: Option<ComputePass>,
-    pub pressure_integration: Option<ComputePass>,
-    pub divergence_source_term: Option<ComputePass>,
-    pub divergence_integration: Option<ComputePass>,
-    /// Compute pass that records simulation statistics.
-    pub stats: Option<ComputePass>,
-    pub solver_check: Option<ComputePass>,
-
-    group_count: u32,
-    solver_state: Option<Subbuffer<[u32]>>,
-    solver_dispatch: Option<Subbuffer<[DispatchIndirectCommand]>>,
-    stats_buffer: Option<Subbuffer<[u32]>>,
-}
 
 pub use crate::sim::solver_settings::{PressureSolve, SolveSettings, SolverSettings};
+pub use crate::sim::sort::SortAlgorithm;
+
+/// Compute passes used by the fluid solver, bound to one set of particle buffers.
+/// The passes are visible inside the crate so that benchmarks can time them
+/// one by one.
+pub struct ComputePipelines {
+    num_particles: u32,
+    group_count: u32,
+    pub neighbor_search: NeighborSearch,
+    pub(crate) density_alpha: ComputePass,
+    pub(crate) viscosity: ComputePass,
+    pub(crate) density_source_term: ComputePass,
+    pub(crate) pressure_force: ComputePass,
+    pub(crate) pressure_update: ComputePass,
+    pub(crate) pressure_integration: ComputePass,
+    pub(crate) divergence_source_term: ComputePass,
+    pub(crate) divergence_integration: ComputePass,
+    pub(crate) stats: ComputePass,
+    pub(crate) solver_check: ComputePass,
+
+    solver_state: Subbuffer<[u32]>,
+    solver_dispatch: Subbuffer<[DispatchIndirectCommand]>,
+    stats_buffer: Subbuffer<[u32]>,
+}
 
 impl ComputePipelines {
-    /// Creates the associated resources.
+    /// Creates every physics pass for `physics_data`. The descriptor binding
+    /// numbers must match the `layout(binding = N)` of each shader.
     pub fn new(
         device: Arc<Device>,
         memory_allocator: Arc<StandardMemoryAllocator>,
-        sort_buffer_size: u32,
-    ) -> Self {
-        let neighbor_search =
-            NeighborSearch::new_with_allocator(device.clone(), memory_allocator, sort_buffer_size);
-        let density_alpha = None;
-        let viscosity = None;
-        let density_source_term = None;
-        let pressure_force = None;
-        let pressure_update = None;
-        let pressure_integration = None;
-        let divergence_source_term = None;
-        let divergence_integration = None;
-        let stats = None;
-        let solver_check = None;
-
-        Self {
-            device,
-            num_particles: 0,
-            neighbor_search,
-            density_alpha,
-            viscosity,
-            density_source_term,
-            pressure_force,
-            pressure_update,
-            pressure_integration,
-            divergence_source_term,
-            divergence_integration,
-            stats,
-            solver_check,
-            group_count: 0,
-            solver_state: None,
-            solver_dispatch: None,
-            stats_buffer: None,
-        }
-    }
-
-    /// Prepares every physics pass for `physics_data`.
-    pub fn prepare(
-        &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
-    ) {
-        self.neighbor_search
-            .prepare(allocator.clone(), physics_data, sim_params);
-        self.density_alpha = Some(ComputePass::new(
+    ) -> Self {
+        let neighbor_search = NeighborSearch::new(
+            device.clone(),
+            memory_allocator,
+            allocator.clone(),
+            physics_data,
+            sim_params,
+        );
+        let pipeline = |load| {
             new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::density_alpha_shader::load,
-                    "main",
-                ),
-            ),
+                device.clone(),
+                load_shader_entry_point(device.clone(), load, "main"),
+            )
+        };
+
+        let density_alpha = ComputePass::new(
+            pipeline(shaders::density_alpha_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
@@ -118,16 +77,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(7, physics_data.neighbor_counts.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.viscosity = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::viscosity_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let viscosity = ComputePass::new(
+            pipeline(shaders::viscosity_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
@@ -139,16 +91,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(6, physics_data.velocity_a.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.density_source_term = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::density_source_term_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let density_source_term = ComputePass::new(
+            pipeline(shaders::density_source_term_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
@@ -162,16 +107,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(8, physics_data.warm_start.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.pressure_force = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::pressure_force_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let pressure_force = ComputePass::new(
+            pipeline(shaders::pressure_force_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
@@ -183,16 +121,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(6, physics_data.pressure_accelerations.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.pressure_update = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::pressure_update_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let pressure_update = ComputePass::new(
+            pipeline(shaders::pressure_update_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
@@ -207,16 +138,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(9, physics_data.solver_state.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.pressure_integration = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::pressure_integration_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let pressure_integration = ComputePass::new(
+            pipeline(shaders::pressure_integration_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.position_b.clone()),
@@ -228,16 +152,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.divergence_source_term = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::divergence_source_term_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let divergence_source_term = ComputePass::new(
+            pipeline(shaders::divergence_source_term_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
@@ -251,16 +168,9 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(8, physics_data.densities.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.divergence_integration = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::divergence_integration_shader::load,
-                    "main",
-                ),
-            ),
+        );
+        let divergence_integration = ComputePass::new(
+            pipeline(shaders::divergence_integration_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.velocity_a.clone()),
@@ -271,65 +181,58 @@ impl ComputePipelines {
                 WriteDescriptorSet::buffer(6, physics_data.warm_start.clone()),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.stats = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(self.device.clone(), shaders::stats_shader::load, "main"),
-            ),
+        );
+        let stats = ComputePass::new(
+            pipeline(shaders::stats_shader::load),
             allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.velocity_a.clone()),
                 WriteDescriptorSet::buffer(1, physics_data.stats_buffer.clone().slice(0..1)),
             ],
             physics_data.count.div_ceil(256),
-        ));
-        self.solver_check = Some(ComputePass::new(
-            new_pipeline(
-                self.device.clone(),
-                load_shader_entry_point(
-                    self.device.clone(),
-                    shaders::solver_check_shader::load,
-                    "main",
-                ),
-            ),
-            allocator,
+        );
+        let solver_check = ComputePass::new(
+            pipeline(shaders::solver_check_shader::load),
+            allocator.clone(),
             [
                 WriteDescriptorSet::buffer(0, physics_data.solver_state.clone()),
                 WriteDescriptorSet::buffer(1, physics_data.solver_dispatch.clone()),
             ],
             1,
-        ));
+        );
 
-        self.num_particles = physics_data.count;
-        self.group_count = physics_data.count.div_ceil(256);
-        self.solver_state = Some(physics_data.solver_state.clone());
-        self.solver_dispatch = Some(physics_data.solver_dispatch.clone());
-        self.stats_buffer = Some(physics_data.stats_buffer.clone());
+        Self {
+            num_particles: physics_data.count,
+            group_count: physics_data.count.div_ceil(256),
+            neighbor_search,
+            density_alpha,
+            viscosity,
+            density_source_term,
+            pressure_force,
+            pressure_update,
+            pressure_integration,
+            divergence_source_term,
+            divergence_integration,
+            stats,
+            solver_check,
+            solver_state: physics_data.solver_state.clone(),
+            solver_dispatch: physics_data.solver_dispatch.clone(),
+            stats_buffer: physics_data.stats_buffer.clone(),
+        }
     }
 
     /// Clears and records the statistics pass.
     pub fn record_stats<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
-        let stats = self
-            .stats_buffer
-            .as_ref()
-            .expect("prepare statistics before dispatch");
         builder
-            .fill_buffer(stats.clone().slice(0..1), 0)
+            .fill_buffer(self.stats_buffer.clone().slice(0..1), 0)
             .expect("statistics can be cleared");
-        self.stats
-            .as_ref()
-            .expect("prepare statistics before dispatch")
-            .dispatch(builder);
+        self.stats.dispatch(builder);
     }
 
     /// Records commands needed before the first substep.
     pub fn record_init<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         self.neighbor_search.execute(builder);
-        self.density_alpha
-            .as_ref()
-            .expect("prepare density_alpha before dispatch")
-            .dispatch(builder);
+        self.density_alpha.dispatch(builder);
     }
 
     /// Records one DFSPH substep: non-pressure forces, density solve,
@@ -339,34 +242,16 @@ impl ComputePipelines {
         builder: &mut AutoCommandBufferBuilder<Cb>,
         solver: &SolverSettings,
     ) {
-        self.viscosity
-            .as_ref()
-            .expect("prepare viscosity before dispatch")
-            .dispatch(builder);
-        self.density_source_term
-            .as_ref()
-            .expect("prepare density_source_term before dispatch")
-            .dispatch(builder);
+        self.viscosity.dispatch(builder);
+        self.density_source_term.dispatch(builder);
         self.record_pressure_solve(builder, &solver.density, PressureSolve::Density);
-        self.pressure_integration
-            .as_ref()
-            .expect("prepare pressure_integration before dispatch")
-            .dispatch(builder);
+        self.pressure_integration.dispatch(builder);
 
         self.neighbor_search.execute(builder);
-        self.density_alpha
-            .as_ref()
-            .expect("prepare density_alpha before dispatch")
-            .dispatch(builder);
-        self.divergence_source_term
-            .as_ref()
-            .expect("prepare divergence_source_term before dispatch")
-            .dispatch(builder);
+        self.density_alpha.dispatch(builder);
+        self.divergence_source_term.dispatch(builder);
         self.record_pressure_solve(builder, &solver.divergence, PressureSolve::Divergence);
-        self.divergence_integration
-            .as_ref()
-            .expect("prepare divergence_integration before dispatch")
-            .dispatch(builder);
+        self.divergence_integration.dispatch(builder);
     }
 
     /// Jacobi iterations on the pressure in `physics_data.pressures`, starting
@@ -387,22 +272,13 @@ impl ComputePipelines {
             PressureSolve::Density => stats_layout::DENSITY_SOLVER,
             PressureSolve::Divergence => stats_layout::DIVERGENCE_SOLVER,
         };
-        let state = self
-            .solver_state
-            .clone()
-            .expect("ComputePipelines: call prepare() first");
-        let dispatch = self
-            .solver_dispatch
-            .clone()
-            .expect("ComputePipelines: call prepare() first");
-        let stats = self
-            .stats_buffer
-            .clone()
-            .expect("ComputePipelines: call prepare() first");
+        let state = self.solver_state.clone();
+        let dispatch = self.solver_dispatch.clone();
+        let stats = self.stats_buffer.clone();
 
         builder
             .update_buffer(state.clone(), Box::<[u32]>::from([0u32; 4]))
-            .unwrap();
+            .expect("solver state can be reset");
         builder
             .update_buffer(
                 dispatch.clone(),
@@ -412,20 +288,11 @@ impl ComputePipelines {
                     z: 1,
                 }]),
             )
-            .unwrap();
+            .expect("solver dispatch arguments can be reset");
 
-        let force = self
-            .pressure_force
-            .as_ref()
-            .expect("prepare pressure force before dispatch");
-        let update = self
-            .pressure_update
-            .as_ref()
-            .expect("prepare pressure update before dispatch");
-        let check = self
-            .solver_check
-            .as_ref()
-            .expect("prepare solver check before dispatch");
+        let force = &self.pressure_force;
+        let update = &self.pressure_update;
+        let check = &self.solver_check;
         force.dispatch(builder);
         for _ in 0..settings.max_iterations {
             update.bind_with_constants(
@@ -449,6 +316,6 @@ impl ComputePipelines {
 
         builder
             .copy_buffer(CopyBufferInfo::buffers(state, stats.slice(stats_range)))
-            .unwrap();
+            .expect("solver state can be copied to the stats buffer");
     }
 }

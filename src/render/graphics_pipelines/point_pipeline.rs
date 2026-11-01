@@ -1,4 +1,4 @@
-use crate::render::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::device::Device;
 use vulkano::format::Format;
@@ -151,8 +151,7 @@ impl PointPipeline {
                 ..GraphicsPipelineCreateInfo::layout(layout)
             },
         )
-        .map_err(|e| panic!("[Point Pipeline] Validation Error:\n{:?}", e))
-        .unwrap();
+        .unwrap_or_else(|e| panic!("[Point Pipeline] Validation Error:\n{:?}", e));
 
         Self { inner: pipeline }
     }

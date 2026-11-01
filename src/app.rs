@@ -48,7 +48,9 @@ pub struct App {
 
 impl App {
     pub fn new() -> Result<Self, AppError> {
-        SimpleLogger::new().init().unwrap();
+        SimpleLogger::new()
+            .init()
+            .expect("logger is initialised once");
         info!("[Engine] Initializing Engine Core...");
 
         let event_loop = EventLoop::new().map_err(|e| AppError::EventLoopInit(e))?;
@@ -250,6 +252,7 @@ impl ApplicationHandler for App {
             renderer.window_renderer.window().request_redraw();
         }
     }
+
     fn device_event(
         &mut self,
         _event_loop: &ActiveEventLoop,
@@ -264,6 +267,7 @@ impl ApplicationHandler for App {
             }
         }
     }
+
     fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
         info!("[Engine] Graceful shutdown...");
     }

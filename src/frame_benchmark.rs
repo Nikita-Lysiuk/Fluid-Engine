@@ -39,7 +39,7 @@ impl FrameBenchmark {
 
     pub fn report(&self) {
         let mut sorted = self.frame_ms.clone();
-        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        sorted.sort_by(|a, b| a.partial_cmp(b).expect("frame times are finite"));
         let n = sorted.len().max(1);
         let mean = sorted.iter().sum::<f32>() / n as f32;
         let p50 = sorted.get(n / 2).copied().unwrap_or(0.0);
@@ -47,7 +47,8 @@ impl FrameBenchmark {
         let max = sorted.last().copied().unwrap_or(0.0);
         let mean_substeps = self.substeps.iter().sum::<u32>() as f32 / n as f32;
         println!(
-            "BENCH frames={} mean_ms={mean:.2} p50_ms={p50:.2} p95_ms={p95:.2} max_ms={max:.1} fps={:.1} substeps/frame={mean_substeps:.2}",
+            "BENCH frames={} mean_ms={mean:.2} p50_ms={p50:.2} p95_ms={p95:.2} \
+             max_ms={max:.1} fps={:.1} substeps/frame={mean_substeps:.2}",
             sorted.len(),
             1000.0 / mean,
         );

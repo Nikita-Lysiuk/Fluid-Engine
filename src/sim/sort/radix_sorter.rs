@@ -1,5 +1,5 @@
+use crate::shader_loader::load_shader_entry_point;
 use crate::sim::particle_buffers::Entry;
-use crate::sim::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
@@ -70,7 +70,7 @@ impl RadixSorter {
             },
             sort_buffer_size as u64,
         )
-        .unwrap();
+        .expect("buffer can be created");
 
         let counts = Buffer::new_slice::<u32>(
             memory_allocator,
@@ -84,7 +84,7 @@ impl RadixSorter {
             },
             (num_work_groups * 256) as u64,
         )
-        .unwrap();
+        .expect("buffer can be created");
 
         let count_shader = load_shader_entry_point(device.clone(), cs_count::load, "main");
         let count_stage = PipelineShaderStageCreateInfo::new(count_shader);
@@ -92,15 +92,15 @@ impl RadixSorter {
             device.clone(),
             PipelineDescriptorSetLayoutCreateInfo::from_stages([&count_stage])
                 .into_pipeline_layout_create_info(device.clone())
-                .unwrap(),
+                .expect("shader pipeline layout is valid"),
         )
-        .unwrap();
+        .expect("pipeline layout can be created");
         let count_pipeline = ComputePipeline::new(
             device.clone(),
             None,
             ComputePipelineCreateInfo::stage_layout(count_stage, count_layout),
         )
-        .unwrap();
+        .expect("compute pipeline can be created");
 
         let scan_shader = load_shader_entry_point(device.clone(), cs_scan::load, "main");
         let scan_stage = PipelineShaderStageCreateInfo::new(scan_shader);
@@ -108,15 +108,15 @@ impl RadixSorter {
             device.clone(),
             PipelineDescriptorSetLayoutCreateInfo::from_stages([&scan_stage])
                 .into_pipeline_layout_create_info(device.clone())
-                .unwrap(),
+                .expect("shader pipeline layout is valid"),
         )
-        .unwrap();
+        .expect("pipeline layout can be created");
         let scan_pipeline = ComputePipeline::new(
             device.clone(),
             None,
             ComputePipelineCreateInfo::stage_layout(scan_stage, scan_layout),
         )
-        .unwrap();
+        .expect("compute pipeline can be created");
 
         let reorder_shader = load_shader_entry_point(device.clone(), cs_reorder::load, "main");
         let reorder_stage = PipelineShaderStageCreateInfo::new(reorder_shader);
@@ -124,15 +124,15 @@ impl RadixSorter {
             device.clone(),
             PipelineDescriptorSetLayoutCreateInfo::from_stages([&reorder_stage])
                 .into_pipeline_layout_create_info(device.clone())
-                .unwrap(),
+                .expect("shader pipeline layout is valid"),
         )
-        .unwrap();
+        .expect("pipeline layout can be created");
         let reorder_pipeline = ComputePipeline::new(
             device.clone(),
             None,
             ComputePipelineCreateInfo::stage_layout(reorder_stage, reorder_layout),
         )
-        .unwrap();
+        .expect("compute pipeline can be created");
 
         Self {
             entries_tmp,
@@ -156,7 +156,12 @@ impl RadixSorter {
         allocator: Arc<StandardDescriptorSetAllocator>,
         grid_entries: &Subbuffer<[Entry]>,
     ) {
-        let count_layout = self.count_pipeline.layout().set_layouts().get(0).unwrap();
+        let count_layout = self
+            .count_pipeline
+            .layout()
+            .set_layouts()
+            .get(0)
+            .expect("descriptor set layout 0 exists");
         self.even_count_set = Some(
             DescriptorSet::new(
                 allocator.clone(),
@@ -167,7 +172,7 @@ impl RadixSorter {
                 ],
                 [],
             )
-            .unwrap(),
+            .expect("descriptor set bindings match the shader"),
         );
         self.odd_count_set = Some(
             DescriptorSet::new(
@@ -179,10 +184,15 @@ impl RadixSorter {
                 ],
                 [],
             )
-            .unwrap(),
+            .expect("descriptor set bindings match the shader"),
         );
 
-        let scan_layout = self.scan_pipeline.layout().set_layouts().get(0).unwrap();
+        let scan_layout = self
+            .scan_pipeline
+            .layout()
+            .set_layouts()
+            .get(0)
+            .expect("descriptor set layout 0 exists");
         self.scan_set = Some(
             DescriptorSet::new(
                 allocator.clone(),
@@ -190,10 +200,15 @@ impl RadixSorter {
                 [WriteDescriptorSet::buffer(0, self.counts.clone())],
                 [],
             )
-            .unwrap(),
+            .expect("descriptor set bindings match the shader"),
         );
 
-        let reorder_layout = self.reorder_pipeline.layout().set_layouts().get(0).unwrap();
+        let reorder_layout = self
+            .reorder_pipeline
+            .layout()
+            .set_layouts()
+            .get(0)
+            .expect("descriptor set layout 0 exists");
         self.even_reorder_set = Some(
             DescriptorSet::new(
                 allocator.clone(),
@@ -205,7 +220,7 @@ impl RadixSorter {
                 ],
                 [],
             )
-            .unwrap(),
+            .expect("descriptor set bindings match the shader"),
         );
         self.odd_reorder_set = Some(
             DescriptorSet::new(
@@ -218,7 +233,7 @@ impl RadixSorter {
                 ],
                 [],
             )
-            .unwrap(),
+            .expect("descriptor set bindings match the shader"),
         );
     }
 
@@ -234,7 +249,7 @@ impl RadixSorter {
                     color: [0.0, 1.0, 0.2, 1.0],
                     ..Default::default()
                 })
-                .unwrap();
+                .expect("debug label can be opened");
 
             let shift = pass * 8;
             let is_even = pass % 2 == 0;
@@ -246,22 +261,26 @@ impl RadixSorter {
                     color: [0.2, 0.4, 1.0, 1.0],
                     ..Default::default()
                 })
-                .unwrap();
+                .expect("debug label can be opened");
             let count_set = if is_even {
-                self.even_count_set.as_ref().unwrap()
+                self.even_count_set
+                    .as_ref()
+                    .expect("prepare() was called before recording")
             } else {
-                self.odd_count_set.as_ref().unwrap()
+                self.odd_count_set
+                    .as_ref()
+                    .expect("prepare() was called before recording")
             };
             builder
                 .bind_pipeline_compute(self.count_pipeline.clone())
-                .unwrap()
+                .expect("compute pipeline can be bound")
                 .bind_descriptor_sets(
                     PipelineBindPoint::Compute,
                     self.count_pipeline.layout().clone(),
                     0,
                     count_set.clone(),
                 )
-                .unwrap()
+                .expect("descriptor set can be bound")
                 .push_constants(
                     self.count_pipeline.layout().clone(),
                     0,
@@ -272,11 +291,16 @@ impl RadixSorter {
                         elements_per_invocation: ELEMENTS_PER_INVOCATION,
                     },
                 )
-                .unwrap();
-            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the debug label is open.
+                .expect("push constants match the shader");
+            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the
+            //         debug label is open.
             unsafe {
-                builder.dispatch([num_work_groups, 1, 1]).unwrap();
-                builder.end_debug_utils_label().unwrap();
+                builder
+                    .dispatch([num_work_groups, 1, 1])
+                    .expect("compute dispatch is valid");
+                builder
+                    .end_debug_utils_label()
+                    .expect("debug label can be closed");
             }
 
             // ── Scan ─────────────────────────────────────────────────────────
@@ -286,17 +310,20 @@ impl RadixSorter {
                     color: [1.0, 0.8, 0.0, 1.0],
                     ..Default::default()
                 })
-                .unwrap();
+                .expect("debug label can be opened");
             builder
                 .bind_pipeline_compute(self.scan_pipeline.clone())
-                .unwrap()
+                .expect("compute pipeline can be bound")
                 .bind_descriptor_sets(
                     PipelineBindPoint::Compute,
                     self.scan_pipeline.layout().clone(),
                     0,
-                    self.scan_set.as_ref().unwrap().clone(),
+                    self.scan_set
+                        .as_ref()
+                        .expect("prepare() was called before recording")
+                        .clone(),
                 )
-                .unwrap()
+                .expect("descriptor set can be bound")
                 .push_constants(
                     self.scan_pipeline.layout().clone(),
                     0,
@@ -304,11 +331,16 @@ impl RadixSorter {
                         num_workgroups: num_work_groups,
                     },
                 )
-                .unwrap();
-            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the debug label is open.
+                .expect("push constants match the shader");
+            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the
+            //         debug label is open.
             unsafe {
-                builder.dispatch([1, 1, 1]).unwrap();
-                builder.end_debug_utils_label().unwrap();
+                builder
+                    .dispatch([1, 1, 1])
+                    .expect("compute dispatch is valid");
+                builder
+                    .end_debug_utils_label()
+                    .expect("debug label can be closed");
             }
 
             // ── Reorder ──────────────────────────────────────────────────────
@@ -318,22 +350,26 @@ impl RadixSorter {
                     color: [1.0, 0.2, 0.2, 1.0],
                     ..Default::default()
                 })
-                .unwrap();
+                .expect("debug label can be opened");
             let reorder_set = if is_even {
-                self.even_reorder_set.as_ref().unwrap()
+                self.even_reorder_set
+                    .as_ref()
+                    .expect("prepare() was called before recording")
             } else {
-                self.odd_reorder_set.as_ref().unwrap()
+                self.odd_reorder_set
+                    .as_ref()
+                    .expect("prepare() was called before recording")
             };
             builder
                 .bind_pipeline_compute(self.reorder_pipeline.clone())
-                .unwrap()
+                .expect("compute pipeline can be bound")
                 .bind_descriptor_sets(
                     PipelineBindPoint::Compute,
                     self.reorder_pipeline.layout().clone(),
                     0,
                     reorder_set.clone(),
                 )
-                .unwrap()
+                .expect("descriptor set can be bound")
                 .push_constants(
                     self.reorder_pipeline.layout().clone(),
                     0,
@@ -344,16 +380,23 @@ impl RadixSorter {
                         elements_per_invocation: ELEMENTS_PER_INVOCATION,
                     },
                 )
-                .unwrap();
-            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the debug label is open.
+                .expect("push constants match the shader");
+            // SAFETY: the compute pipeline, descriptor set, and push constants are bound above; the
+            //         debug label is open.
             unsafe {
-                builder.dispatch([num_work_groups, 1, 1]).unwrap();
-                builder.end_debug_utils_label().unwrap();
+                builder
+                    .dispatch([num_work_groups, 1, 1])
+                    .expect("compute dispatch is valid");
+                builder
+                    .end_debug_utils_label()
+                    .expect("debug label can be closed");
             }
 
             // SAFETY: the enclosing radix pass debug label was opened above.
             unsafe {
-                builder.end_debug_utils_label().unwrap();
+                builder
+                    .end_debug_utils_label()
+                    .expect("debug label can be closed");
             }
         }
     }

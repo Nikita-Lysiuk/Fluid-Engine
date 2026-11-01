@@ -81,15 +81,6 @@ pub(super) fn make_context() -> Arc<VulkanoContext> {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-pub(super) fn prepare_all_pipelines(
-    pipelines: &mut ComputePipelines,
-    ds_alloc: Arc<StandardDescriptorSetAllocator>,
-    physics_data: &ParticleBuffers,
-    sim_params: &Subbuffer<SimulationParams>,
-) {
-    pipelines.prepare(ds_alloc, physics_data, sim_params);
-}
-
 // Records and submits `n_substeps` substeps in a single command buffer. The
 // substep body mirrors `Renderer::step()` exactly: viscosity, density source,
 // density solver loop, pressure integration, neighbor search rebuild,
@@ -272,13 +263,9 @@ fn solver_convergence_benchmark() {
         )
         .unwrap();
 
-        let mut pipelines = ComputePipelines::new(
+        let pipelines = ComputePipelines::new(
             device.clone(),
             memory_allocator.clone(),
-            physics_data.grid_entries.len() as u32,
-        );
-        prepare_all_pipelines(
-            &mut pipelines,
             ds_allocator.clone(),
             &physics_data,
             &sim_params_buffer,
@@ -510,13 +497,9 @@ fn rest_density_diagnostic() {
     )
     .unwrap();
 
-    let mut pipelines = ComputePipelines::new(
+    let pipelines = ComputePipelines::new(
         device.clone(),
         memory_allocator.clone(),
-        physics_data.grid_entries.len() as u32,
-    );
-    prepare_all_pipelines(
-        &mut pipelines,
         ds_allocator.clone(),
         &physics_data,
         &sim_params_buffer,
@@ -532,11 +515,7 @@ fn rest_density_diagnostic() {
     )
     .unwrap();
     pipelines.neighbor_search.execute(&mut builder);
-    pipelines
-        .density_alpha
-        .as_ref()
-        .expect("prepare density_alpha before dispatch")
-        .dispatch(&mut builder);
+    pipelines.density_alpha.dispatch(&mut builder);
     builder
         .copy_buffer(CopyBufferInfo::buffers(
             physics_data.densities.clone(),
@@ -670,13 +649,9 @@ fn density_after_warmup_diagnostic() {
     )
     .unwrap();
 
-    let mut pipelines = ComputePipelines::new(
+    let pipelines = ComputePipelines::new(
         device.clone(),
         memory_allocator.clone(),
-        physics_data.grid_entries.len() as u32,
-    );
-    prepare_all_pipelines(
-        &mut pipelines,
         ds_allocator.clone(),
         &physics_data,
         &sim_params_buffer,
@@ -693,11 +668,7 @@ fn density_after_warmup_diagnostic() {
         )
         .unwrap();
         pipelines.neighbor_search.execute(&mut builder);
-        pipelines
-            .density_alpha
-            .as_ref()
-            .expect("prepare density_alpha before dispatch")
-            .dispatch(&mut builder);
+        pipelines.density_alpha.dispatch(&mut builder);
         builder
             .copy_buffer(CopyBufferInfo::buffers(
                 physics_data.densities.clone(),
@@ -875,13 +846,9 @@ fn cfl_comparison() {
         )
         .unwrap();
 
-        let mut pipelines = ComputePipelines::new(
+        let pipelines = ComputePipelines::new(
             device.clone(),
             memory_allocator.clone(),
-            physics_data.grid_entries.len() as u32,
-        );
-        prepare_all_pipelines(
-            &mut pipelines,
             ds_allocator.clone(),
             &physics_data,
             &sim_params_buffer,

@@ -307,6 +307,6 @@ impl ParticleBuffers {
             },
             count,
         )
-        .unwrap()
+        .expect("buffer can be created")
     }
 }

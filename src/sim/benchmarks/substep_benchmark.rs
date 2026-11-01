@@ -27,7 +27,7 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::query::{QueryPool, QueryPoolCreateInfo, QueryResultFlags, QueryType};
 use vulkano::sync::{self, GpuFuture, PipelineStage};
 
-use super::convergence_benchmark::{make_context, prepare_all_pipelines};
+use super::convergence_benchmark::make_context;
 use crate::scene::Scene;
 use crate::sim::particle_buffers::ParticleBuffers;
 use crate::sim::pipelines::{ComputePipelines, PressureSolve, SolverSettings, SortAlgorithm};
@@ -108,47 +108,23 @@ fn profile_substep(
     };
 
     mark(&mut builder, "start");
-    pipelines
-        .viscosity
-        .as_ref()
-        .expect("prepare viscosity before dispatch")
-        .dispatch(&mut builder);
+    pipelines.viscosity.dispatch(&mut builder);
     mark(&mut builder, "viscosity");
-    pipelines
-        .density_source_term
-        .as_ref()
-        .expect("prepare density_source_term before dispatch")
-        .dispatch(&mut builder);
+    pipelines.density_source_term.dispatch(&mut builder);
     mark(&mut builder, "density_source_term");
     pipelines.record_pressure_solve(&mut builder, &solver.density, PressureSolve::Density);
     mark(&mut builder, "density_solve");
-    pipelines
-        .pressure_integration
-        .as_ref()
-        .expect("prepare pressure_integration before dispatch")
-        .dispatch(&mut builder);
+    pipelines.pressure_integration.dispatch(&mut builder);
     mark(&mut builder, "pressure_integration");
     pipelines.neighbor_search.execute(&mut builder);
     mark(&mut builder, "neighbor_search");
-    pipelines
-        .density_alpha
-        .as_ref()
-        .expect("prepare density_alpha before dispatch")
-        .dispatch(&mut builder);
+    pipelines.density_alpha.dispatch(&mut builder);
     mark(&mut builder, "density_alpha");
-    pipelines
-        .divergence_source_term
-        .as_ref()
-        .expect("prepare divergence_source_term before dispatch")
-        .dispatch(&mut builder);
+    pipelines.divergence_source_term.dispatch(&mut builder);
     mark(&mut builder, "divergence_source_term");
     pipelines.record_pressure_solve(&mut builder, &solver.divergence, PressureSolve::Divergence);
     mark(&mut builder, "divergence_solve");
-    pipelines
-        .divergence_integration
-        .as_ref()
-        .expect("prepare divergence_integration before dispatch")
-        .dispatch(&mut builder);
+    pipelines.divergence_integration.dispatch(&mut builder);
     mark(&mut builder, "divergence_integration");
 
     submit_and_wait(queue, builder.build().unwrap());
@@ -237,9 +213,10 @@ fn run_substep_benchmark(particle_count: u32) {
         let mut pipelines = ComputePipelines::new(
             device.clone(),
             memory_allocator.clone(),
-            physics_data.grid_entries.len() as u32,
+            ds_alloc,
+            &physics_data,
+            &sim_params_buffer,
         );
-        prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
         pipelines.neighbor_search.sort_algorithm = sort_algorithm;
 
         let mut init = AutoCommandBufferBuilder::primary(
@@ -304,7 +281,8 @@ fn run_substep_benchmark(particle_count: u32) {
         println!("    {:<30} {total:>8.3} ms", "total");
         let stats = super::convergence_benchmark::read_stats(&physics_data, scene.sim_params.dt);
         println!(
-            "    iterations: density {} (avg err {:.3} kg/m³), divergence {} (avg err {:.3} kg/m³/s)",
+            "    iterations: density {} (avg err {:.3} kg/m³), \
+             divergence {} (avg err {:.3} kg/m³/s)",
             stats.density_iterations,
             stats.density_error,
             stats.divergence_iterations,
@@ -365,12 +343,13 @@ fn solver_iterations_over_time() {
         scene.sim_params,
     )
     .unwrap();
-    let mut pipelines = ComputePipelines::new(
+    let pipelines = ComputePipelines::new(
         device.clone(),
         memory_allocator.clone(),
-        physics_data.grid_entries.len() as u32,
+        ds_alloc,
+        &physics_data,
+        &sim_params_buffer,
     );
-    prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
 
     println!(
         "{:>7} {:>6}  {:>9} {:>12}  {:>9} {:>14}",
@@ -452,12 +431,13 @@ fn attractor_gathers_water() {
         scene.sim_params,
     )
     .unwrap();
-    let mut pipelines = ComputePipelines::new(
+    let pipelines = ComputePipelines::new(
         device.clone(),
         memory_allocator.clone(),
-        physics_data.grid_entries.len() as u32,
+        ds_alloc,
+        &physics_data,
+        &sim_params_buffer,
     );
-    prepare_all_pipelines(&mut pipelines, ds_alloc, &physics_data, &sim_params_buffer);
 
     let run = |substeps: u32, init: bool| {
         let mut builder = AutoCommandBufferBuilder::primary(

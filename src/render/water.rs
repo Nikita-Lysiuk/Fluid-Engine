@@ -55,7 +55,7 @@ impl WaterRenderer {
             },
             vertices,
         )
-        .unwrap();
+        .expect("buffer can be created");
 
         let index_buffer = Buffer::from_iter(
             memory_allocator.clone(),
@@ -70,7 +70,7 @@ impl WaterRenderer {
             },
             indices.clone(),
         )
-        .unwrap();
+        .expect("buffer can be created");
 
         let density_sampler = Sampler::new(
             memory_allocator.device().clone(),
@@ -82,7 +82,7 @@ impl WaterRenderer {
                 ..SamplerCreateInfo::default()
             },
         )
-        .unwrap();
+        .expect("sampler can be created");
 
         let skybox_sampler = Sampler::new(
             memory_allocator.device().clone(),
@@ -92,9 +92,12 @@ impl WaterRenderer {
                 ..SamplerCreateInfo::default()
             },
         )
-        .unwrap();
+        .expect("sampler can be created");
 
-        let set_layout = pipeline_layout.set_layouts().get(0).unwrap();
+        let set_layout = pipeline_layout
+            .set_layouts()
+            .get(0)
+            .expect("descriptor set layout 0 exists");
         let descriptor_set = DescriptorSet::new(
             descriptor_set_allocator,
             set_layout.clone(),
@@ -105,7 +108,7 @@ impl WaterRenderer {
             ],
             [],
         )
-        .unwrap();
+        .expect("descriptor set bindings match the shader");
 
         Self {
             vertex_buffer,
@@ -171,26 +174,27 @@ impl WaterRenderer {
             model: model_matrix.to_cols_array_2d(),
         };
 
-        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound
+        //         before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipeline.clone())
-                .unwrap()
+                .expect("graphics pipeline can be bound")
                 .bind_descriptor_sets(
                     PipelineBindPoint::Graphics,
                     pipeline.layout().clone(),
                     0,
                     self.descriptor_set.clone(),
                 )
-                .unwrap()
+                .expect("descriptor set can be bound")
                 .bind_vertex_buffers(0, self.vertex_buffer.clone())
-                .unwrap()
+                .expect("vertex buffers can be bound")
                 .bind_index_buffer(self.index_buffer.clone())
-                .unwrap()
+                .expect("index buffer can be bound")
                 .push_constants(pipeline.layout().clone(), 0, push_data)
-                .unwrap()
+                .expect("push constants match the shader")
                 .draw_indexed(self.index_count, 1, 0, 0, 0)
-                .unwrap();
+                .expect("indexed draw call is valid");
         }
     }
 }

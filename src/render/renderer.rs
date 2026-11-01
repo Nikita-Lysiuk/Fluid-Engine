@@ -83,14 +83,9 @@ impl Renderer {
             ),
         );
 
-        let sort_buffer_size = simulation_resources.physics_data.grid_entries.len() as u32;
-        let mut gpu_physics = ComputePipelines::new(
+        let gpu_physics = ComputePipelines::new(
             context.device().clone(),
             context.memory_allocator().clone(),
-            sort_buffer_size,
-        );
-
-        gpu_physics.prepare(
             descriptor_set_allocator.clone(),
             &simulation_resources.physics_data,
             &simulation_resources.sim_params_buffer,
@@ -165,10 +160,10 @@ impl Renderer {
             |builder| {
                 builder
                     .copy_buffer(CopyBufferInfo::buffers(position, render_positions))
-                    .unwrap();
+                    .expect("buffer copy is valid");
                 builder
                     .copy_buffer(CopyBufferInfo::buffers(colors, render_colors))
-                    .unwrap();
+                    .expect("buffer copy is valid");
             },
         );
         if let Some(stats) = frame.stats {
@@ -196,8 +191,7 @@ impl Renderer {
         let acquire_future = self
             .window_renderer
             .acquire(None, |_| {})
-            .map_err(|e| panic!("[Renderer] Failed to acquire swapchain image: {:?}", e))
-            .unwrap();
+            .unwrap_or_else(|e| panic!("[Renderer] Failed to acquire swapchain image: {:?}", e));
 
         let physics_semaphore = self.step(scene, safe_dt, acquire_future.boxed());
 
@@ -206,18 +200,19 @@ impl Renderer {
             self.context.graphics_queue().queue_family_index(),
             CommandBufferUsage::OneTimeSubmit,
         )
-        .map_err(|e| {
+        .unwrap_or_else(|e| {
             panic!(
                 "[Renderer] Failed to create command buffer builder: {:?}",
                 e
             )
-        })
-        .unwrap();
+        });
 
         if self.app_ui.render_mode == RenderMode::Raymarching {
             let mut clear_info = ClearColorImageInfo::image(self.resources.density_texture.clone());
             clear_info.clear_value = ClearColorValue::Uint([0; 4]);
-            builder.clear_color_image(clear_info).unwrap();
+            builder
+                .clear_color_image(clear_info)
+                .expect("image clear is valid");
             self.density_texture.execute(&mut builder);
         }
 
@@ -254,19 +249,16 @@ impl Renderer {
                 }),
                 ..RenderingInfo::default()
             })
-            .map_err(|e| {
+            .unwrap_or_else(|e| {
                 panic!(
                     "[Renderer] Failed to create command buffer builder: {:?}",
                     e
                 )
             })
-            .unwrap()
             .set_viewport(0, [viewport.clone()].into_iter().collect())
-            .map_err(|e| panic!("[Renderer] Failed to set viewport: {:?}", e))
-            .unwrap()
+            .unwrap_or_else(|e| panic!("[Renderer] Failed to set viewport: {:?}", e))
             .set_scissor(0, [scissor.clone()].into_iter().collect())
-            .map_err(|e| panic!("[Renderer] Failed to set scissor: {:?}", e))
-            .unwrap();
+            .unwrap_or_else(|e| panic!("[Renderer] Failed to set scissor: {:?}", e));
 
         self.sky_data.bind_to_command_buffer(
             &mut builder,
@@ -298,16 +290,15 @@ impl Renderer {
 
         builder
             .end_rendering()
-            .map_err(|e| panic!("[Renderer] Failed to end rendering: {:?}", e))
-            .unwrap();
-        let render_command_buffer = builder.build().unwrap();
+            .unwrap_or_else(|e| panic!("[Renderer] Failed to end rendering: {:?}", e));
+        let render_command_buffer = builder.build().expect("recorded commands are valid");
 
         let render_future = physics_semaphore
             .then_execute(
                 self.window_renderer.graphics_queue().clone(),
                 render_command_buffer,
             )
-            .unwrap();
+            .expect("commands can be submitted");
 
         let gui_future = self
             .gui

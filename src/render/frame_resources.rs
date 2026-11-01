@@ -49,9 +49,10 @@ impl GpuSceneResources {
             },
             AllocationCreateInfo::default(),
         )
-        .unwrap();
+        .expect("image can be created");
 
-        let density_view = ImageView::new_default(density_texture.clone()).unwrap();
+        let density_view =
+            ImageView::new_default(density_texture.clone()).expect("image view can be created");
 
         Self {
             camera_data: CameraData::new(allocator.clone()),
@@ -86,7 +87,6 @@ impl GpuSceneResources {
             self.camera_addr(),
             self.current_frame_idx,
         );
-        //self.render_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx, self.physics_data.count);
     }
 
     /// Advances to the next frame resource slot.

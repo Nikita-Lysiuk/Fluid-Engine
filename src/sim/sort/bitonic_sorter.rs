@@ -1,6 +1,6 @@
+use crate::shader_loader::load_shader_entry_point;
 use crate::sim::params::SimulationParams;
 use crate::sim::particle_buffers::ParticleBuffers;
-use crate::sim::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
@@ -52,7 +52,12 @@ impl BitonicSorter {
             "BitonicSorter: Buffer len must be power of 2"
         );
 
-        let layout = self.pipeline.layout().set_layouts().get(0).unwrap();
+        let layout = self
+            .pipeline
+            .layout()
+            .set_layouts()
+            .get(0)
+            .expect("descriptor set layout 0 exists");
         self.descriptor_set = Some(
             DescriptorSet::new(
                 allocator,
@@ -60,7 +65,7 @@ impl BitonicSorter {
                 [WriteDescriptorSet::buffer(0, grid_entries.clone())],
                 [],
             )
-            .unwrap(),
+            .expect("descriptor set bindings match the shader"),
         );
     }
     /// Records the associated GPU commands.
@@ -83,16 +88,16 @@ impl BitonicSorter {
 
                 builder
                     .bind_pipeline_compute(self.pipeline.clone())
-                    .unwrap()
+                    .expect("compute pipeline can be bound")
                     .bind_descriptor_sets(
                         PipelineBindPoint::Compute,
                         self.pipeline.layout().clone(),
                         0,
                         set.clone(),
                     )
-                    .unwrap()
+                    .expect("descriptor set can be bound")
                     .push_constants(self.pipeline.layout().clone(), 0, pc)
-                    .unwrap();
+                    .expect("push constants match the shader");
 
                 let threads_needed = num_elements / 2;
                 let group_size = 256;
@@ -100,7 +105,9 @@ impl BitonicSorter {
 
                 // SAFETY: the compute pipeline, descriptors, and sort constants are bound above.
                 unsafe {
-                    builder.dispatch([dispatch_count, 1, 1]).unwrap();
+                    builder
+                        .dispatch([dispatch_count, 1, 1])
+                        .expect("compute dispatch is valid");
                 }
 
                 step /= 2;

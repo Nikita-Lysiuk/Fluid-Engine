@@ -59,8 +59,7 @@ impl SkyData {
             },
             vertices,
         )
-        .map_err(|e| panic!("[SkySphere] Failed to create vertex buffer:\n{:?}", e))
-        .unwrap();
+        .unwrap_or_else(|e| panic!("[SkySphere] Failed to create vertex buffer:\n{:?}", e));
 
         let index_buffer = Buffer::from_iter(
             memory_allocator.clone(),
@@ -75,8 +74,7 @@ impl SkyData {
             },
             indices.clone(),
         )
-        .map_err(|e| panic!("[SkySphere] Failed to create index buffer:\n{:?}", e))
-        .unwrap();
+        .unwrap_or_else(|e| panic!("[SkySphere] Failed to create index buffer:\n{:?}", e));
 
         let (descriptor_set, texture_view) = Self::load_hdri_texture(
             path_to_hdri,
@@ -144,14 +142,12 @@ impl SkyData {
         sky_layout: Arc<PipelineLayout>,
         queue: Arc<Queue>,
     ) -> (Arc<DescriptorSet>, Arc<ImageView>) {
-        let img = image::open(path)
-            .map_err(|e| {
-                panic!(
-                    "[SkySphere] Failed to load HDRI image from path {}:\n{:?}",
-                    path, e
-                )
-            })
-            .unwrap();
+        let img = image::open(path).unwrap_or_else(|e| {
+            panic!(
+                "[SkySphere] Failed to load HDRI image from path {}:\n{:?}",
+                path, e
+            )
+        });
         let dims = img.dimensions();
         let rgba_data = img.to_rgba32f().into_raw();
 
@@ -166,8 +162,7 @@ impl SkyData {
             },
             AllocationCreateInfo::default(),
         )
-        .map_err(|e| panic!("[SkySphere] Failed to create HDRI image:\n{:?}", e))
-        .unwrap();
+        .unwrap_or_else(|e| panic!("[SkySphere] Failed to create HDRI image:\n{:?}", e));
 
         let staging_buffer = Buffer::from_iter(
             memory_allocator.clone(),
@@ -182,77 +177,71 @@ impl SkyData {
             },
             rgba_data,
         )
-        .map_err(|e| {
+        .unwrap_or_else(|e| {
             panic!(
                 "[SkySphere] Failed to create staging buffer for HDRI texture:\n{:?}",
                 e
             )
-        })
-        .unwrap();
+        });
 
         let mut builder = AutoCommandBufferBuilder::primary(
             command_buffer_allocator,
             queue.queue_family_index(),
             CommandBufferUsage::OneTimeSubmit,
         )
-        .map_err(|e| {
+        .unwrap_or_else(|e| {
             panic!(
                 "[SkySphere] Failed to create command buffer builder:\n{:?}",
                 e
             )
-        })
-        .unwrap();
+        });
 
         builder
             .copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(
                 staging_buffer,
                 texture.clone(),
             ))
-            .map_err(|e| {
+            .unwrap_or_else(|e| {
                 panic!(
                     "[SkySphere] Failed to record buffer to image copy command:\n{:?}",
                     e
                 )
-            })
-            .unwrap();
+            });
 
         let command_buffer = builder
             .build()
-            .map_err(|e| panic!("[SkySphere] Failed to build command buffer:\n{:?}", e))
-            .unwrap();
+            .unwrap_or_else(|e| panic!("[SkySphere] Failed to build command buffer:\n{:?}", e));
 
         command_buffer
             .execute(queue.clone())
-            .map_err(|e| panic!("[SkySphere] Failed to execute command buffer:\n{:?}", e))
-            .unwrap()
+            .unwrap_or_else(|e| panic!("[SkySphere] Failed to execute command buffer:\n{:?}", e))
             .then_signal_fence_and_flush()
-            .map_err(|e| panic!("[SkySphere] Failed to flush command buffer:\n{:?}", e))
-            .unwrap()
+            .unwrap_or_else(|e| panic!("[SkySphere] Failed to flush command buffer:\n{:?}", e))
             .wait(None)
-            .map_err(|e| {
+            .unwrap_or_else(|e| {
                 panic!(
                     "[SkySphere] Failed to wait for command buffer execution:\n{:?}",
                     e
                 )
-            })
-            .unwrap();
+            });
 
-        let texture_view = ImageView::new_default(texture)
-            .map_err(|e| {
-                panic!(
-                    "[SkySphere] Failed to create image view for HDRI texture:\n{:?}",
-                    e
-                )
-            })
-            .unwrap();
+        let texture_view = ImageView::new_default(texture).unwrap_or_else(|e| {
+            panic!(
+                "[SkySphere] Failed to create image view for HDRI texture:\n{:?}",
+                e
+            )
+        });
 
         let sampler = Sampler::new(
             memory_allocator.device().clone(),
             SamplerCreateInfo::simple_repeat_linear_no_mipmap(),
         )
-        .unwrap();
+        .expect("sampler can be created");
 
-        let set_layout = sky_layout.set_layouts().get(0).unwrap();
+        let set_layout = sky_layout
+            .set_layouts()
+            .get(0)
+            .expect("descriptor set layout 0 exists");
         let descriptor_set = DescriptorSet::new(
             descriptor_allocator,
             set_layout.clone(),
@@ -263,7 +252,7 @@ impl SkyData {
             )],
             [],
         )
-        .unwrap();
+        .expect("descriptor set bindings match the shader");
 
         (descriptor_set, texture_view)
     }
@@ -275,20 +264,19 @@ impl SkyData {
         pipelines: &Pipelines,
         camera_addr: u64,
     ) {
-        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
+        // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound
+        //         before drawing.
         unsafe {
             builder
                 .bind_pipeline_graphics(pipelines.sky_pipeline.inner.clone())
-                .map_err(|e| panic!("[Renderer] Failed to bind sky pipeline: {:?}", e))
-                .unwrap()
+                .unwrap_or_else(|e| panic!("[Renderer] Failed to bind sky pipeline: {:?}", e))
                 .bind_descriptor_sets(
                     PipelineBindPoint::Graphics,
                     pipelines.sky_layout.clone(),
                     0,
                     self.descriptor_set.clone(),
                 )
-                .map_err(|e| panic!("[Renderer] Failed to bind sky descriptor set: {:?}", e))
-                .unwrap()
+                .unwrap_or_else(|e| panic!("[Renderer] Failed to bind sky descriptor set: {:?}", e))
                 .push_constants(
                     pipelines.sky_layout.clone(),
                     0,
@@ -296,19 +284,17 @@ impl SkyData {
                         camera_addr,
                         self.vertex_buffer
                             .device_address()
-                            .map_err(|e| panic!("[Renderer] Failed to get vertex_buffer: {:?}", e))
-                            .unwrap()
+                            .unwrap_or_else(|e| {
+                                panic!("[Renderer] Failed to get vertex_buffer: {:?}", e)
+                            })
                             .get(),
                     ],
                 )
-                .map_err(|e| panic!("[Renderer] Failed to bind sky buffers: {:?}", e))
-                .unwrap()
+                .unwrap_or_else(|e| panic!("[Renderer] Failed to bind sky buffers: {:?}", e))
                 .bind_index_buffer(self.index_buffer.clone())
-                .map_err(|e| panic!("[Renderer] Failed to bind sky index buffer: {:?}", e))
-                .unwrap()
+                .unwrap_or_else(|e| panic!("[Renderer] Failed to bind sky index buffer: {:?}", e))
                 .draw_indexed(self.index_count, 1, 0, 0, 0)
-                .map_err(|e| panic!("[Renderer] Failed to draw sky sphere: {:?}", e))
-                .unwrap();
+                .unwrap_or_else(|e| panic!("[Renderer] Failed to draw sky sphere: {:?}", e));
         }
     }
 }

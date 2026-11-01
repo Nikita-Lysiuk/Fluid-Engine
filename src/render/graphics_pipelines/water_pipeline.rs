@@ -1,5 +1,5 @@
 use crate::render::model_vertex::ModelVertex;
-use crate::render::shader_loader::load_shader_entry_point;
+use crate::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::device::Device;
 use vulkano::format::Format;
@@ -59,16 +59,20 @@ impl WaterRenderPipeline {
             device.clone(),
             PipelineDescriptorSetLayoutCreateInfo::from_stages(&stages)
                 .into_pipeline_layout_create_info(device.clone())
-                .unwrap(),
+                .expect("shader pipeline layout is valid"),
         )
-        .unwrap();
+        .expect("pipeline layout can be created");
 
         let pipeline = GraphicsPipeline::new(
             device.clone(),
             None,
             GraphicsPipelineCreateInfo {
                 stages: stages.into_iter().collect(),
-                vertex_input_state: Some(ModelVertex::per_vertex().definition(&vs).unwrap()),
+                vertex_input_state: Some(
+                    ModelVertex::per_vertex()
+                        .definition(&vs)
+                        .expect("vertex input matches the shader"),
+                ),
                 input_assembly_state: Some(InputAssemblyState::default()),
                 viewport_state: Some(ViewportState::default()),
                 dynamic_state: [DynamicState::Viewport, DynamicState::Scissor]
@@ -100,7 +104,7 @@ impl WaterRenderPipeline {
                 ..GraphicsPipelineCreateInfo::layout(layout)
             },
         )
-        .unwrap();
+        .expect("graphics pipeline can be created");
 
         Self { inner: pipeline }
     }
