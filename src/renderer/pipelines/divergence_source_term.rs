@@ -4,7 +4,7 @@ use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
-use crate::entities::particle::{GpuPhysicsData, SimulationParams};
+use crate::entities::particle::{ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
 
 mod cs {
@@ -28,7 +28,7 @@ impl ComputeStep for DivergenceSourceTermPipeline {
     fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
         let num_particles = physics_data.count;

@@ -33,7 +33,7 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::sync::GpuFuture;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 
-use crate::entities::particle::{stats_layout, GpuPhysicsData, ParticleGenerator, SimulationParams};
+use crate::entities::particle::{stats_layout, ParticleBuffers, spawn_block, SimulationParams};
 use crate::renderer::pipelines::{ComputePipelines, ComputeStep, SolverSettings};
 
 // ── Configuration ────────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ pub(super) fn make_context() -> Arc<VulkanoContext> {
 pub(super) fn prepare_all_pipelines(
     pipelines: &mut ComputePipelines,
     ds_alloc: Arc<StandardDescriptorSetAllocator>,
-    physics_data: &GpuPhysicsData,
+    physics_data: &ParticleBuffers,
     sim_params: &Subbuffer<SimulationParams>,
 ) {
     pipelines.prepare(ds_alloc, physics_data, sim_params);
@@ -139,7 +139,7 @@ pub(super) struct SolverStats {
     pub divergence_iterations: u32,
 }
 
-pub(super) fn read_stats(physics_data: &GpuPhysicsData, dt: f32) -> SolverStats {
+pub(super) fn read_stats(physics_data: &ParticleBuffers, dt: f32) -> SolverStats {
     let stats = physics_data.stats_buffer.read().unwrap();
     let solve = |range: std::ops::Range<u64>| {
         let state = &stats[range.start as usize..range.end as usize];
@@ -208,11 +208,9 @@ fn solver_convergence_benchmark() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let (initial_positions, particle_mass) = ParticleGenerator::generate_volume(
+    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos,
-        0.8, // water_width
-        0.8, // water_height
-        0.5, // water_depth
+        Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
         target_density,
         spacing,
@@ -249,7 +247,7 @@ fn solver_convergence_benchmark() {
 
         // Fresh particle state per iteration-count test.
         let physics_data =
-            GpuPhysicsData::new(memory_allocator.clone(), initial_positions.clone());
+            ParticleBuffers::new(memory_allocator.clone(), initial_positions.clone());
         let sim_params_buffer = Buffer::from_data(
             memory_allocator.clone(),
             BufferCreateInfo {
@@ -436,11 +434,9 @@ fn rest_density_diagnostic() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let (initial_positions, particle_mass) = ParticleGenerator::generate_volume(
+    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos,
-        0.8,
-        0.8,
-        0.5,
+        Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
         target_density,
         spacing,
@@ -468,7 +464,7 @@ fn rest_density_diagnostic() {
         IVec3::new(128, 128, 128),
     );
 
-    let physics_data = GpuPhysicsData::new(memory_allocator.clone(), initial_positions);
+    let physics_data = ParticleBuffers::new(memory_allocator.clone(), initial_positions);
     let sim_params_buffer = Buffer::from_data(
         memory_allocator.clone(),
         BufferCreateInfo {
@@ -585,11 +581,9 @@ fn density_after_warmup_diagnostic() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let (initial_positions, particle_mass) = ParticleGenerator::generate_volume(
+    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos,
-        0.8,
-        0.8,
-        0.5,
+        Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
         target_density,
         spacing,
@@ -619,7 +613,7 @@ fn density_after_warmup_diagnostic() {
         IVec3::new(128, 128, 128),
     );
 
-    let physics_data = GpuPhysicsData::new(memory_allocator.clone(), initial_positions);
+    let physics_data = ParticleBuffers::new(memory_allocator.clone(), initial_positions);
     let sim_params_buffer = Buffer::from_data(
         memory_allocator.clone(),
         BufferCreateInfo {
@@ -740,7 +734,7 @@ fn write_cfl_csv(path: &str, rows: &[(u32, &str, f32, f32, u32)]) {
     }
 }
 
-fn read_max_speed(physics_data: &GpuPhysicsData) -> f32 {
+fn read_max_speed(physics_data: &ParticleBuffers) -> f32 {
     let stats = physics_data.stats_buffer.read().unwrap();
     f32::from_bits(stats[0])
 }
@@ -761,8 +755,8 @@ fn cfl_comparison() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let (initial_positions, particle_mass) = ParticleGenerator::generate_volume(
-        spawn_pos, 0.8, 0.8, 0.5, particle_radius, target_density, spacing, 0.01,
+    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+        spawn_pos, Vec3::new(0.8, 0.8, 0.5), particle_radius, target_density, spacing, 0.01,
     );
     println!(
         "cfl_comparison: {} cząstek, {} klatek per tryb",
@@ -790,7 +784,7 @@ fn cfl_comparison() {
         let mut dt = STATIC_DT;
 
         let physics_data =
-            GpuPhysicsData::new(memory_allocator.clone(), initial_positions.clone());
+            ParticleBuffers::new(memory_allocator.clone(), initial_positions.clone());
 
         // Host-accessible so we can update dt each frame.
         let sim_params_buffer = Buffer::from_data(

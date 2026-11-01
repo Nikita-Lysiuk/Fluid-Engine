@@ -7,7 +7,7 @@ use vulkano::device::Device;
 use vulkano::image::view::ImageView;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
 use vulkano::shader::EntryPoint;
-use crate::entities::particle::{GpuPhysicsData, SimulationParams};
+use crate::entities::particle::{ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 
@@ -30,7 +30,7 @@ impl DensityTexturePipeline {
     pub fn prepare_with_image(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         image: Arc<ImageView>,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
@@ -62,7 +62,7 @@ impl ComputeStep for DensityTexturePipeline {
     fn prepare(
         &mut self,
         _allocator: Arc<StandardDescriptorSetAllocator>,
-        _physics_data: &GpuPhysicsData,
+        _physics_data: &ParticleBuffers,
         _sim_params: &Subbuffer<SimulationParams>,
     ) {
         // Use prepare_with_image() instead, as an ImageView is required.

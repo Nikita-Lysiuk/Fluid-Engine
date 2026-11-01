@@ -10,7 +10,7 @@ use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLa
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use vulkano::shader::EntryPoint;
-use crate::entities::particle::{GpuPhysicsData, SimulationParams};
+use crate::entities::particle::{ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::{ComputeStep, SortAlgorithm};
 use crate::renderer::pipelines::sorter::{GpuSorter, RadixSorter};
 use crate::utils::shader_loader::load_shader_entry_point;
@@ -122,7 +122,7 @@ impl ComputeStep for NeighborSearch {
     fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
         self.num_particles = physics_data.count;

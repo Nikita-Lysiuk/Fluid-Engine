@@ -1,4 +1,4 @@
-use crate::entities::particle::{stats_layout, GpuPhysicsData, SimulationParams};
+use crate::entities::particle::{stats_layout, ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
 use crate::renderer::pipelines::density_alpha::DensityAlphaPipeline;
 use crate::renderer::pipelines::density_source_term::DensitySourceTermPipeline;
@@ -87,7 +87,7 @@ pub trait ComputeStep: Sized {
     fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
     );
     fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>);
@@ -188,7 +188,7 @@ impl ComputePipelines {
     pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
         self.neighbor_search.prepare(allocator.clone(), physics_data, sim_params);

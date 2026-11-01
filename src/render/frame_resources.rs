@@ -8,14 +8,14 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, Standar
 use crate::core::scene::Scene;
 use crate::entities::camera::CameraData;
 use crate::entities::collision::CollisionBoxData;
-use crate::entities::particle::{stats_layout, GpuPhysicsData, GpuRenderData, SimulationParams};
+use crate::entities::particle::{stats_layout, ParticleBuffers, GpuRenderData, SimulationParams};
 use crate::renderer::pipelines::Pipelines;
 use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct GpuSceneResources {
     camera_data: CameraData,
     collision_box_data: CollisionBoxData,
-    pub physics_data: GpuPhysicsData,
+    pub physics_data: ParticleBuffers,
     pub render_data: GpuRenderData,
 
     pub sim_params_buffer: Subbuffer<SimulationParams>,
@@ -29,7 +29,7 @@ pub struct GpuSceneResources {
 
 impl GpuSceneResources {
     pub fn new(allocator: Arc<StandardMemoryAllocator>, scene: &Scene) -> Self {
-        let physics_data = GpuPhysicsData::new(
+        let physics_data = ParticleBuffers::new(
             allocator.clone(),
             scene.initial_positions.clone()
         );

@@ -6,7 +6,7 @@ use vulkano::device::Device;
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
-use crate::entities::particle::GpuPhysicsData;
+use crate::entities::particle::ParticleBuffers;
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs {
@@ -36,7 +36,7 @@ impl SolverCheckPipeline {
         Self { pipeline, descriptor_set: None, num_particles: 0 }
     }
 
-    pub fn prepare(&mut self, allocator: Arc<StandardDescriptorSetAllocator>, physics_data: &GpuPhysicsData) {
+    pub fn prepare(&mut self, allocator: Arc<StandardDescriptorSetAllocator>, physics_data: &ParticleBuffers) {
         self.num_particles = physics_data.count;
         let layout = self.pipeline.layout().set_layouts()[0].clone();
         self.descriptor_set = Some(

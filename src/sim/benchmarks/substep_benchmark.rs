@@ -29,7 +29,7 @@ use vulkano::sync::{self, GpuFuture, PipelineStage};
 
 use super::convergence_benchmark::{make_context, prepare_all_pipelines};
 use crate::core::scene::Scene;
-use crate::entities::particle::GpuPhysicsData;
+use crate::entities::particle::ParticleBuffers;
 use crate::renderer::pipelines::{ComputePipelines, ComputeStep, PressureSolve, SolverSettings, SortAlgorithm};
 
 const SUBSTEPS_PER_BATCH: u32 = 20;
@@ -181,7 +181,7 @@ fn run_substep_benchmark(particle_count: u32) {
 
         // Fresh state per algorithm so both start from the same initial block.
         let physics_data =
-            GpuPhysicsData::new(memory_allocator.clone(), scene.initial_positions.clone());
+            ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
         let sim_params_buffer = Buffer::from_data(
             memory_allocator.clone(),
             BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
@@ -303,7 +303,7 @@ fn solver_iterations_over_time() {
         device.clone(),
         StandardDescriptorSetAllocatorCreateInfo::default(),
     ));
-    let physics_data = GpuPhysicsData::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let physics_data = ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
     let sim_params_buffer = Buffer::from_data(
         memory_allocator.clone(),
         BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },
@@ -379,7 +379,7 @@ fn attractor_gathers_water() {
         device.clone(),
         StandardDescriptorSetAllocatorCreateInfo::default(),
     ));
-    let physics_data = GpuPhysicsData::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let physics_data = ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
     let sim_params_buffer = Buffer::from_data(
         memory_allocator.clone(),
         BufferCreateInfo { usage: BufferUsage::UNIFORM_BUFFER, ..Default::default() },

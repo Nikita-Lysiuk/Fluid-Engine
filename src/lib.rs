@@ -19,3 +19,13 @@ pub mod frame_timer;
 pub mod frame_benchmark;
 
 
+
+#[path = "render/particle_renderer.rs"]
+mod particle_renderer;
+#[path = "sim/particle_buffers.rs"]
+mod particle_buffers;
+#[path = "sim/params.rs"]
+mod params;
+
+#[path = "sim/spawn.rs"]
+mod spawn;

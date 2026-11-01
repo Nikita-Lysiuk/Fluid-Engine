@@ -1,4 +1,4 @@
-use crate::entities::particle::{Entry, GpuPhysicsData, SimulationParams};
+use crate::entities::particle::{Entry, ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
@@ -49,7 +49,7 @@ impl ComputeStep for GpuSorter {
     fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         _sim_params: &Subbuffer<SimulationParams>,
     ) {
         let grid_entries = &physics_data.grid_entries;

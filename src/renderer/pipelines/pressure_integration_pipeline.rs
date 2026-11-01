@@ -6,7 +6,7 @@ use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
 use vulkano::device::Device;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
 use vulkano::shader::EntryPoint;
-use crate::entities::particle::{GpuPhysicsData, SimulationParams};
+use crate::entities::particle::{ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 
@@ -34,7 +34,7 @@ impl ComputeStep for PressureIntegrationPipeline {
     fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &GpuPhysicsData,
+        physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
         let num_particles = physics_data.count;
