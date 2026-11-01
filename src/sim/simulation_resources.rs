@@ -8,8 +8,11 @@ use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 /// GPU buffers owned by the simulation.
 pub struct SimulationResources {
+    /// Particle state buffers used by the solver.
     pub physics_data: ParticleBuffers,
+    /// GPU buffer holding current simulation parameters.
     pub sim_params_buffer: Subbuffer<SimulationParams>,
+    /// Per-frame GPU statistics readback buffers.
     pub stats_readback: Vec<Subbuffer<[u32]>>,
 }
 

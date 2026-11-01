@@ -15,10 +15,15 @@ use crate::constants::WINDOW_TITLE;
 
 /// Window and Vulkan objects shared by rendering and simulation.
 pub struct GpuContext {
+    /// Shared Vulkan context.
     pub context: Arc<VulkanoContext>,
+    /// Window and swapchain renderer.
     pub window_renderer: VulkanoWindowRenderer,
+    /// Allocator for command buffers.
     pub command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
+    /// Allocator for descriptor sets.
     pub descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
+    /// Depth attachment format.
     pub depth_format: Format,
 }
 

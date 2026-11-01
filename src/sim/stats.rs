@@ -3,10 +3,15 @@ use crate::sim::params::SimulationParams;
 
 /// Solver and speed measurements read from the GPU.
 pub struct SimulationStats {
+    /// Maximum measured particle speed.
     pub max_speed: f32,
+    /// Iterations used by the density solve.
     pub density_iterations: u32,
+    /// Mean density solve error.
     pub density_error: f32,
+    /// Iterations used by the divergence solve.
     pub divergence_iterations: u32,
+    /// Mean divergence solve error.
     pub divergence_error: f32,
 }
 

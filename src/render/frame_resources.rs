@@ -15,12 +15,16 @@ use crate::constants::MAX_FRAMES_IN_FLIGHT;
 pub struct GpuSceneResources {
     camera_data: CameraData,
     collision_box_data: CollisionBoxData,
+    /// Buffers used to draw particles.
     pub render_data: GpuRenderData,
 
 
+    /// Density volume sampled by the fluid renderer.
     pub density_texture: Arc<Image>,
+    /// View of the density volume.
     pub density_view: Arc<ImageView>,
 
+    /// Index of the current frame resource slot.
     pub current_frame_idx: usize,
 }
 

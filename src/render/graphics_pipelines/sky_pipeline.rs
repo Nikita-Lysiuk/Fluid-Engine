@@ -33,6 +33,7 @@ mod fs {
 
 /// Graphics pipeline for the sky.
 pub struct SkyPipeline {
+    /// Underlying Vulkan graphics pipeline.
     pub inner: Arc<GraphicsPipeline>
 }
 

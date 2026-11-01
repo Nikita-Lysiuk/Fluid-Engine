@@ -35,6 +35,7 @@ pub struct ComputePipelines {
     pub pressure_integration: Option<ComputePass>,
     pub divergence_source_term: Option<ComputePass>,
     pub divergence_integration: Option<ComputePass>,
+    /// Compute pass that records simulation statistics.
     pub stats: Option<ComputePass>,
     pub solver_check: Option<ComputePass>,
 

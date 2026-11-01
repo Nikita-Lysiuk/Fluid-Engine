@@ -17,11 +17,17 @@ mod water_pipeline;
 
 /// Graphics pipelines and layouts used for a frame.
 pub struct Pipelines {
+    /// Pipeline layout used for the sky.
     pub sky_layout: Arc<PipelineLayout>,
+    /// Graphics pipeline used for the sky.
     pub sky_pipeline: Arc<SkyPipeline>,
+    /// Pipeline layout shared by scene geometry.
     pub common_layout: Arc<PipelineLayout>,
+    /// Graphics pipeline used for particles.
     pub point_pipeline: Arc<PointPipeline>,
+    /// Graphics pipeline used for the boundary outline.
     pub collision_pipeline: Arc<CollisionPipeline>,
+    /// Graphics pipeline used for the fluid volume.
     pub water_renderer_pipeline: Arc<WaterRenderPipeline>,
 }
 

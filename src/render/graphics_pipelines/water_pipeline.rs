@@ -36,6 +36,7 @@ mod fs {
 
 /// Graphics pipeline for ray-marched fluid.
 pub struct WaterRenderPipeline {
+    /// Underlying Vulkan graphics pipeline.
     pub inner: Arc<GraphicsPipeline>,
 }
 

@@ -37,6 +37,7 @@ pub struct NeighborSearch {
     sort_buffer_len: u32,
     num_particles: u32,
 
+    /// Particle sorting algorithm used by neighbor search.
     pub sort_algorithm: SortAlgorithm,
 }
 

@@ -11,7 +11,9 @@ pub enum PressureSolve {
 /// Iteration limits and error thresholds of one pressure solve.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SolveSettings {
+    /// Minimum iterations before convergence is checked.
     pub min_iterations: u32,
+    /// Maximum iterations in the solve.
     pub max_iterations: u32,
     /// Average compression error (kg/m^3) at which the solve stops early;
     /// negative to always run `max_iterations`.
@@ -21,7 +23,9 @@ pub struct SolveSettings {
 /// Settings for both pressure solves.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SolverSettings {
+    /// Settings for the density solve.
     pub density: SolveSettings,
+    /// Settings for the divergence solve.
     pub divergence: SolveSettings,
 }
 

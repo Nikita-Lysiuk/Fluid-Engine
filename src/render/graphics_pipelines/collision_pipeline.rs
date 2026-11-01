@@ -34,6 +34,7 @@ mod fs {
 
 /// Graphics pipeline for the boundary outline.
 pub struct CollisionPipeline {
+    /// Underlying Vulkan graphics pipeline.
     pub inner: Arc<GraphicsPipeline>
 }
 

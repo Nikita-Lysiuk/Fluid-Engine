@@ -3,9 +3,13 @@ use glam::Vec3;
 
 /// Moving simulation boundary.
 pub struct CollisionBox {
+    /// Minimum boundary coordinates.
     pub min: Vec3,
+    /// Maximum boundary coordinates.
     pub max: Vec3,
+    /// Amplitude of the moving wall.
     pub wave_amplitude: f32,
+    /// Frequency of the moving wall.
     pub wave_frequency: f32,
     /// Whether the `min.x` wall oscillates; toggled from the UI.
     pub animate: bool,

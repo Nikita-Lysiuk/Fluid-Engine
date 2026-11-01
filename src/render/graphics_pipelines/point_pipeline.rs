@@ -34,6 +34,7 @@ mod fs {
 
 /// Graphics pipeline for particle points.
 pub struct PointPipeline {
+    /// Underlying Vulkan graphics pipeline.
     pub inner: Arc<GraphicsPipeline>
 }
 

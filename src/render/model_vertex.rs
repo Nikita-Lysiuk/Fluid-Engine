@@ -6,5 +6,6 @@ use vulkano::pipeline::graphics::vertex_input::Vertex;
 #[repr(C)]
 pub struct ModelVertex {
     #[format(R32G32B32_SFLOAT)]
+    /// Vertex position.
     pub position: [f32; 3],
 }

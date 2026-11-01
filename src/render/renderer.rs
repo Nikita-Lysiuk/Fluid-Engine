@@ -33,6 +33,7 @@ use winit::window::Window;
 
 /// Window, simulation, and graphics frame coordinator.
 pub struct Renderer {
+    /// Window and swapchain renderer.
     pub window_renderer: VulkanoWindowRenderer,
     context: Arc<VulkanoContext>,
     command_buffer_allocator: Arc<StandardCommandBufferAllocator>,

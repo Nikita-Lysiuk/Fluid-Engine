@@ -13,28 +13,44 @@ pub enum RenderMode {
 
 /// Interactive simulation and rendering controls.
 pub struct AppUi {
+    /// Whether the controls panel is visible.
     pub show_controls: bool,
+    /// Selected fluid rendering mode.
     pub render_mode: RenderMode,
+    /// Particle sorting algorithm used by neighbor search.
     pub sort_algorithm: SortAlgorithm,
+    /// Whether to adapt the time step using the CFL condition.
     pub use_cfl: bool,
+    /// Scale applied to the CFL time step.
     pub cfl_factor: f32,
+    /// Minimum adaptive time step in seconds.
     pub cfl_min_dt: f32,
+    /// Maximum adaptive time step in seconds.
     pub cfl_max_dt: f32,
+    /// Latest measured maximum particle speed.
     pub display_max_speed: f32,
+    /// Latest adaptive time step shown in the UI.
     pub display_cfl_dt: f32,
 
+    /// Maximum substeps submitted per frame.
     pub max_substeps_per_frame: u32,
+    /// Number of substeps in the last frame.
     pub display_substeps: u32,
 
+    /// Whether pressure solves stop at an error threshold.
     pub use_solver_error_threshold: bool,
     /// η: max average compression as % of ρ₀ (SPlisHSPlasH `maxError`).
     pub density_error_pct: f32,
     /// ηv: max average density change per second as % of ρ₀ / dt
     /// (SPlisHSPlasH `maxErrorV`).
     pub divergence_error_pct: f32,
+    /// Latest mean density error.
     pub display_avg_density_error: f32,
+    /// Latest mean divergence error.
     pub display_avg_divergence_error: f32,
+    /// Iterations used by the last density solve.
     pub display_density_iters_used: u32,
+    /// Iterations used by the last divergence solve.
     pub display_divergence_iters_used: u32,
 }
 

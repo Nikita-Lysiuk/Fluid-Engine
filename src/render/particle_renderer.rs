@@ -12,6 +12,7 @@ use crate::constants::MAX_FRAMES_IN_FLIGHT;
 #[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
 pub struct PositionVertex {
     #[format(R32G32B32A32_SFLOAT)]
+    /// Vertex position.
     pub position: [f32; 4],
 }
 
@@ -20,6 +21,7 @@ pub struct PositionVertex {
 #[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
 pub struct ColorVertex {
     #[format(R32G32B32A32_SFLOAT)]
+    /// Particle color.
     pub color: [f32; 4],
 }
 
@@ -28,13 +30,17 @@ pub struct ColorVertex {
 #[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
 pub struct AttributeVertex {
     #[format(R32_SFLOAT)]
+    /// Particle radius.
     pub radius: f32,
 }
 
 /// GPU buffers used to draw particles.
 pub struct GpuRenderData {
+    /// Per-frame particle position buffers.
     pub position_buffers: Vec<Subbuffer<[PositionVertex]>>,
+    /// Per-frame particle color buffers.
     pub color_buffers: Vec<Subbuffer<[ColorVertex]>>,
+    /// Particle attribute buffer.
     pub attribute_buffer: Subbuffer<[AttributeVertex]>,
 }
 

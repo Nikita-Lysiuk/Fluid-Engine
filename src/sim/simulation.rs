@@ -17,14 +17,23 @@ use crate::sim::params::SimulationParams;
 
 /// Controls for a simulation frame.
 pub struct SimulationSettings {
+    /// Whether to adapt the time step using the CFL condition.
     pub use_cfl: bool,
+    /// Scale applied to the CFL time step.
     pub cfl_factor: f32,
+    /// Minimum adaptive time step in seconds.
     pub cfl_min_dt: f32,
+    /// Maximum adaptive time step in seconds.
     pub cfl_max_dt: f32,
+    /// Maximum substeps submitted per frame.
     pub max_substeps: u32,
+    /// Particle sorting algorithm used by neighbor search.
     pub sort_algorithm: SortAlgorithm,
+    /// Whether pressure solves stop at an error threshold.
     pub use_solver_error_threshold: bool,
+    /// Density error threshold as a percentage of rest density.
     pub density_error_pct: f32,
+    /// Divergence error threshold as a percentage of rest density.
     pub divergence_error_pct: f32,
 }
 
@@ -43,8 +52,11 @@ impl SimulationSettings {
 
 /// Measurements and time step used for the submitted frame.
 pub struct SimulationFrame {
+    /// Most recent available simulation measurements.
     pub stats: Option<SimulationStats>,
+    /// Adaptive time step, when updated for this frame.
     pub cfl_dt: Option<f32>,
+    /// Number of submitted substeps.
     pub substeps: u32,
 }
 

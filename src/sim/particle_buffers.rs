@@ -7,7 +7,9 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, Standar
 #[derive(BufferContents, Copy, Clone)]
 #[repr(C)]
 pub struct Entry {
+    /// Spatial hash of the particle.
     pub hash: u32,
+    /// Particle index associated with the hash.
     pub index: u32,
 }
 
@@ -16,30 +18,44 @@ pub const MAX_NEIGHBORS: u32 = 64;
 
 /// GPU buffers holding simulation state.
 pub struct ParticleBuffers {
+    /// Number of simulated particles.
     pub count: u32,
 
+    /// Primary particle positions.
     pub position_a: Subbuffer<[[f32; 4]]>,
+    /// Reordered particle positions.
     pub position_b: Subbuffer<[[f32; 4]]>,
 
+    /// Primary particle velocities.
     pub velocity_a: Subbuffer<[[f32; 4]]>,
+    /// Reordered particle velocities.
     pub velocity_b: Subbuffer<[[f32; 4]]>,
 
+    /// Particle colors for rendering.
     pub colors: Subbuffer<[[f32; 4]]>,
 
+    /// Particle density estimates.
     pub densities: Subbuffer<[f32]>,
+    /// Pressure solver coefficients.
     pub factors: Subbuffer<[f32]>,
 
+    /// Pressure solver source terms.
     pub source_terms: Subbuffer<[f32]>,
+    /// Particle pressure estimates.
     pub pressures: Subbuffer<[f32]>,
+    /// Pressure acceleration per particle.
     pub pressure_accelerations: Subbuffer<[[f32; 4]]>,
 
 
+    /// Sorted particle hash entries.
     pub grid_entries: Subbuffer<[Entry]>,
+    /// First entry for each spatial hash bucket.
     pub grid_start: Subbuffer<[u32]>,
 
     /// Neighbour indices, `MAX_NEIGHBORS` per particle, entry k of particle i
     /// at `k * count + i`. Built by density_and_alpha.comp.
     pub neighbor_list: Subbuffer<[u32]>,
+    /// Number of neighbors per particle.
     pub neighbor_counts: Subbuffer<[u32]>,
 
     /// Final pressure of the previous density (x) and divergence (y) solve,

@@ -2,7 +2,9 @@ use glam::Vec3;
 
 /// Particle positions and mass generated for a fluid block.
 pub struct SpawnedBlock {
+    /// Generated particle positions.
     pub positions: Vec<[f32; 3]>,
+    /// Mass assigned to each generated particle.
     pub particle_mass: f32,
 }
 
