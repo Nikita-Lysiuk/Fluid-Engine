@@ -2,7 +2,7 @@ use crate::scene::Scene;
 use crate::sim::pipelines::SortAlgorithm;
 use crate::sim::simulation::SimulationSettings;
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
-use glam::{Vec2, Vec4};
+use glam::Vec2;
 
 /// Available fluid rendering modes.
 #[derive(PartialEq, Clone, Copy)]
@@ -259,21 +259,6 @@ impl AppUi {
                         );
                     });
                 });
-
-                scene.sim_params.box_min = Vec4::new(
-                    scene.boundary.min.x,
-                    scene.boundary.min.y,
-                    scene.boundary.min.z,
-                    0.0,
-                )
-                .into();
-                scene.sim_params.box_max = Vec4::new(
-                    scene.boundary.max.x,
-                    scene.boundary.max.y,
-                    scene.boundary.max.z,
-                    0.0,
-                )
-                .into();
 
                 ui.separator();
 

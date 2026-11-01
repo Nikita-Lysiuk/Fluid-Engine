@@ -139,6 +139,10 @@ impl Simulation {
             }
         }
         let solver = settings.solver_settings(&scene.sim_params);
+        // The box moves (piston wall, UI sliders), so its walls are copied
+        // into the parameters every frame.
+        scene.sim_params.box_min = scene.boundary.min.extend(0.0).to_array();
+        scene.sim_params.box_max = scene.boundary.max.extend(0.0).to_array();
         scene.sim_params.piston_velocity = scene.boundary.piston_velocity();
         scene.sim_params.attractor = scene.attractor.to_gpu();
         scene.sim_params.attractor_radius = scene.attractor.radius;
