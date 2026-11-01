@@ -2,9 +2,10 @@ use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
-use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::WriteDescriptorSet;
+use crate::compute_pass::ComputePass;
 use vulkano::device::Device;
-use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
+use vulkano::pipeline::ComputePipeline;
 use vulkano::shader::EntryPoint;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
 use crate::renderer::pipelines::ComputeStep;
@@ -17,8 +18,7 @@ mod cs {
 
 pub struct ViscosityPipeline {
     pipeline: Arc<ComputePipeline>,
-    descriptor_set: Option<Arc<DescriptorSet>>,
-    dispatch_count: u32,
+    pass: Option<ComputePass>,
 }
 
 impl ComputeStep for ViscosityPipeline {
@@ -26,7 +26,7 @@ impl ComputeStep for ViscosityPipeline {
         load_shader_entry_point(device, cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
-        Self { pipeline, descriptor_set: None, dispatch_count: 0 }
+        Self { pipeline, pass: None }
     }
     fn prepare(
         &mut self,
@@ -34,14 +34,8 @@ impl ComputeStep for ViscosityPipeline {
         physics_data: &ParticleBuffers,
         sim_params: &Subbuffer<SimulationParams>,
     ) {
-        let num_particles = physics_data.count;
-        let group_size = 256;
-        self.dispatch_count = (num_particles + group_size - 1) / group_size;
-
-        let layout = self.pipeline.layout().set_layouts().get(0).unwrap();
-        self.descriptor_set = Some(DescriptorSet::new(
-            allocator,
-            layout.clone(),
+        self.pass = Some(ComputePass::new(
+            self.pipeline.clone(), allocator,
             [
                 WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
                 WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
@@ -51,15 +45,11 @@ impl ComputeStep for ViscosityPipeline {
                 WriteDescriptorSet::buffer(5, physics_data.densities.clone()),
                 WriteDescriptorSet::buffer(6, physics_data.velocity_a.clone()),
             ],
-            []
-        ).unwrap());
+            physics_data.count.div_ceil(256),
+        ));
     }
+
     fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
-        let set = self.descriptor_set.as_ref().expect("ViscosityPipeline: call prepare() before execute()");
-        builder
-            .bind_pipeline_compute(self.pipeline.clone()).unwrap()
-            .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set.clone())
-            .unwrap();
-        unsafe { builder.dispatch([self.dispatch_count, 1, 1]).unwrap(); }
+        self.pass.as_ref().expect("prepare the compute pass before dispatch").dispatch(builder);
     }
 }

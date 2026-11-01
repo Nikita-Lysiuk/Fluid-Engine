@@ -29,3 +29,6 @@ mod params;
 
 #[path = "sim/spawn.rs"]
 mod spawn;
+
+#[path = "sim/compute_pass.rs"]
+mod compute_pass;

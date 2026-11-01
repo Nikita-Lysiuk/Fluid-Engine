@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
-use vulkano::descriptor_set::{DescriptorSet, WriteDescriptorSet};
+use vulkano::descriptor_set::WriteDescriptorSet;
+use crate::compute_pass::ComputePass;
 use vulkano::device::Device;
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
-use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
+use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
 use crate::entities::particle::ParticleBuffers;
 use crate::utils::shader_loader::load_shader_entry_point;
 
@@ -17,7 +18,7 @@ mod cs {
 /// Convergence test after each Jacobi iteration (`solver_check.comp`).
 pub struct SolverCheckPipeline {
     pipeline: Arc<ComputePipeline>,
-    descriptor_set: Option<Arc<DescriptorSet>>,
+    pass: Option<ComputePass>,
     num_particles: u32,
 }
 
@@ -33,34 +34,22 @@ impl SolverCheckPipeline {
         .unwrap();
         let pipeline =
             ComputePipeline::new(device, None, ComputePipelineCreateInfo::stage_layout(stage, layout)).unwrap();
-        Self { pipeline, descriptor_set: None, num_particles: 0 }
+        Self { pipeline, pass: None, num_particles: 0 }
     }
 
     pub fn prepare(&mut self, allocator: Arc<StandardDescriptorSetAllocator>, physics_data: &ParticleBuffers) {
         self.num_particles = physics_data.count;
-        let layout = self.pipeline.layout().set_layouts()[0].clone();
-        self.descriptor_set = Some(
-            DescriptorSet::new(
-                allocator,
-                layout,
-                [
-                    WriteDescriptorSet::buffer(0, physics_data.solver_state.clone()),
-                    WriteDescriptorSet::buffer(1, physics_data.solver_dispatch.clone()),
-                ],
-                [],
-            )
-            .unwrap(),
-        );
+        self.pass = Some(ComputePass::new(self.pipeline.clone(), allocator, [
+            WriteDescriptorSet::buffer(0, physics_data.solver_state.clone()),
+            WriteDescriptorSet::buffer(1, physics_data.solver_dispatch.clone()),
+        ], 1));
     }
 
     /// `max_avg_error` in kg/m^3; a negative value disables the early exit.
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, max_avg_error: f32, min_iterations: u32) {
-        let set = self.descriptor_set.as_ref().expect("SolverCheckPipeline: call prepare() before execute()");
         let pc = cs::PushConstants { max_avg_error, min_iterations, num_particles: self.num_particles };
-        builder
-            .bind_pipeline_compute(self.pipeline.clone()).unwrap()
-            .bind_descriptor_sets(PipelineBindPoint::Compute, self.pipeline.layout().clone(), 0, set.clone()).unwrap()
-            .push_constants(self.pipeline.layout().clone(), 0, pc).unwrap();
-        unsafe { builder.dispatch([1, 1, 1]).unwrap(); }
+        let pass = self.pass.as_ref().expect("prepare solver check before dispatch");
+        pass.bind_with_constants(builder, pc);
+        pass.dispatch_bound(builder);
     }
 }
