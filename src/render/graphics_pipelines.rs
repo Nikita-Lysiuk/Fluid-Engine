@@ -1,0 +1,128 @@
+use crate::render::graphics_pipelines::collision_pipeline::CollisionPipeline;
+use crate::render::graphics_pipelines::point_pipeline::PointPipeline;
+use crate::render::graphics_pipelines::sky_pipeline::SkyPipeline;
+use crate::render::graphics_pipelines::water_pipeline::WaterRenderPipeline;
+use std::sync::Arc;
+use vulkano::descriptor_set::layout::{
+    DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType,
+};
+use vulkano::device::Device;
+use vulkano::format::Format;
+use vulkano::pipeline::PipelineLayout;
+use vulkano::pipeline::layout::{PipelineLayoutCreateInfo, PushConstantRange};
+use vulkano::shader::ShaderStages;
+use vulkano_util::context::VulkanoContext;
+pub mod collision_pipeline;
+pub mod point_pipeline;
+pub mod sky_pipeline;
+mod water_pipeline;
+
+/// Graphics pipelines and layouts used for a frame.
+pub struct Pipelines {
+    /// Pipeline layout used for the sky.
+    pub sky_layout: Arc<PipelineLayout>,
+    /// Graphics pipeline used for the sky.
+    pub sky_pipeline: Arc<SkyPipeline>,
+    /// Pipeline layout shared by scene geometry.
+    pub common_layout: Arc<PipelineLayout>,
+    /// Graphics pipeline used for particles.
+    pub point_pipeline: Arc<PointPipeline>,
+    /// Graphics pipeline used for the boundary outline.
+    pub collision_pipeline: Arc<CollisionPipeline>,
+    /// Graphics pipeline used for the fluid volume.
+    pub water_renderer_pipeline: Arc<WaterRenderPipeline>,
+}
+
+impl Pipelines {
+    /// Creates the associated resources.
+    pub fn new(
+        context: Arc<VulkanoContext>,
+        swapchain_format: Format,
+        depth_format: Format,
+    ) -> Self {
+        let device = context.device().clone();
+
+        let push_constant_range = PushConstantRange {
+            stages: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+            offset: 0,
+            size: 16,
+        };
+
+        let sky_layout = Self::create_sky_layout(device.clone(), push_constant_range);
+        let sky_pipeline = Arc::new(SkyPipeline::new(
+            device.clone(),
+            sky_layout.clone(),
+            swapchain_format,
+            depth_format,
+        ));
+
+        let common_layout = Self::create_common_layout(device.clone(), push_constant_range);
+        let point_pipeline = Arc::new(PointPipeline::new(
+            device.clone(),
+            swapchain_format,
+            depth_format,
+        ));
+        let collision_pipeline = Arc::new(CollisionPipeline::new(
+            device.clone(),
+            common_layout.clone(),
+            swapchain_format,
+            depth_format,
+        ));
+
+        let water_renderer_pipeline = Arc::new(WaterRenderPipeline::new(
+            device.clone(),
+            swapchain_format,
+            depth_format,
+        ));
+
+        Self {
+            sky_layout,
+            sky_pipeline,
+            common_layout,
+            point_pipeline,
+            collision_pipeline,
+            water_renderer_pipeline,
+        }
+    }
+
+    fn create_sky_layout(device: Arc<Device>, pc: PushConstantRange) -> Arc<PipelineLayout> {
+        let dsl = DescriptorSetLayout::new(
+            device.clone(),
+            DescriptorSetLayoutCreateInfo {
+                bindings: [(
+                    0,
+                    DescriptorSetLayoutBinding {
+                        stages: ShaderStages::FRAGMENT,
+                        ..DescriptorSetLayoutBinding::descriptor_type(
+                            DescriptorType::CombinedImageSampler,
+                        )
+                    },
+                )]
+                .into(),
+                ..Default::default()
+            },
+        )
+        .expect("descriptor set layout can be created");
+
+        PipelineLayout::new(
+            device,
+            PipelineLayoutCreateInfo {
+                set_layouts: vec![dsl],
+                push_constant_ranges: vec![pc],
+                ..Default::default()
+            },
+        )
+        .expect("pipeline layout can be created")
+    }
+    fn create_common_layout(device: Arc<Device>, pc: PushConstantRange) -> Arc<PipelineLayout> {
+        PipelineLayout::new(
+            device,
+            PipelineLayoutCreateInfo {
+                set_layouts: vec![],
+                push_constant_ranges: vec![pc],
+                ..Default::default()
+            },
+        )
+        .expect("pipeline layout can be created")
+    }
+}

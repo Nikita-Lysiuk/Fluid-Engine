@@ -51,6 +51,15 @@ void main() {
         }
     }
 
+    // Same safety net for the pillar: push the particle back onto its surface
+    // and drop the velocity component pointing into it.
+    float to_pillar;
+    vec3 pillar_normal;
+    if (pillar_distance(new_pos, to_pillar, pillar_normal) && to_pillar < WALL_SAFETY_MARGIN) {
+        new_pos += (WALL_SAFETY_MARGIN - to_pillar) * pillar_normal;
+        new_vel -= min(dot(new_vel, pillar_normal), 0.0) * pillar_normal;
+    }
+
     warm_start[i].x = pressures[i] * dt * dt;
     new_positions[i] = vec4(new_pos, 1.0);
     velocities[i] = vec4(new_vel, 0.0);
