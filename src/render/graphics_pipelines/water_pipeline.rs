@@ -34,11 +34,13 @@ mod fs {
     }
 }
 
+/// Graphics pipeline for ray-marched fluid.
 pub struct WaterRenderPipeline {
     pub inner: Arc<GraphicsPipeline>,
 }
 
 impl WaterRenderPipeline {
+    /// Creates the associated resources.
     pub fn new(
         device: Arc<Device>,
         swapchain_format: Format,

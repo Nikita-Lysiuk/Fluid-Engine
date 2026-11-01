@@ -17,6 +17,7 @@ mod cs {
     shader!(ty: "compute", path: "shaders\\compute\\bitonic_sort.comp");
 }
 
+/// GPU bitonic sorter for particle hashes.
 pub struct BitonicSorter {
     pub(super) pipeline: Arc<ComputePipeline>,
     pub(super) descriptor_set: Option<Arc<DescriptorSet>>,
@@ -24,6 +25,7 @@ pub struct BitonicSorter {
 }
 
 impl BitonicSorter {
+    /// Creates the associated resources.
     pub fn new(device: Arc<vulkano::device::Device>) -> Self {
         let shader = Self::load_shader_module(device.clone());
         Self::from_pipeline(crate::sim::compute_pass::new_pipeline(device, shader))
@@ -38,6 +40,7 @@ impl BitonicSorter {
             num_elements: 0,
         }
     }
+    /// Prepares GPU resources for subsequent commands.
     pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
@@ -62,6 +65,7 @@ impl BitonicSorter {
             .unwrap(),
         );
     }
+    /// Records the associated GPU commands.
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let set = self
             .descriptor_set

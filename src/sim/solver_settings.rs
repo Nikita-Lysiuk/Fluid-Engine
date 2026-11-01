@@ -18,6 +18,7 @@ pub struct SolveSettings {
     pub max_avg_error: f32,
 }
 
+/// Settings for both pressure solves.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SolverSettings {
     pub density: SolveSettings,

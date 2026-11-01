@@ -1,6 +1,7 @@
 use glam::{IVec3, Vec3};
 use vulkano::buffer::BufferContents;
 
+/// GPU-visible parameters for a simulation substep.
 #[repr(C, align(16))]
 #[derive(BufferContents, Copy, Clone)]
 pub struct SimulationParams {
@@ -31,6 +32,7 @@ pub struct SimulationParams {
 }
 
 impl SimulationParams {
+    /// Creates the associated resources.
     pub fn new(
         particle_radius: f32,
         particle_mass: f32,

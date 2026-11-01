@@ -18,6 +18,7 @@ use crate::sim::shader_loader::load_shader_entry_point;
 
 use crate::sim::shaders::{cs_hash, cs_offsets, cs_reorder};
 
+/// Builds and sorts the particle neighborhood grid.
 pub struct NeighborSearch {
     spatial_hash_pipeline: Arc<ComputePipeline>,
     offsets_pipeline: Arc<ComputePipeline>,
@@ -100,6 +101,7 @@ impl NeighborSearch {
 }
 
 impl NeighborSearch {
+    /// Prepares GPU resources for subsequent commands.
     pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
@@ -133,6 +135,7 @@ impl NeighborSearch {
         self.sorter.prepare(allocator.clone(), physics_data, sim_params);
         self.radix_sorter.prepare(allocator, &physics_data.grid_entries);
     }
+    /// Records the associated GPU commands.
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let sort_buffer_len = self.sort_buffer_len;
         let num_particles = self.num_particles;

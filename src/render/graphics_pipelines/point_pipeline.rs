@@ -32,11 +32,13 @@ mod fs {
     );
 }
 
+/// Graphics pipeline for particle points.
 pub struct PointPipeline {
     pub inner: Arc<GraphicsPipeline>
 }
 
 impl PointPipeline {
+    /// Creates the associated resources.
     pub fn new(
         device: Arc<Device>,
         color_format: Format,

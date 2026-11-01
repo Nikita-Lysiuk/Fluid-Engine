@@ -11,6 +11,7 @@ use crate::render::particle_renderer::GpuRenderData;
 use crate::render::graphics_pipelines::Pipelines;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
+/// Per-frame scene and render resources.
 pub struct GpuSceneResources {
     camera_data: CameraData,
     collision_box_data: CollisionBoxData,
@@ -24,6 +25,7 @@ pub struct GpuSceneResources {
 }
 
 impl GpuSceneResources {
+    /// Creates the associated resources.
     pub fn new(allocator: Arc<StandardMemoryAllocator>, scene: &Scene) -> Self {
         let render_data = GpuRenderData::new(
             allocator.clone(),
@@ -56,19 +58,23 @@ impl GpuSceneResources {
             density_view,
         }
     }
+    /// Returns the current camera buffer address.
     pub fn camera_addr(&self) -> u64 {
         self.camera_data.uniform_buffer_addr(self.current_frame_idx)
     }
+    /// Updates frame resources from the scene.
     pub fn sync_with_scene(&self, scene: &Scene) {
         self.camera_data.write_to_buffer(&scene.camera, self.current_frame_idx);
         self.collision_box_data.write_to_buffer(&scene.boundary, self.current_frame_idx);
     }
 
+    /// Records the graphics commands for this resource.
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines) {
         self.collision_box_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx);
         //self.render_data.bind_to_command_buffer(builder, pipelines, self.camera_addr(), self.current_frame_idx, self.physics_data.count);
     }
 
+    /// Advances to the next frame resource slot.
     pub fn prepare_next_frame(&mut self) {
         self.current_frame_idx = (self.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
     }

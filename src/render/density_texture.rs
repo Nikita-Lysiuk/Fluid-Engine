@@ -21,12 +21,14 @@ mod splat_cs {
     }
 }
 
+/// Compute pipeline that splats particles into a density texture.
 pub struct DensityTexturePipeline {
     pub pipeline: Arc<ComputePipeline>,
     pass: Option<ComputePass>,
 }
 
 impl DensityTexturePipeline {
+    /// Prepares the pass for the density image.
     pub fn prepare_with_image(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
@@ -43,6 +45,7 @@ impl DensityTexturePipeline {
 }
 
 impl DensityTexturePipeline {
+    /// Creates the associated resources.
     pub fn new(device: Arc<vulkano::device::Device>) -> Self {
         let shader = Self::load_shader_module(device.clone());
         Self::from_pipeline(crate::sim::compute_pass::new_pipeline(device, shader))
@@ -53,6 +56,7 @@ impl DensityTexturePipeline {
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
         Self { pipeline, pass: None }
     }
+    /// Records the associated GPU commands.
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         self.pass.as_ref().expect("prepare the density texture before dispatch").dispatch(builder);
     }

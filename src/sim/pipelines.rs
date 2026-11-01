@@ -22,6 +22,7 @@ mod convergence_benchmark;
 #[path = "benchmarks/substep_benchmark.rs"]
 mod substep_benchmark;
 
+/// Compute passes used by the fluid solver.
 pub struct ComputePipelines {
     device: Arc<Device>,
     num_particles: u32,
@@ -46,6 +47,7 @@ pub struct ComputePipelines {
 pub use crate::sim::solver_settings::{PressureSolve, SolveSettings, SolverSettings};
 
 impl ComputePipelines {
+    /// Creates the associated resources.
     pub fn new(
         device: Arc<Device>,
         memory_allocator: Arc<StandardMemoryAllocator>,
@@ -234,6 +236,7 @@ impl ComputePipelines {
         self.stats.as_ref().expect("prepare statistics before dispatch").dispatch(builder);
     }
 
+    /// Records commands needed before the first substep.
     pub fn record_init<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         self.neighbor_search.execute(builder);
         self.density_alpha.as_ref().expect("prepare density_alpha before dispatch").dispatch(builder);

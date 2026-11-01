@@ -7,12 +7,14 @@ use crate::render::model_vertex::ModelVertex;
 use crate::render::graphics_pipelines::Pipelines;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
+/// GPU buffers for the simulation boundary outline.
 pub struct CollisionBoxData {
     vertex_buffer: Vec<Subbuffer<[ModelVertex]>>,
     index_buffer: Vec<Subbuffer<[u16]>>,
 }
 
 impl CollisionBoxData {
+    /// Creates the associated resources.
     pub fn new(memory_allocator: Arc<StandardMemoryAllocator>) -> Self {
         let mut vertex_buffer = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
         let mut index_buffer = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
@@ -94,6 +96,7 @@ impl CollisionBoxData {
             .get()
     }
 
+    /// Records the graphics commands for this resource.
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64, current_frame_idx: usize) {
         // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {

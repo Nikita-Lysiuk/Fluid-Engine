@@ -2,6 +2,7 @@ use std::sync::Arc;
 use vulkano::device::Device;
 use vulkano::shader::{EntryPoint, ShaderModule};
 
+/// Loads a named shader entry point.
 pub fn load_shader_entry_point(
     device: Arc<Device>,
     loader: fn(Arc<Device>) -> Result<Arc<ShaderModule>, vulkano::Validated<vulkano::VulkanError>>,

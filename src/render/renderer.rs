@@ -31,6 +31,7 @@ use vulkano_util::renderer::VulkanoWindowRenderer;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
 
+/// Window, simulation, and graphics frame coordinator.
 pub struct Renderer {
     pub window_renderer: VulkanoWindowRenderer,
     context: Arc<VulkanoContext>,
@@ -50,6 +51,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    /// Creates the associated resources.
     pub fn new(window: Window, scene: &Scene, event_loop: &ActiveEventLoop) -> Self {
         let GpuContext { context, window_renderer, command_buffer_allocator, descriptor_set_allocator, depth_format } = GpuContext::new(window);
 

@@ -15,6 +15,7 @@ pub mod point_pipeline;
 pub mod sky_pipeline;
 mod water_pipeline;
 
+/// Graphics pipelines and layouts used for a frame.
 pub struct Pipelines {
     pub sky_layout: Arc<PipelineLayout>,
     pub sky_pipeline: Arc<SkyPipeline>,
@@ -25,6 +26,7 @@ pub struct Pipelines {
 }
 
 impl Pipelines {
+    /// Creates the associated resources.
     pub fn new(
         context: Arc<VulkanoContext>,
         swapchain_format: Format,

@@ -32,11 +32,13 @@ mod fs {
     );
 }
 
+/// Graphics pipeline for the boundary outline.
 pub struct CollisionPipeline {
     pub inner: Arc<GraphicsPipeline>
 }
 
 impl CollisionPipeline {
+    /// Creates the associated resources.
     pub fn new(
         device: Arc<Device>,
         layout: Arc<PipelineLayout>,

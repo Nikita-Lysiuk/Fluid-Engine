@@ -3,6 +3,7 @@ use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Sub
 use vulkano::command_buffer::DispatchIndirectCommand;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 
+/// Particle index and spatial hash used for sorting.
 #[derive(BufferContents, Copy, Clone)]
 #[repr(C)]
 pub struct Entry {
@@ -13,6 +14,7 @@ pub struct Entry {
 /// Must match `MAX_NEIGHBORS` in common.glsl.
 pub const MAX_NEIGHBORS: u32 = 64;
 
+/// GPU buffers holding simulation state.
 pub struct ParticleBuffers {
     pub count: u32,
 
@@ -73,6 +75,7 @@ pub mod stats_layout {
 }
 
 impl ParticleBuffers {
+    /// Creates the associated resources.
     pub fn new(
         allocator: Arc<StandardMemoryAllocator>,
         initial_positions: Vec<[f32; 3]>,

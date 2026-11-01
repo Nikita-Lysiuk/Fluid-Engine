@@ -1,6 +1,7 @@
 use std::f32::consts::TAU;
 use glam::Vec3;
 
+/// Moving simulation boundary.
 pub struct CollisionBox {
     pub min: Vec3,
     pub max: Vec3,
@@ -13,6 +14,7 @@ pub struct CollisionBox {
 }
 
 impl CollisionBox {
+    /// Creates the associated resources.
     pub fn new(min: Vec3, max: Vec3) -> Self {
         Self {
             base_min_x: min.x,
@@ -24,6 +26,7 @@ impl CollisionBox {
             time: 0.0,
         }
     }
+    /// Advances the boundary animation.
     pub fn update(&mut self, dt: f32) {
         if !self.animate {
             return;

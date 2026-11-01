@@ -7,6 +7,7 @@ use vulkano::pipeline::Pipeline;
 use crate::render::graphics_pipelines::Pipelines;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
+/// Particle position supplied to the graphics pipeline.
 #[repr(C)]
 #[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
 pub struct PositionVertex {
@@ -14,6 +15,7 @@ pub struct PositionVertex {
     pub position: [f32; 4],
 }
 
+/// Particle color supplied to the graphics pipeline.
 #[repr(C)]
 #[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
 pub struct ColorVertex {
@@ -21,6 +23,7 @@ pub struct ColorVertex {
     pub color: [f32; 4],
 }
 
+/// Particle rendering attributes.
 #[repr(C)]
 #[derive(BufferContents, Vertex, Copy, Clone, Debug, Default)]
 pub struct AttributeVertex {
@@ -28,6 +31,7 @@ pub struct AttributeVertex {
     pub radius: f32,
 }
 
+/// GPU buffers used to draw particles.
 pub struct GpuRenderData {
     pub position_buffers: Vec<Subbuffer<[PositionVertex]>>,
     pub color_buffers: Vec<Subbuffer<[ColorVertex]>>,
@@ -35,6 +39,7 @@ pub struct GpuRenderData {
 }
 
 impl GpuRenderData {
+    /// Creates the associated resources.
     pub fn new(
         allocator: Arc<StandardMemoryAllocator>,
         initial_positions: &[[f32; 3]],
@@ -96,6 +101,7 @@ impl GpuRenderData {
 
         Self { position_buffers, attribute_buffer, color_buffers }
     }
+    /// Records the graphics commands for this resource.
     pub fn bind_to_command_buffer<Cb>(
         &self,
         builder: &mut AutoCommandBufferBuilder<Cb>,

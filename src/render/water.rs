@@ -20,6 +20,7 @@ struct WaterPushConstants {
     model: [[f32; 4]; 4],
 }
 
+/// Resources for ray-marched fluid rendering.
 pub struct WaterRenderer {
     vertex_buffer: Subbuffer<[ModelVertex]>,
     index_buffer: Subbuffer<[u32]>,
@@ -28,6 +29,7 @@ pub struct WaterRenderer {
 }
 
 impl WaterRenderer {
+    /// Creates the associated resources.
     pub fn new(
         memory_allocator: Arc<StandardMemoryAllocator>,
         descriptor_set_allocator: Arc<StandardDescriptorSetAllocator>,
@@ -127,6 +129,7 @@ impl WaterRenderer {
 
         (vertices, indices)
     }
+    /// Records the graphics commands for this resource.
     pub fn bind_to_command_buffer<Cb>(
         &self,
         builder: &mut AutoCommandBufferBuilder<Cb>,

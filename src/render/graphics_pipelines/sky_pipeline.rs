@@ -31,11 +31,13 @@ mod fs {
     );
 }
 
+/// Graphics pipeline for the sky.
 pub struct SkyPipeline {
     pub inner: Arc<GraphicsPipeline>
 }
 
 impl SkyPipeline {
+    /// Creates the associated resources.
     pub fn new(
         device: Arc<Device>,
         layout: Arc<PipelineLayout>,

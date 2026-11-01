@@ -29,6 +29,7 @@ mod cs_reorder {
 
 pub(super) const ELEMENTS_PER_INVOCATION: u32 = 8;
 
+/// GPU radix sorter for particle hashes.
 pub struct RadixSorter {
     entries_tmp: Subbuffer<[Entry]>,
     counts: Subbuffer<[u32]>,
@@ -48,6 +49,7 @@ pub struct RadixSorter {
 }
 
 impl RadixSorter {
+    /// Creates the associated resources.
     pub fn new(
         device: Arc<Device>,
         memory_allocator: Arc<StandardMemoryAllocator>,
@@ -148,6 +150,7 @@ impl RadixSorter {
         }
     }
 
+    /// Prepares GPU resources for subsequent commands.
     pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
@@ -219,6 +222,7 @@ impl RadixSorter {
         );
     }
 
+    /// Records the associated GPU commands.
     pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let num_work_groups = self.num_work_groups;
         let num_elements = self.num_elements;

@@ -4,12 +4,14 @@ use crate::sim::pipelines::SortAlgorithm;
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
 use glam::{Vec2, Vec4};
 
+/// Available fluid rendering modes.
 #[derive(PartialEq, Clone, Copy)]
 pub enum RenderMode {
     Raymarching,
     Particles,
 }
 
+/// Interactive simulation and rendering controls.
 pub struct AppUi {
     pub show_controls: bool,
     pub render_mode: RenderMode,
@@ -37,6 +39,7 @@ pub struct AppUi {
 }
 
 impl AppUi {
+    /// Creates the associated resources.
     pub fn new() -> Self {
         Self {
             show_controls: true,
@@ -74,6 +77,7 @@ impl AppUi {
         }
     }
 
+    /// Draws the application controls.
     pub fn render(&mut self, ctx: &Context, scene: &mut Scene, fps: u32) {
         if !self.show_controls {
             return;

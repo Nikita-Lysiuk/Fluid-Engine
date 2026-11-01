@@ -17,6 +17,7 @@ use vulkano::sync::GpuFuture;
 use crate::render::model_vertex::ModelVertex;
 use crate::render::graphics_pipelines::Pipelines;
 
+/// Resources used to render the environment.
 pub struct SkyData {
     pub vertex_buffer: Subbuffer<[ModelVertex]>,
     pub index_buffer: Subbuffer<[u32]>,
@@ -28,6 +29,7 @@ pub struct SkyData {
 }
 
 impl SkyData {
+    /// Creates the associated resources.
     pub fn new(
         radius: f32,
         sectors: u16,
@@ -201,6 +203,7 @@ impl SkyData {
         (descriptor_set, texture_view)
     }
     
+    /// Records the graphics commands for this resource.
     pub fn bind_to_command_buffer<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>, pipelines: &Pipelines, camera_addr: u64) {
         // SAFETY: the pipeline, required descriptors, vertex buffers, and push constants are bound before drawing.
         unsafe {
