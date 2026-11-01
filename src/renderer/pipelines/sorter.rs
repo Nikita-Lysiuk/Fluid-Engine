@@ -16,7 +16,7 @@ use vulkano::pipeline::{
 };
 use vulkano::shader::EntryPoint;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum SortAlgorithm {
     Bitonic,
     Radix,

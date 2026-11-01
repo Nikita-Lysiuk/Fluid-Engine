@@ -4,9 +4,12 @@
 
 layout(local_size_x = 256) in;
 
+// 1/s; how strongly the attractor brakes particles inside its radius.
+#define ATTRACTOR_DAMPING 4.0
 
-layout(std430, set = 0, binding = 0) readonly buffer Entries { Entry entries[]; };
-layout(std430, set = 0, binding = 1) readonly buffer Offsets { uint grid_start[]; };
+
+layout(std430, set = 0, binding = 0) readonly buffer NeighborList { uint neighbor_list[]; };
+layout(std430, set = 0, binding = 1) readonly buffer NeighborCounts { uint neighbor_counts[]; };
 layout(std430, set = 0, binding = 3) readonly buffer Velocities { vec4 velocities[];};
 layout(std430, set = 0, binding = 4) readonly buffer Positions { vec4 positions[]; };
 layout(std430, set = 0, binding = 5) readonly buffer Densities { float densities[]; };
@@ -24,43 +27,48 @@ void main() {
     float h = sim_params.smoothing_radius;
     float mass = sim_params.particle_mass;
 
-    ivec3 cell_coords = ivec3(floor(pos_i / h));
-    uint table_size = uint(grid_start.length());
 
     vec3 sum_viscosity = vec3(0.0);
 
-    for (int z = -1; z <= 1; z++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
-                uint hash = get_cell_hash(neighbor_cell, table_size);
-                uint start_idx = grid_start[hash];
+    uint neighbor_count = neighbor_counts[i];
+    for (uint k = 0u; k < neighbor_count; k++) {
+        uint j = neighbor_list[k * num_particles + i];
 
-                if (start_idx == 0xFFFFFFFF) continue;
+        vec3 pos_j = positions[j].xyz;
+        vec3 r_vec = pos_i - pos_j;
+        float r2 = dot(r_vec, r_vec);
 
-                for (uint j = start_idx; j < num_particles; j++) {
-                    if (entries[j].hash != hash) break;
+        if (r2 > h * h) continue;
 
-                    vec3 pos_j = positions[j].xyz;
-                    vec3 r_vec = pos_i - pos_j;
-                    float r2 = dot(r_vec, r_vec);
+        float r = sqrt(r2);
+        float w = kernel_w(r, h);
 
-                    if (r2 > h * h) continue;
-
-                    float r = sqrt(r2);
-                    float w = kernel_w(r, h);
-
-                    if (r > 1e-6) {
-                        vec3 vel_diff = velocities[j].xyz - velocities[i].xyz;
-                        sum_viscosity += mass / densities[j] * vel_diff * w;
-                    }
-                }
-            }
+        if (r > 1e-6) {
+            vec3 vel_diff = velocities[j].xyz - velocities[i].xyz;
+            sum_viscosity += mass / densities[j] * vel_diff * w;
         }
-    }
+        }
 
     vec3 current_vel = velocities[i].xyz;
     vec3 vel_visco = current_vel + sim_params.viscosity * sum_viscosity;
-    vec3 vel_final = vel_visco + sim_params.gravity.xyz * sim_params.dt;
+
+    // Mouse attractor: inside the radius, pull towards the centre and damp the
+    // velocity (so particles gather instead of orbiting), and fade gravity out
+    // towards the centre so the water can form a ball.
+    vec3 gravity = sim_params.gravity.xyz;
+    vec3 attraction = vec3(0.0);
+    float strength = sim_params.attractor.w;
+    if (strength != 0.0) {
+        vec3 to_centre = sim_params.attractor.xyz - pos_i;
+        float dist = length(to_centre);
+        float radius = sim_params.attractor_radius;
+        if (dist < radius && dist > 1e-6) {
+            float weight = 1.0 - dist / radius;
+            attraction = (to_centre / dist * strength - current_vel * ATTRACTOR_DAMPING) * weight;
+            gravity *= 1.0 - weight * clamp(strength / 10.0, 0.0, 1.0);
+        }
+    }
+
+    vec3 vel_final = vel_visco + (gravity + attraction) * sim_params.dt;
     new_velocities[i] = vec4(vel_final, 0.0);
 }

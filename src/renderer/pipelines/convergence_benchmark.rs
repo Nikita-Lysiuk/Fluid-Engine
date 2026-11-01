@@ -33,8 +33,8 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::sync::GpuFuture;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 
-use crate::entities::particle::{GpuPhysicsData, ParticleGenerator, SimulationParams};
-use crate::renderer::pipelines::{ComputePipelines, ComputeStep};
+use crate::entities::particle::{stats_layout, GpuPhysicsData, ParticleGenerator, SimulationParams};
+use crate::renderer::pipelines::{ComputePipelines, ComputeStep, SolverSettings};
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
@@ -54,13 +54,9 @@ const CFL_MIN_DT: f32 = 0.001;
 const CFL_MAX_DT: f32 = 0.05;
 const STATIC_DT: f32 = 0.005;
 
-// Fixed-point scales — must match the constants in stats.comp / mod.rs.
-const DENSITY_SCALE: f32 = 1.0;
-const DIVERGENCE_SCALE: f32 = 10.0;
-
 // ── Vulkan setup ─────────────────────────────────────────────────────────────
 
-fn make_context() -> Arc<VulkanoContext> {
+pub(super) fn make_context() -> Arc<VulkanoContext> {
     let config = VulkanoConfig {
         instance_create_info: InstanceCreateInfo {
             enabled_extensions: InstanceExtensions {
@@ -82,22 +78,13 @@ fn make_context() -> Arc<VulkanoContext> {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-fn prepare_all_pipelines(
+pub(super) fn prepare_all_pipelines(
     pipelines: &mut ComputePipelines,
     ds_alloc: Arc<StandardDescriptorSetAllocator>,
     physics_data: &GpuPhysicsData,
     sim_params: &Subbuffer<SimulationParams>,
 ) {
-    pipelines.neighbor_search.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.density_alpha.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.viscosity.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.density_source_term.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.pressure_force.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.pressure_update.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.pressure_integration.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.divergence_source_term.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.divergence_integration.prepare(ds_alloc.clone(), physics_data, sim_params);
-    pipelines.stats.prepare(ds_alloc, physics_data, sim_params);
+    pipelines.prepare(ds_alloc, physics_data, sim_params);
 }
 
 // Records and submits `n_substeps` substeps in a single command buffer. The
@@ -109,7 +96,7 @@ fn submit_substeps(
     cb_alloc: &Arc<StandardCommandBufferAllocator>,
     queue: &Arc<Queue>,
     pipelines: &ComputePipelines,
-    iter_count: u32,
+    solver: SolverSettings,
     n_substeps: u32,
     is_first_call: bool,
 ) {
@@ -125,30 +112,11 @@ fn submit_substeps(
     // physics_data, since subsequent substeps' internal neighbor_search keeps
     // the structure synchronized.
     if is_first_call {
-        pipelines.neighbor_search.execute(&mut builder);
-        pipelines.density_alpha.execute(&mut builder);
+        pipelines.record_init(&mut builder);
     }
 
     for _ in 0..n_substeps {
-        // Phase 1 — density correction.
-        pipelines.viscosity.execute(&mut builder);
-        pipelines.density_source_term.execute(&mut builder);
-        for _ in 0..iter_count {
-            pipelines.pressure_force.execute(&mut builder);
-            pipelines.pressure_update.execute(&mut builder);
-        }
-        pipelines.pressure_integration.execute(&mut builder);
-
-        // Phase 2 — divergence correction (rebuild neighbours first, since
-        // pressure_integration just moved every particle).
-        pipelines.neighbor_search.execute(&mut builder);
-        pipelines.density_alpha.execute(&mut builder);
-        pipelines.divergence_source_term.execute(&mut builder);
-        for _ in 0..iter_count {
-            pipelines.pressure_force.execute(&mut builder);
-            pipelines.pressure_update.execute(&mut builder);
-        }
-        pipelines.divergence_integration.execute(&mut builder);
+        pipelines.record_substep(&mut builder, &solver);
     }
 
     pipelines.stats.execute(&mut builder);
@@ -162,12 +130,29 @@ fn submit_substeps(
         .unwrap();
 }
 
-fn read_stats(physics_data: &GpuPhysicsData, n_particles: u32) -> (f32, f32) {
+/// Compression error after the last density solve (kg/m³) and after the last
+/// divergence solve (kg/m³/s), plus the iterations both solves used.
+pub(super) struct SolverStats {
+    pub density_error: f32,
+    pub divergence_error: f32,
+    pub density_iterations: u32,
+    pub divergence_iterations: u32,
+}
+
+pub(super) fn read_stats(physics_data: &GpuPhysicsData, dt: f32) -> SolverStats {
     let stats = physics_data.stats_buffer.read().unwrap();
-    let n = n_particles as f32;
-    let density_err = stats[1] as f32 / (DENSITY_SCALE * n);
-    let div_err = stats[2] as f32 / (DIVERGENCE_SCALE * n);
-    (density_err, div_err)
+    let solve = |range: std::ops::Range<u64>| {
+        let state = &stats[range.start as usize..range.end as usize];
+        (state[stats_layout::ITERATIONS], f32::from_bits(state[stats_layout::AVG_ERROR]))
+    };
+    let (density_iterations, density_error) = solve(stats_layout::DENSITY_SOLVER);
+    let (divergence_iterations, divergence_per_step) = solve(stats_layout::DIVERGENCE_SOLVER);
+    SolverStats {
+        density_error,
+        divergence_error: divergence_per_step / dt,
+        density_iterations,
+        divergence_iterations,
+    }
 }
 
 fn mean(xs: &[f32]) -> f32 {
@@ -297,7 +282,7 @@ fn solver_convergence_benchmark() {
             &cb_allocator,
             &queue,
             &pipelines,
-            iter_count,
+            SolverSettings::fixed(iter_count, iter_count),
             WARMUP_SUBSTEPS,
             true,
         );
@@ -307,10 +292,17 @@ fn solver_convergence_benchmark() {
         let mut div_errs = Vec::with_capacity(MEASUREMENT_SUBSTEPS as usize);
 
         for _ in 0..MEASUREMENT_SUBSTEPS {
-            submit_substeps(&cb_allocator, &queue, &pipelines, iter_count, 1, false);
-            let (de, ve) = read_stats(&physics_data, n_particles);
-            density_errs.push(de);
-            div_errs.push(ve);
+            submit_substeps(
+                &cb_allocator,
+                &queue,
+                &pipelines,
+                SolverSettings::fixed(iter_count, iter_count),
+                1,
+                false,
+            );
+            let stats = read_stats(&physics_data, dt);
+            density_errs.push(stats.density_error);
+            div_errs.push(stats.divergence_error);
         }
 
         let avg_density = mean(&density_errs);
@@ -690,7 +682,7 @@ fn density_after_warmup_diagnostic() {
         &cb_allocator,
         &queue,
         &pipelines,
-        iter_count,
+        SolverSettings::fixed(iter_count, iter_count),
         warmup,
         false,
     );
@@ -844,7 +836,14 @@ fn cfl_comparison() {
                 }
             }
 
-            submit_substeps(&cb_allocator, &queue, &pipelines, iter_count, 1, frame == 0);
+            submit_substeps(
+                &cb_allocator,
+                &queue,
+                &pipelines,
+                SolverSettings::fixed(iter_count, iter_count),
+                1,
+                frame == 0,
+            );
 
             let v_max = read_max_speed(&physics_data);
 

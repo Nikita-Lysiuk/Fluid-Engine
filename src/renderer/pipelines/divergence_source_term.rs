@@ -40,12 +40,15 @@ impl ComputeStep for DivergenceSourceTermPipeline {
             allocator,
             layout.clone(),
             [
-                WriteDescriptorSet::buffer(0, physics_data.grid_entries.clone()),
-                WriteDescriptorSet::buffer(1, physics_data.grid_start.clone()),
+                WriteDescriptorSet::buffer(0, physics_data.neighbor_list.clone()),
+                WriteDescriptorSet::buffer(1, physics_data.neighbor_counts.clone()),
                 WriteDescriptorSet::buffer(2, sim_params.clone()),
                 WriteDescriptorSet::buffer(3, physics_data.position_b.clone()),
                 WriteDescriptorSet::buffer(4, physics_data.velocity_a.clone()),
                 WriteDescriptorSet::buffer(5, physics_data.source_terms.clone()),
+                WriteDescriptorSet::buffer(6, physics_data.pressures.clone()),
+                WriteDescriptorSet::buffer(7, physics_data.warm_start.clone()),
+                WriteDescriptorSet::buffer(8, physics_data.densities.clone()),
             ],
             []
         ).unwrap());

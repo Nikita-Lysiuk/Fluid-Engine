@@ -4,12 +4,15 @@
 
 layout(local_size_x = 256) in;
 
-layout(std430, set = 0, binding = 0) readonly buffer Entries { Entry entries[]; };
-layout(std430, set = 0, binding = 1) readonly buffer Offsets { uint grid_start[]; };
+layout(std430, set = 0, binding = 0) readonly buffer NeighborList { uint neighbor_list[]; };
+layout(std430, set = 0, binding = 1) readonly buffer NeighborCounts { uint neighbor_counts[]; };
 layout(std430, set = 0, binding = 3) readonly buffer Positions { vec4 positions[]; };
 layout(std430, set = 0, binding = 4) readonly buffer Velocities { vec4 velocities[]; };
 
 layout(std430, set = 0, binding = 5) buffer SourceTerms { float source_terms[]; };
+layout(std430, set = 0, binding = 6) writeonly buffer Pressures { float pressures[]; };
+layout(std430, set = 0, binding = 7) readonly buffer WarmStart { vec2 warm_start[]; };
+layout(std430, set = 0, binding = 8) readonly buffer Densities { float densities[]; };
 
 void main() {
     uint i = gl_GlobalInvocationID.x;
@@ -22,41 +25,46 @@ void main() {
     float h = sim_params.smoothing_radius;
     float mass = sim_params.particle_mass;
 
-    ivec3 cell_coords = ivec3(floor(pos_i / h));
-    uint table_size = uint(grid_start.length());
 
     float divergence_sum = 0.0;
 
-    for (int z = -1; z <= 1; z++) {
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                ivec3 neighbor_cell = cell_coords + ivec3(x, y, z);
-                uint hash = get_cell_hash(neighbor_cell, table_size);
-                uint start_idx = grid_start[hash];
+    uint neighbor_count = neighbor_counts[i];
+    for (uint k = 0u; k < neighbor_count; k++) {
+        uint j = neighbor_list[k * num_particles + i];
 
-                if (start_idx == 0xFFFFFFFF) continue;
+        vec3 pos_j = positions[j].xyz;
+        vec3 r_vec = pos_i - pos_j;
+        float r2 = dot(r_vec, r_vec);
 
-                for (uint j = start_idx; j < num_particles; j++) {
-                    if (entries[j].hash != hash) break;
+        if (r2 > h * h) continue;
 
-                    vec3 pos_j = positions[j].xyz;
-                    vec3 r_vec = pos_i - pos_j;
-                    float r2 = dot(r_vec, r_vec);
+        float r = sqrt(r2);
 
-                    if (r2 > h * h) continue;
-
-                    float r = sqrt(r2);
-
-                    if (r > 1e-6) {
-                        vec3 grad = kernel_grad(r_vec, r, h);
-                        vec3 vel_j = velocities[j].xyz;
-                        vec3 vel_diff = vel_i - vel_j;
-                        divergence_sum += mass * dot(vel_diff, grad);
-                    }
-                }
-            }
+        if (r > 1e-6) {
+            vec3 grad = kernel_grad(r_vec, r, h);
+            vec3 vel_j = velocities[j].xyz;
+            vec3 vel_diff = vel_i - vel_j;
+            divergence_sum += mass * dot(vel_diff, grad);
         }
-    }
+        }
 
-    source_terms[i] = -divergence_sum;
+    divergence_sum += sim_params.target_density * box_boundary_divergence(pos_i, vel_i);
+    // Particles with too few neighbours are left out, as in SPlisHSPlasH.
+    // Unlike SPlisHSPlasH the source is not clamped to compression only:
+    // with the clamp the solver needed more iterations here (18.7 vs 14.4 on
+    // average over 3 s, `solver_iterations_over_time`).
+    float source = -divergence_sum;
+    if (effective_neighbor_count(pos_i, neighbor_count) < MIN_DIVERGENCE_NEIGHBORS) {
+        source = 0.0;
+    }
+    source_terms[i] = source;
+
+    float dt = sim_params.dt;
+    float rho_i = densities[i];
+    float p0 = 0.0;
+    if (source < 0.0 && dt > 1e-6) {
+        float cap = WARM_START_CAP_DIVERGENCE * rho_i * rho_i;
+        p0 = 0.5 * min(warm_start[i].y, cap) / dt;
+    }
+    pressures[i] = p0;
 }
