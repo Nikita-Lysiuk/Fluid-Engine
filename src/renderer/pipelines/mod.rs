@@ -2,7 +2,6 @@ use crate::entities::particle::{stats_layout, ParticleBuffers, SimulationParams}
 use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
 use crate::renderer::pipelines::density_alpha::DensityAlphaPipeline;
 use crate::renderer::pipelines::density_source_term::DensitySourceTermPipeline;
-use crate::renderer::pipelines::density_texture::DensityTexturePipeline;
 use crate::renderer::pipelines::divergence_integration::DivergenceIntegrationPipeline;
 use crate::renderer::pipelines::divergence_source_term::DivergenceSourceTermPipeline;
 use crate::renderer::pipelines::neighbor_search::NeighborSearch;
@@ -42,7 +41,6 @@ mod sorter;
 pub use sorter::SortAlgorithm;
 mod density_alpha;
 mod density_source_term;
-mod density_texture;
 mod divergence_integration;
 mod divergence_source_term;
 mod pressure_force_pipeline;
@@ -70,7 +68,6 @@ pub struct ComputePipelines {
     pub pressure_integration: PressureIntegrationPipeline,
     pub divergence_source_term: DivergenceSourceTermPipeline,
     pub divergence_integration: DivergenceIntegrationPipeline,
-    pub density_texture: DensityTexturePipeline,
     pub stats: StatsPipeline,
     pub solver_check: SolverCheckPipeline,
 
@@ -127,7 +124,6 @@ impl ComputePipelines {
         let pressure_integration = PressureIntegrationPipeline::new(device.clone());
         let divergence_source_term = DivergenceSourceTermPipeline::new(device.clone());
         let divergence_integration = DivergenceIntegrationPipeline::new(device.clone());
-        let density_texture = DensityTexturePipeline::new(device.clone());
         let stats = StatsPipeline::new(device.clone());
         let solver_check = SolverCheckPipeline::new(device.clone());
 
@@ -141,7 +137,6 @@ impl ComputePipelines {
             pressure_integration,
             divergence_source_term,
             divergence_integration,
-            density_texture,
             stats,
             solver_check,
             group_count: 0,

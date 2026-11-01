@@ -41,3 +41,6 @@ mod simulation_stats;
 
 #[path = "sim/simulation.rs"]
 mod simulation;
+
+#[path = "render/density_texture.rs"]
+mod density_texture;

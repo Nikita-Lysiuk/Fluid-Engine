@@ -4,6 +4,7 @@ use crate::entities::sky::SkyData;
 use crate::entities::water::WaterRenderer;
 use crate::renderer::pipelines::{ComputePipelines, Pipelines};
 use crate::simulation::Simulation;
+use crate::density_texture::DensityTexturePipeline;
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
 pub use crate::renderer::ui::RenderMode;
@@ -40,6 +41,7 @@ pub struct Renderer {
     command_buffer_allocator: Arc<StandardCommandBufferAllocator>,
     pipelines: Pipelines,
     simulation: Simulation,
+    density_texture: DensityTexturePipeline,
     sky_data: SkyData,
     water_renderer: WaterRenderer,
 
@@ -90,7 +92,8 @@ impl Renderer {
             &resources.physics_data,
             &resources.sim_params_buffer,
         );
-        gpu_physics.density_texture.prepare_with_image(
+        let mut density_texture = DensityTexturePipeline::new(context.device().clone());
+        density_texture.prepare_with_image(
             descriptor_set_allocator.clone(),
             &resources.physics_data,
             resources.density_view.clone(),
@@ -125,6 +128,7 @@ impl Renderer {
             resources,
             sky_data,
             water_renderer,
+            density_texture,
             simulation: Simulation::new(gpu_physics, command_buffer_allocator.clone(), context.graphics_queue().queue_family_index()),
             gui,
             app_ui: AppUI::new(),
@@ -257,7 +261,7 @@ impl Renderer {
             let mut clear_info = ClearColorImageInfo::image(self.resources.density_texture.clone());
             clear_info.clear_value = ClearColorValue::Uint([0; 4]);
             builder.clear_color_image(clear_info).unwrap();
-            self.simulation.pipelines.density_texture.execute(&mut builder);
+            self.density_texture.execute(&mut builder);
         }
 
         let extent = self.window_renderer.window_size();
