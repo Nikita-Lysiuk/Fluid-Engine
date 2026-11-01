@@ -65,3 +65,15 @@ impl ComputePass {
         unsafe { builder.dispatch_indirect(args).expect("indirect compute dispatch is valid"); }
     }
 }
+
+/// Creates a compute pipeline from a shader entry point.
+pub(crate) fn new_pipeline(device: Arc<vulkano::device::Device>, shader: vulkano::shader::EntryPoint) -> Arc<ComputePipeline> {
+    use vulkano::pipeline::compute::ComputePipelineCreateInfo;
+    use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
+    use vulkano::pipeline::{PipelineLayout, PipelineShaderStageCreateInfo};
+    let stage = PipelineShaderStageCreateInfo::new(shader);
+    let layout_info = PipelineDescriptorSetLayoutCreateInfo::from_stages([&stage])
+        .into_pipeline_layout_create_info(device.clone()).expect("shader pipeline layout is valid");
+    let layout = PipelineLayout::new(device.clone(), layout_info).expect("pipeline layout can be created");
+    ComputePipeline::new(device, None, ComputePipelineCreateInfo::stage_layout(stage, layout)).expect("compute pipeline can be created")
+}

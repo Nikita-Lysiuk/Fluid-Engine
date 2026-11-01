@@ -9,9 +9,8 @@ use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
-use vulkano::shader::EntryPoint;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::renderer::pipelines::{ComputeStep, SortAlgorithm};
+use crate::renderer::pipelines::{SortAlgorithm};
 use crate::renderer::pipelines::sorter::{GpuSorter, RadixSorter};
 use crate::utils::shader_loader::load_shader_entry_point;
 
@@ -109,17 +108,8 @@ impl NeighborSearch {
     }
 }
 
-impl ComputeStep for NeighborSearch {
-    fn load_shader_module(_device: Arc<Device>) -> EntryPoint {
-        unimplemented!("NeighborSearch uses multiple shaders")
-    }
-    fn from_pipeline(_pipeline: Arc<ComputePipeline>) -> Self {
-        unimplemented!("NeighborSearch uses multiple pipelines")
-    }
-    fn new(_device: Arc<Device>) -> Self {
-        unimplemented!("NeighborSearch requires a memory allocator — use new_with_allocator")
-    }
-    fn prepare(
+impl NeighborSearch {
+    pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &ParticleBuffers,
@@ -178,7 +168,7 @@ impl ComputeStep for NeighborSearch {
         self.sorter.prepare(allocator.clone(), physics_data, sim_params);
         self.radix_sorter.prepare(allocator, &physics_data.grid_entries);
     }
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+    pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let sort_buffer_len = self.sort_buffer_len;
         let num_particles = self.num_particles;
         let group_size = 256;

@@ -8,7 +8,6 @@ use vulkano::device::Device;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::shader::EntryPoint;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs {
@@ -22,14 +21,18 @@ pub struct StatsPipeline {
     stats_buffer: Option<Subbuffer<[u32]>>,
 }
 
-impl ComputeStep for StatsPipeline {
+impl StatsPipeline {
+    pub fn new(device: Arc<vulkano::device::Device>) -> Self {
+        let shader = Self::load_shader_module(device.clone());
+        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+    }
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
         Self { pipeline, pass: None, stats_buffer: None }
     }
-    fn prepare(
+    pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &ParticleBuffers,
@@ -46,7 +49,7 @@ impl ComputeStep for StatsPipeline {
         ));
     }
 
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+    pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let buf = self.stats_buffer.as_ref().expect("StatsPipeline: call prepare() before execute()");
         builder.fill_buffer(buf.clone().slice(0..1), 0).unwrap();
 

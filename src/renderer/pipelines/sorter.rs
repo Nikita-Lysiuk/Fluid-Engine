@@ -1,5 +1,4 @@
 use crate::entities::particle::{Entry, ParticleBuffers, SimulationParams};
-use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
@@ -35,7 +34,11 @@ pub struct GpuSorter {
     num_elements: u32,
 }
 
-impl ComputeStep for GpuSorter {
+impl GpuSorter {
+    pub fn new(device: Arc<vulkano::device::Device>) -> Self {
+        let shader = Self::load_shader_module(device.clone());
+        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+    }
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, cs::load, "main")
     }
@@ -46,7 +49,7 @@ impl ComputeStep for GpuSorter {
             num_elements: 0,
         }
     }
-    fn prepare(
+    pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &ParticleBuffers,
@@ -70,7 +73,7 @@ impl ComputeStep for GpuSorter {
             .unwrap(),
         );
     }
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+    pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let set = self
             .descriptor_set
             .as_ref()
@@ -690,8 +693,7 @@ mod benchmark {
 
     use super::{GpuSorter, RadixSorter};
     use crate::entities::particle::Entry;
-    use crate::renderer::pipelines::ComputeStep;
-
+    
     // All values are powers of two so bitonic sort can use them directly.
     const N_VALUES: &[u32] = &[
         1_024,     // 1k

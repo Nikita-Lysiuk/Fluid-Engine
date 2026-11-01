@@ -6,7 +6,6 @@ use vulkano::descriptor_set::WriteDescriptorSet;
 use crate::compute_pass::ComputePass;
 use vulkano::pipeline::ComputePipeline;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::renderer::pipelines::ComputeStep;
 
 mod cs {
     use vulkano_shaders::shader;
@@ -18,14 +17,18 @@ pub struct DensitySourceTermPipeline {
     pass: Option<ComputePass>,
 }
 
-impl ComputeStep for DensitySourceTermPipeline {
+impl DensitySourceTermPipeline {
+    pub fn new(device: Arc<vulkano::device::Device>) -> Self {
+        let shader = Self::load_shader_module(device.clone());
+        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+    }
     fn load_shader_module(device: Arc<vulkano::device::Device>) -> vulkano::shader::EntryPoint {
         crate::utils::shader_loader::load_shader_entry_point(device, cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
         Self { pipeline, pass: None }
     }
-    fn prepare(
+    pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &ParticleBuffers,
@@ -48,7 +51,7 @@ impl ComputeStep for DensitySourceTermPipeline {
         ));
     }
 
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+    pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         self.pass.as_ref().expect("prepare the compute pass before dispatch").dispatch(builder);
     }
 }

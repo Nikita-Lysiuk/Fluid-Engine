@@ -8,7 +8,6 @@ use vulkano::image::view::ImageView;
 use vulkano::pipeline::{ComputePipeline, Pipeline, PipelineBindPoint};
 use vulkano::shader::EntryPoint;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod splat_cs {
@@ -52,22 +51,18 @@ impl DensityTexturePipeline {
     }
 }
 
-impl ComputeStep for DensityTexturePipeline {
+impl DensityTexturePipeline {
+    pub fn new(device: Arc<vulkano::device::Device>) -> Self {
+        let shader = Self::load_shader_module(device.clone());
+        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+    }
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, splat_cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
         Self { pipeline, descriptor_set: None, dispatch_count: 0 }
     }
-    fn prepare(
-        &mut self,
-        _allocator: Arc<StandardDescriptorSetAllocator>,
-        _physics_data: &ParticleBuffers,
-        _sim_params: &Subbuffer<SimulationParams>,
-    ) {
-        // Use prepare_with_image() instead, as an ImageView is required.
-    }
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
+    pub fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
         let set = self.descriptor_set.as_ref().expect("DensityTexturePipeline: call prepare_with_image() before execute()");
         builder
             .bind_pipeline_compute(self.pipeline.clone()).unwrap()

@@ -2,7 +2,7 @@ use crate::core::scene::Scene;
 use crate::entities::particle::stats_layout;
 use crate::entities::sky::SkyData;
 use crate::entities::water::WaterRenderer;
-use crate::renderer::pipelines::{ComputePipelines, ComputeStep, Pipelines, SolverSettings, SortAlgorithm};
+use crate::renderer::pipelines::{ComputePipelines, Pipelines, SolverSettings, SortAlgorithm};
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
 pub use crate::renderer::ui::RenderMode;

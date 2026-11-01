@@ -25,12 +25,11 @@ use vulkano::descriptor_set::layout::{
 use vulkano::device::Device;
 use vulkano::format::Format;
 use vulkano::memory::allocator::StandardMemoryAllocator;
-use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::{
-    PipelineDescriptorSetLayoutCreateInfo, PipelineLayoutCreateInfo, PushConstantRange,
+    PipelineLayoutCreateInfo, PushConstantRange,
 };
-use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
-use vulkano::shader::{EntryPoint, ShaderStages};
+use vulkano::pipeline::PipelineLayout;
+use vulkano::shader::ShaderStages;
 use vulkano_util::context::VulkanoContext;
 
 pub mod collision_pipeline;
@@ -59,39 +58,6 @@ mod convergence_benchmark;
 #[cfg(test)]
 #[path = "../../sim/benchmarks/substep_benchmark.rs"]
 mod substep_benchmark;
-
-pub trait ComputeStep: Sized {
-    fn load_shader_module(device: Arc<Device>) -> EntryPoint;
-    fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self;
-    fn new(device: Arc<Device>) -> Self {
-        let entry_point = Self::load_shader_module(device.clone());
-
-        let stage = PipelineShaderStageCreateInfo::new(entry_point);
-        let layout = PipelineLayout::new(
-            device.clone(),
-            PipelineDescriptorSetLayoutCreateInfo::from_stages([&stage])
-                .into_pipeline_layout_create_info(device.clone())
-                .unwrap(),
-        )
-        .unwrap();
-
-        let pipeline = ComputePipeline::new(
-            device.clone(),
-            None,
-            ComputePipelineCreateInfo::stage_layout(stage, layout),
-        )
-        .unwrap();
-
-        Self::from_pipeline(pipeline)
-    }
-    fn prepare(
-        &mut self,
-        allocator: Arc<StandardDescriptorSetAllocator>,
-        physics_data: &ParticleBuffers,
-        sim_params: &Subbuffer<SimulationParams>,
-    );
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>);
-}
 
 pub struct ComputePipelines {
     pub neighbor_search: NeighborSearch,

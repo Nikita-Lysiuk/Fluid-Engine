@@ -8,7 +8,6 @@ use vulkano::device::Device;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::shader::EntryPoint;
 use crate::entities::particle::{ParticleBuffers, SimulationParams};
-use crate::renderer::pipelines::ComputeStep;
 use crate::utils::shader_loader::load_shader_entry_point;
 
 mod cs {
@@ -24,14 +23,18 @@ pub struct PressureUpdatePipeline {
     pass: Option<ComputePass>,
 }
 
-impl ComputeStep for PressureUpdatePipeline {
+impl PressureUpdatePipeline {
+    pub fn new(device: Arc<vulkano::device::Device>) -> Self {
+        let shader = Self::load_shader_module(device.clone());
+        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+    }
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, cs::load, "main")
     }
     fn from_pipeline(pipeline: Arc<ComputePipeline>) -> Self {
         Self { pipeline, pass: None }
     }
-    fn prepare(
+    pub fn prepare(
         &mut self,
         allocator: Arc<StandardDescriptorSetAllocator>,
         physics_data: &ParticleBuffers,
@@ -55,10 +58,7 @@ impl ComputeStep for PressureUpdatePipeline {
         ));
     }
 
-    fn execute<Cb>(&self, builder: &mut AutoCommandBufferBuilder<Cb>) {
-        self.bind(builder, false);
-        self.pass.as_ref().expect("prepare pressure update before dispatch").dispatch_bound(builder);
-    }
+
 }
 
 impl PressureUpdatePipeline {
