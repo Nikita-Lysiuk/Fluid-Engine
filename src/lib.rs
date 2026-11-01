@@ -32,3 +32,6 @@ mod spawn;
 
 #[path = "sim/compute_pass.rs"]
 mod compute_pass;
+
+#[path = "render/gpu_context.rs"]
+mod gpu_context;
