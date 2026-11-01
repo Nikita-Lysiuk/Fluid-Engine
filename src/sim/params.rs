@@ -29,6 +29,10 @@ pub struct SimulationParams {
     pub attractor: [f32; 4],
     pub attractor_radius: f32,
     _padding_end: [f32; 3],
+
+    /// Vertical pillar standing in the box: x, z of its axis, radius, and
+    /// 1.0 when present (0.0 = no pillar).
+    pub pillar: [f32; 4],
 }
 
 impl SimulationParams {
@@ -67,6 +71,7 @@ impl SimulationParams {
             attractor: [0.0; 4],
             attractor_radius: 0.0,
             _padding_end: [0.0; 3],
+            pillar: [0.0; 4],
         }
     }
 }

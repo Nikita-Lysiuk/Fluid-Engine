@@ -30,6 +30,7 @@ layout(std140, set = 0, binding = 2) uniform SimulationParams {
     float _pad3;
     float _pad4;
     float _pad5;
+    vec4 pillar;             // x, z of the axis, radius, w = 1 when present
 } sim_params;
 
 // Warm start of the pressure solvers (DFSPH paper, Sec. 4.4; SPlisHSPlasH
@@ -143,6 +144,23 @@ float wall_volume_slope(float d, float h) {
 // Sum of the six walls at position x: V and grad V. Corners count the overlap
 // of two or three walls more than once, which slightly overestimates the
 // boundary there.
+// Distance from x to the surface of the vertical pillar and the surface
+// normal pointing away from it. Returns false when there is no pillar.
+bool pillar_distance(vec3 x, out float distance_to_surface, out vec3 normal) {
+    distance_to_surface = 0.0;
+    normal = vec3(1.0, 0.0, 0.0);
+    if (sim_params.pillar.w == 0.0) {
+        return false;
+    }
+    vec2 from_axis = x.xz - sim_params.pillar.xy;
+    float r = length(from_axis);
+    if (r > 1e-6) {
+        normal = vec3(from_axis.x / r, 0.0, from_axis.y / r);
+    }
+    distance_to_surface = r - sim_params.pillar.z;
+    return true;
+}
+
 void box_boundary(vec3 x, out float volume, out vec3 grad) {
     float h = sim_params.smoothing_radius;
     vec3 to_min = x - sim_params.box_min.xyz;
@@ -160,6 +178,15 @@ void box_boundary(vec3 x, out float volume, out vec3 grad) {
             volume += wall_volume(to_max[axis], h);
             grad += wall_volume_slope(to_max[axis], h) * n;
         }
+    }
+
+    // The pillar's surface is treated as locally planar, which is accurate
+    // while its radius is a few times larger than h.
+    float to_pillar;
+    vec3 pillar_normal;
+    if (pillar_distance(x, to_pillar, pillar_normal) && to_pillar < h) {
+        volume += wall_volume(to_pillar, h);
+        grad -= wall_volume_slope(to_pillar, h) * pillar_normal;
     }
 }
 
@@ -194,6 +221,12 @@ float effective_neighbor_count(vec3 x, uint fluid_neighbors) {
         float d_max = clamp(to_max[axis], 0.0, h);
         wall_volume += PI * (h - d_min) * (h - d_min) * (2.0 * h + d_min) / 3.0;
         wall_volume += PI * (h - d_max) * (h - d_max) * (2.0 * h + d_max) / 3.0;
+    }
+    float to_pillar;
+    vec3 pillar_normal;
+    if (pillar_distance(x, to_pillar, pillar_normal)) {
+        float d = clamp(to_pillar, 0.0, h);
+        wall_volume += PI * (h - d) * (h - d) * (2.0 * h + d) / 3.0;
     }
     return float(fluid_neighbors) + wall_volume / (spacing * spacing * spacing);
 }

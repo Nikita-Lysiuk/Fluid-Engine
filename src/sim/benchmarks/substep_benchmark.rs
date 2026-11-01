@@ -485,3 +485,77 @@ fn attractor_gathers_water() {
         "attractor did not gather water: {before} -> {after}"
     );
 }
+
+/// Drops 25k particles next to the pillar and checks that after 1.5 s none
+/// of them are inside it.
+///
+///     cargo test --release -- --ignored pillar_keeps_water_out --nocapture
+#[test]
+#[ignore]
+fn pillar_keeps_water_out() {
+    let ctx = make_context();
+    let device = ctx.device().clone();
+    let memory_allocator = ctx.memory_allocator().clone();
+    let queue = ctx.graphics_queue().clone();
+
+    let scene = Scene::new(25_000);
+    assert!(scene.pillar.enabled);
+    let solver = SolverSettings::default_for(&scene.sim_params);
+    let cb_alloc = Arc::new(StandardCommandBufferAllocator::new(
+        device.clone(),
+        StandardCommandBufferAllocatorCreateInfo::default(),
+    ));
+    let ds_alloc = Arc::new(StandardDescriptorSetAllocator::new(
+        device.clone(),
+        StandardDescriptorSetAllocatorCreateInfo::default(),
+    ));
+    let physics_data =
+        ParticleBuffers::new(memory_allocator.clone(), scene.initial_positions.clone());
+    let sim_params_buffer = Buffer::from_data(
+        memory_allocator.clone(),
+        BufferCreateInfo {
+            usage: BufferUsage::UNIFORM_BUFFER,
+            ..Default::default()
+        },
+        AllocationCreateInfo {
+            memory_type_filter: MemoryTypeFilter::PREFER_DEVICE
+                | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
+            ..Default::default()
+        },
+        scene.sim_params,
+    )
+    .unwrap();
+    let pipelines = ComputePipelines::new(
+        device.clone(),
+        memory_allocator.clone(),
+        ds_alloc,
+        &physics_data,
+        &sim_params_buffer,
+    );
+
+    let mut builder = AutoCommandBufferBuilder::primary(
+        cb_alloc.clone(),
+        queue.queue_family_index(),
+        CommandBufferUsage::OneTimeSubmit,
+    )
+    .unwrap();
+    pipelines.record_init(&mut builder);
+    for _ in 0..300 {
+        pipelines.record_substep(&mut builder, &solver);
+    }
+    submit_and_wait(&queue, builder.build().unwrap());
+
+    let pillar = scene.pillar;
+    let positions = physics_data.position_a.read().unwrap();
+    let near = positions
+        .iter()
+        .filter(|q| glam::Vec2::new(q[0], q[2]).distance(pillar.centre) < pillar.radius + 0.1)
+        .count();
+    let inside = positions
+        .iter()
+        .filter(|q| glam::Vec2::new(q[0], q[2]).distance(pillar.centre) < pillar.radius - 0.002)
+        .count();
+    println!("particles within 10 cm of the pillar: {near}, inside it: {inside}");
+    assert!(near > 100, "water never reached the pillar");
+    assert_eq!(inside, 0, "particles went through the pillar");
+}

@@ -1,5 +1,6 @@
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 use crate::render::graphics_pipelines::Pipelines;
+use crate::scene::Pillar;
 use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
@@ -51,6 +52,17 @@ impl GpuRenderData {
         initial_positions: &[[f32; 3]],
         radius: f32,
     ) -> Self {
+        Self::with_color(allocator, initial_positions, radius, [0.0, 0.5, 1.0, 1.0])
+    }
+
+    /// Like `new`, with every point drawn in `color` until the buffers are
+    /// overwritten.
+    pub fn with_color(
+        allocator: Arc<StandardMemoryAllocator>,
+        initial_positions: &[[f32; 3]],
+        radius: f32,
+        color: [f32; 4],
+    ) -> Self {
         let particle_count = initial_positions.len();
 
         let mut position_buffers = Vec::with_capacity(MAX_FRAMES_IN_FLIGHT);
@@ -86,9 +98,7 @@ impl GpuRenderData {
                         | MemoryTypeFilter::HOST_SEQUENTIAL_WRITE,
                     ..Default::default()
                 },
-                (0..particle_count).map(|_| ColorVertex {
-                    color: [0.0, 0.5, 1.0, 1.0],
-                }),
+                (0..particle_count).map(|_| ColorVertex { color }),
             )
             .expect("Failed to create render color buffer");
             color_buffers.push(color_buffer);
@@ -149,4 +159,26 @@ impl GpuRenderData {
                 .expect("Failed to bind particle vertex buffers");
         }
     }
+}
+
+/// Points covering the side of `pillar` from the floor to `height`, spaced
+/// so that the drawn spheres overlap into a solid-looking column.
+pub fn pillar_surface_points(pillar: &Pillar, height: f32, spacing: f32) -> Vec<[f32; 3]> {
+    let around = ((std::f32::consts::TAU * pillar.radius / spacing).ceil() as usize).max(8);
+    let rings = (height / spacing).ceil() as usize;
+    let mut points = Vec::with_capacity(around * rings);
+    for ring in 0..rings {
+        let y = (ring as f32 + 0.5) * spacing;
+        // Offset every other ring by half a step to avoid visible columns.
+        let offset = if ring % 2 == 0 { 0.0 } else { 0.5 };
+        for step in 0..around {
+            let angle = (step as f32 + offset) / around as f32 * std::f32::consts::TAU;
+            points.push([
+                pillar.centre.x + pillar.radius * angle.cos(),
+                y,
+                pillar.centre.y + pillar.radius * angle.sin(),
+            ]);
+        }
+    }
+    points
 }

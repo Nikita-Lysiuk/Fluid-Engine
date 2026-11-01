@@ -51,6 +51,17 @@ impl Camera {
             far: 1000.0,
         }
     }
+    /// A camera at `position` looking at `target`, with +y up.
+    pub fn look_at(position: Vec3, target: Vec3) -> Self {
+        let direction = (target - position).normalize();
+        let yaw = direction.x.atan2(direction.z);
+        // A positive rotation about x turns +z towards -y, i.e. looks down.
+        let pitch = (-direction.y).asin();
+        Self {
+            orientation: Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0),
+            ..Self::new(position)
+        }
+    }
     pub fn from_euler(pitch: f32, yaw: f32, roll: f32) -> Self {
         let orientation = Quat::from_euler(
             EulerRot::YXZ,
@@ -224,6 +235,18 @@ mod tests {
     use super::*;
 
     const WINDOW: Vec2 = Vec2::new(1920.0, 1080.0);
+
+    #[test]
+    fn look_at_faces_the_target() {
+        let target = Vec3::new(-0.1, 0.25, 0.0);
+        let camera = Camera::look_at(Vec3::new(-1.6, 2.1, -2.9), target);
+        let expected = (target - camera.position).normalize();
+        assert!(
+            camera.forward().dot(expected) > 0.9999,
+            "{:?}",
+            camera.forward()
+        );
+    }
 
     #[test]
     fn ray_through_window_centre_points_forward() {

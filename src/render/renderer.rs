@@ -286,6 +286,8 @@ impl Renderer {
             }
         }
         self.resources
+            .draw_pillar(&mut builder, &self.pipelines, scene);
+        self.resources
             .bind_to_command_buffer(&mut builder, &self.pipelines);
 
         builder

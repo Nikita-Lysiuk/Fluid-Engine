@@ -203,6 +203,7 @@ impl AppUi {
 
                 ui.heading("Collision Boundary");
                 ui.checkbox(&mut scene.boundary.animate, "Moving wall");
+                ui.checkbox(&mut scene.pillar.enabled, "Pillar");
                 ui.label("Control the simulation box size:");
 
                 ui.group(|ui| {

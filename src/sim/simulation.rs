@@ -142,6 +142,7 @@ impl Simulation {
         scene.sim_params.piston_velocity = scene.boundary.piston_velocity();
         scene.sim_params.attractor = scene.attractor.to_gpu();
         scene.sim_params.attractor_radius = scene.attractor.radius;
+        scene.sim_params.pillar = scene.pillar.to_gpu();
         sync_scene(scene);
         let mut builder = AutoCommandBufferBuilder::primary(
             self.command_buffer_allocator.clone(),
