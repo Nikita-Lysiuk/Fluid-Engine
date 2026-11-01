@@ -8,35 +8,35 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::PhysicalKey;
 use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{CursorGrabMode, Icon, WindowAttributes, WindowId};
-use crate::core::controller::{Controller, KeyboardAction};
-use crate::core::scene::Scene;
+use crate::input::Input;
+use crate::scene::Scene;
 use crate::renderer::Renderer;
 
-use crate::errors::application_error::ApplicationError;
-use crate::utils::constants::{PREFERRED_FPS};
-use crate::utils::fps_counter::FpsCounter;
-use crate::utils::frame_benchmark::FrameBenchmark;
+use crate::app_error::AppError;
+use crate::constants::{PREFERRED_FPS};
+use crate::frame_timer::FrameTimer;
+use crate::frame_benchmark::FrameBenchmark;
 
-fn load_icon(path: &str) -> Result<Icon, ApplicationError> {
+fn load_icon(path: &str) -> Result<Icon, AppError> {
     let (icon_rgba, icon_width, icon_height) = {
         let image = image::open(path)
-            .map_err(|e| ApplicationError::ResourceLoadError(format!("Failed to parse icon image: {}", e)))?
+            .map_err(|e| AppError::ResourceLoad(format!("Failed to parse icon image: {}", e)))?
             .into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();
         (rgba, width, height)
     };
     Icon::from_rgba(icon_rgba, icon_width, icon_height).map_err(|e| {
-        ApplicationError::ResourceLoadError(format!("Failed to create icon from RGBA data: {}", e))
+        AppError::ResourceLoad(format!("Failed to create icon from RGBA data: {}", e))
     })
 }
 
-pub struct Engine {
+pub struct App {
     renderer: Option<Renderer>,
     event_loop: Option<EventLoop<()>>,
     scene: Scene,
-    controller: Controller,
-    fps_counter: FpsCounter,
+    input: Input,
+    fps_counter: FrameTimer,
     /// Right mouse button held: mouse motion rotates the camera.
     rotating_camera: bool,
     /// Cursor position in physical pixels.
@@ -45,13 +45,13 @@ pub struct Engine {
     benchmark: Option<FrameBenchmark>,
 }
 
-impl Engine {
-    pub fn new() -> Result<Self, ApplicationError> {
+impl App {
+    pub fn new() -> Result<Self, AppError> {
         SimpleLogger::new().init().unwrap();
         info!("[Engine] Initializing Engine Core...");
 
         let event_loop = EventLoop::new()
-            .map_err(|e| ApplicationError::EventLoopInitializationError(e))?;
+            .map_err(|e| AppError::EventLoopInit(e))?;
 
         event_loop.set_control_flow(ControlFlow::Poll);
         let particle_count = std::env::var("FLUID_PARTICLES")
@@ -64,8 +64,8 @@ impl Engine {
             renderer: None,
             event_loop: Some(event_loop),
             scene,
-            fps_counter: FpsCounter::new(PREFERRED_FPS),
-            controller: Controller::new(),
+            fps_counter: FrameTimer::new(PREFERRED_FPS),
+            input: Input::default(),
             rotating_camera: false,
             cursor: Vec2::ZERO,
             pointer_over_ui: true,
@@ -100,7 +100,7 @@ impl Engine {
     }
 }
 
-impl ApplicationHandler for Engine {
+impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.renderer.is_none() {
             info!("[Engine] System Resumed. Initializing Window and Graphics...");
@@ -151,7 +151,7 @@ impl ApplicationHandler for Engine {
             WindowEvent::Focused(false) => {
                 self.set_camera_rotation(false);
                 self.scene.attractor.active = false;
-                self.controller.release_all_keys();
+                self.input.release_all_keys();
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.cursor = Vec2::new(position.x as f32, position.y as f32);
@@ -190,9 +190,9 @@ impl ApplicationHandler for Engine {
                 if let PhysicalKey::Code(code) = key_event.physical_key {
                     match key_event.state {
                         // Releases always count, so keys never stay stuck.
-                        ElementState::Released => self.controller.update_key(code, KeyboardAction::Released),
+                        ElementState::Released => self.input.key_event(code, ElementState::Released),
                         ElementState::Pressed if !egui_wants_keyboard => {
-                            self.controller.update_key(code, KeyboardAction::Pressed)
+                            self.input.key_event(code, ElementState::Pressed)
                         }
                         ElementState::Pressed => {}
                     }
@@ -203,12 +203,7 @@ impl ApplicationHandler for Engine {
                 let dt = frame_time.as_secs_f32();
                 let safe_dt = dt.min(0.1);
 
-                for command in self.controller.get_active_commands() {
-                    command.execute(&mut self.scene, safe_dt);
-                }
-                if let Some(cmd) = self.controller.get_mouse_command() {
-                    cmd.execute(&mut self.scene, safe_dt);
-                }
+                self.input.apply_to_camera(&mut self.scene.camera, safe_dt);
 
                 if let Some(renderer) = self.renderer.as_mut() {
                     let window_size = Vec2::from(renderer.window_renderer.window_size());
@@ -237,7 +232,7 @@ impl ApplicationHandler for Engine {
         if let DeviceEvent::MouseMotion { delta } = event {
             if self.rotating_camera {
                 let sensitivity = 0.1;
-                self.controller.update_mouse_delta(delta.0 as f32 * sensitivity, delta.1 as f32 * sensitivity);
+                self.input.mouse_motion(delta.0 as f32 * sensitivity, delta.1 as f32 * sensitivity);
             }
         }
     }
@@ -245,3 +240,6 @@ impl ApplicationHandler for Engine {
         info!("[Engine] Graceful shutdown...");
     }
 }
+
+
+

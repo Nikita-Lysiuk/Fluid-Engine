@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-pub struct FpsCounter {
+pub struct FrameTimer {
     last_updated_time: Instant,
     last_frame_time: Instant,
     frame_count: u32,
@@ -8,10 +8,10 @@ pub struct FpsCounter {
     target_frame_count: u32,
 }
 
-impl FpsCounter {
+impl FrameTimer {
     pub fn new(preferred_fps: u32) -> Self {
         let now = Instant::now();
-        FpsCounter {
+        FrameTimer {
             last_updated_time: now,
             last_frame_time: now,
             frame_count: 0,

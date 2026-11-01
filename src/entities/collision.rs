@@ -4,7 +4,7 @@ use glam::Vec3;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::entities::{Actor, ModelVertex};
+use crate::entities::ModelVertex;
 use crate::renderer::pipelines::Pipelines;
 use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
@@ -46,11 +46,6 @@ impl CollisionBox {
         }
         let omega = self.wave_frequency * TAU;
         self.wave_amplitude * omega * (self.time * omega).cos()
-    }
-    pub fn contains(&self, actor: &impl Actor) -> bool {
-        actor.location().x >= self.min.x && actor.location().x <= self.max.x &&
-            actor.location().y >= self.min.y && actor.location().y <= self.max.y &&
-            actor.location().z >= self.min.z && actor.location().z <= self.max.z
     }
 }
 

@@ -54,8 +54,10 @@ mod viscosity;
 mod water_pipeline;
 
 #[cfg(test)]
+#[path = "../../sim/benchmarks/convergence_benchmark.rs"]
 mod convergence_benchmark;
 #[cfg(test)]
+#[path = "../../sim/benchmarks/substep_benchmark.rs"]
 mod substep_benchmark;
 
 pub trait ComputeStep: Sized {

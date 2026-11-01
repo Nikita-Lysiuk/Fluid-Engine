@@ -2,7 +2,6 @@ use std::sync::Arc;
 use glam::{EulerRot, Mat4, Quat, Vec2, Vec3};
 use vulkano::buffer::{Buffer, BufferContents, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::entities::Actor;
 use crate::utils::constants::MAX_FRAMES_IN_FLIGHT;
 
 #[derive(BufferContents, Debug, Clone, Copy)]
@@ -24,22 +23,18 @@ pub struct Camera {
     far: f32,
 }
 
-impl Actor for Camera {
-    #[warn(unused)]
-    fn update(&mut self, _dt: f32) {
-        // Can be used for effects on every frame if needed
+impl Camera {
+    /// Returns the camera position.
+    pub fn position(&self) -> Vec3 { self.position }
+    /// Moves the camera along a world-space direction.
+    pub fn move_by(&mut self, direction: Vec3, distance: f32) {
+        self.position += direction * distance;
     }
-    fn location(&self) -> Vec3 {
-        self.position
-    }
-    fn add_input_vector(&mut self, direction: Vec3, magnitude: f32) {
-        self.position += direction * magnitude;
-    }
-    fn add_rotation(&mut self, dx: f32, dy: f32) {
+    /// Rotates the camera by yaw and pitch in degrees.
+    pub fn rotate_by(&mut self, dx: f32, dy: f32) {
         let yaw = Quat::from_rotation_y(dx.to_radians());
         let pitch = Quat::from_rotation_x(dy.to_radians());
-        self.orientation = yaw * self.orientation * pitch;
-        self.orientation = self.orientation.normalize();
+        self.orientation = (yaw * self.orientation * pitch).normalize();
     }
 }
 

@@ -2,17 +2,18 @@ use thiserror::Error;
 use winit::error::{EventLoopError, OsError};
 
 #[derive(Debug, Error)]
-pub enum ApplicationError {
+pub enum AppError {
     #[error(transparent)]
-    WindowCreationError(#[from] OsError),
+    WindowCreation(#[from] OsError),
 
     #[error(transparent)]
-    EventLoopInitializationError(#[from] EventLoopError),
+    EventLoopInit(#[from] EventLoopError),
 
     #[error("Failed to load resource: {0}")]
-    ResourceLoadError(String),
+    ResourceLoad(String),
     
     #[error("An unexpected application error occurred: {0}")]
     Other(String),
 }
+
 
