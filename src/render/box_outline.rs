@@ -1,10 +1,10 @@
 use std::sync::Arc;
-use crate::collision_box::CollisionBox;
+use crate::sim::collision_box::CollisionBox;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
-use crate::model_vertex::ModelVertex;
-use crate::renderer::pipelines::Pipelines;
+use crate::render::model_vertex::ModelVertex;
+use crate::render::graphics_pipelines::Pipelines;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 pub struct CollisionBoxData {

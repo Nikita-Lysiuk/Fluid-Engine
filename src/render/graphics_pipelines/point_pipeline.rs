@@ -12,7 +12,7 @@ use vulkano::pipeline::graphics::subpass::{PipelineRenderingCreateInfo, Pipeline
 use vulkano::pipeline::graphics::vertex_input::{VertexInputAttributeDescription, VertexInputBindingDescription, VertexInputRate, VertexInputState};
 use vulkano::pipeline::graphics::viewport::ViewportState;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
-use crate::shader_loader::load_shader_entry_point;
+use crate::render::shader_loader::load_shader_entry_point;
 
 mod vs {
     use vulkano_shaders::shader;

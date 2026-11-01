@@ -1,5 +1,5 @@
-use crate::particle_buffers::stats_layout;
-use crate::params::SimulationParams;
+use crate::sim::particle_buffers::stats_layout;
+use crate::sim::params::SimulationParams;
 
 /// Solver and speed measurements read from the GPU.
 pub struct SimulationStats {

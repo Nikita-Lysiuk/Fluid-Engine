@@ -10,7 +10,7 @@ use winit::platform::windows::WindowAttributesExtWindows;
 use winit::window::{CursorGrabMode, Icon, WindowAttributes, WindowId};
 use crate::input::Input;
 use crate::scene::Scene;
-use crate::renderer::Renderer;
+use crate::render::renderer::Renderer;
 
 use crate::app_error::AppError;
 use crate::constants::{PREFERRED_FPS};
@@ -125,7 +125,7 @@ impl ApplicationHandler for App {
                 renderer.app_ui.max_substeps_per_frame = cap;
             }
             if std::env::var("FLUID_BENCH_RENDER").as_deref() == Ok("particles") {
-                renderer.app_ui.render_mode = crate::renderer::RenderMode::Particles;
+                renderer.app_ui.render_mode = crate::render::ui::RenderMode::Particles;
             }
             self.renderer = Some(renderer);
             info!("[Engine] Systems initialized successfully.");

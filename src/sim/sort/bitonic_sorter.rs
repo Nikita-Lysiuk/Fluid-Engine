@@ -1,5 +1,6 @@
-use crate::particle::{ParticleBuffers, SimulationParams};
-use crate::shader_loader::load_shader_entry_point;
+use crate::sim::particle_buffers::ParticleBuffers;
+use crate::sim::params::SimulationParams;
+use crate::sim::shader_loader::load_shader_entry_point;
 use std::sync::Arc;
 use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
@@ -25,7 +26,7 @@ pub struct BitonicSorter {
 impl BitonicSorter {
     pub fn new(device: Arc<vulkano::device::Device>) -> Self {
         let shader = Self::load_shader_module(device.clone());
-        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+        Self::from_pipeline(crate::sim::compute_pass::new_pipeline(device, shader))
     }
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, cs::load, "main")

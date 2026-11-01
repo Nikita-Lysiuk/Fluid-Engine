@@ -14,8 +14,8 @@ use vulkano::image::view::ImageView;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::{PipelineBindPoint, PipelineLayout};
 use vulkano::sync::GpuFuture;
-use crate::model_vertex::ModelVertex;
-use crate::renderer::pipelines::Pipelines;
+use crate::render::model_vertex::ModelVertex;
+use crate::render::graphics_pipelines::Pipelines;
 
 pub struct SkyData {
     pub vertex_buffer: Subbuffer<[ModelVertex]>,

@@ -5,15 +5,15 @@
 //! and then solves divergence and updates velocity A and particle colours.
 
 use std::sync::Arc;
-use crate::simulation_resources::SimulationResources;
+use crate::sim::simulation_resources::SimulationResources;
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferInfo, PrimaryAutoCommandBuffer};
 use vulkano::device::Queue;
 use vulkano::sync::GpuFuture;
 use crate::scene::Scene;
-use crate::sim_pipelines::{ComputePipelines, SolveSettings, SolverSettings, SortAlgorithm};
-use crate::simulation_stats::{SimulationStats, cfl_time_step};
-use crate::params::SimulationParams;
+use crate::sim::pipelines::{ComputePipelines, SolveSettings, SolverSettings, SortAlgorithm};
+use crate::sim::stats::{SimulationStats, cfl_time_step};
+use crate::sim::params::SimulationParams;
 
 /// Controls for a simulation frame.
 pub struct SimulationSettings {

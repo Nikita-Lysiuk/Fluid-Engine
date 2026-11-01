@@ -1,7 +1,7 @@
-use crate::renderer::pipelines::collision_pipeline::CollisionPipeline;
-use crate::renderer::pipelines::point_pipeline::PointPipeline;
-use crate::renderer::pipelines::sky_pipeline::SkyPipeline;
-use crate::renderer::pipelines::water_pipeline::WaterRenderPipeline;
+use crate::render::graphics_pipelines::collision_pipeline::CollisionPipeline;
+use crate::render::graphics_pipelines::point_pipeline::PointPipeline;
+use crate::render::graphics_pipelines::sky_pipeline::SkyPipeline;
+use crate::render::graphics_pipelines::water_pipeline::WaterRenderPipeline;
 use std::sync::Arc;
 use vulkano::descriptor_set::layout::{DescriptorSetLayout, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType};
 use vulkano::device::Device;

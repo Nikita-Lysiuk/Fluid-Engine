@@ -1,6 +1,6 @@
 use crate::scene::Scene;
-use crate::simulation::SimulationSettings;
-use crate::sim_pipelines::SortAlgorithm;
+use crate::sim::simulation::SimulationSettings;
+use crate::sim::pipelines::SortAlgorithm;
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
 use glam::{Vec2, Vec4};
 

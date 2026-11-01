@@ -4,7 +4,7 @@ use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use vulkano::pipeline::graphics::vertex_input::Vertex;
 use vulkano::pipeline::Pipeline;
-use crate::renderer::pipelines::Pipelines;
+use crate::render::graphics_pipelines::Pipelines;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 #[repr(C)]

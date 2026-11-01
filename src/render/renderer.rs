@@ -1,16 +1,17 @@
 use crate::scene::Scene;
-use crate::sky::SkyData;
-use crate::water::WaterRenderer;
-use crate::renderer::pipelines::Pipelines;
-use crate::sim_pipelines::ComputePipelines;
-use crate::simulation::Simulation;
-use crate::simulation_resources::SimulationResources;
-use crate::density_texture::DensityTexturePipeline;
-use crate::renderer::resources::GpuSceneResources;
-use crate::renderer::ui::AppUI;
-pub use crate::renderer::ui::RenderMode;
+use crate::render::sky::SkyData;
+use crate::render::water::WaterRenderer;
+use crate::render::graphics_pipelines::Pipelines;
+use crate::sim::pipelines::ComputePipelines;
+use crate::sim::simulation::Simulation;
+use crate::sim::simulation_resources::SimulationResources;
+use crate::render::density_texture::DensityTexturePipeline;
+use crate::render::frame_resources::GpuSceneResources;
+use crate::render::ui::AppUI;
+use crate::render::ui;
+pub use crate::render::ui::RenderMode;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
-use crate::gpu_context::GpuContext;
+use crate::render::gpu_context::GpuContext;
 use egui_winit_vulkano::{Gui, GuiConfig};
 use std::sync::Arc;
 use vulkano::command_buffer::allocator::{
@@ -29,12 +30,6 @@ use vulkano_util::context::VulkanoContext;
 use vulkano_util::renderer::VulkanoWindowRenderer;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::Window;
-
-pub mod pipelines;
-#[path = "../render/frame_resources.rs"]
-mod resources;
-#[path = "../render/ui.rs"]
-mod ui;
 
 pub struct Renderer {
     pub window_renderer: VulkanoWindowRenderer,

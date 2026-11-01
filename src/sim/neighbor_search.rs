@@ -3,17 +3,18 @@ use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CopyBufferInfo};
 use vulkano::instance::debug::DebugUtilsLabel;
 use vulkano::descriptor_set::WriteDescriptorSet;
-use crate::compute_pass::ComputePass;
+use crate::sim::compute_pass::ComputePass;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::device::Device;
 use vulkano::memory::allocator::StandardMemoryAllocator;
 use vulkano::pipeline::{ComputePipeline, PipelineLayout, PipelineShaderStageCreateInfo};
 use vulkano::pipeline::compute::ComputePipelineCreateInfo;
 use vulkano::pipeline::layout::PipelineDescriptorSetLayoutCreateInfo;
-use crate::particle::{ParticleBuffers, SimulationParams};
-use crate::sim_pipelines::SortAlgorithm;
-use crate::sim_pipelines::sorter::{BitonicSorter, RadixSorter};
-use crate::shader_loader::load_shader_entry_point;
+use crate::sim::particle_buffers::ParticleBuffers;
+use crate::sim::params::SimulationParams;
+use crate::sim::pipelines::SortAlgorithm;
+use crate::sim::pipelines::sorter::{BitonicSorter, RadixSorter};
+use crate::sim::shader_loader::load_shader_entry_point;
 
 mod cs_hash {
     use vulkano_shaders::shader;

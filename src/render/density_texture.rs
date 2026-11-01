@@ -3,13 +3,14 @@ use vulkano::buffer::Subbuffer;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 use vulkano::descriptor_set::allocator::StandardDescriptorSetAllocator;
 use vulkano::descriptor_set::WriteDescriptorSet;
-use crate::compute_pass::ComputePass;
+use crate::sim::compute_pass::ComputePass;
 use vulkano::device::Device;
 use vulkano::image::view::ImageView;
 use vulkano::pipeline::ComputePipeline;
 use vulkano::shader::EntryPoint;
-use crate::particle::{ParticleBuffers, SimulationParams};
-use crate::shader_loader::load_shader_entry_point;
+use crate::sim::particle_buffers::ParticleBuffers;
+use crate::sim::params::SimulationParams;
+use crate::render::shader_loader::load_shader_entry_point;
 
 mod splat_cs {
     use vulkano_shaders::shader;
@@ -44,7 +45,7 @@ impl DensityTexturePipeline {
 impl DensityTexturePipeline {
     pub fn new(device: Arc<vulkano::device::Device>) -> Self {
         let shader = Self::load_shader_module(device.clone());
-        Self::from_pipeline(crate::compute_pass::new_pipeline(device, shader))
+        Self::from_pipeline(crate::sim::compute_pass::new_pipeline(device, shader))
     }
     fn load_shader_module(device: Arc<Device>) -> EntryPoint {
         load_shader_entry_point(device, splat_cs::load, "main")

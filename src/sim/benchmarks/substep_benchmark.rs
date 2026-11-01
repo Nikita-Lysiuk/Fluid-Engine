@@ -29,8 +29,8 @@ use vulkano::sync::{self, GpuFuture, PipelineStage};
 
 use super::convergence_benchmark::{make_context, prepare_all_pipelines};
 use crate::scene::Scene;
-use crate::particle::ParticleBuffers;
-use crate::sim_pipelines::{ComputePipelines, PressureSolve, SolverSettings, SortAlgorithm};
+use crate::sim::particle_buffers::ParticleBuffers;
+use crate::sim::pipelines::{ComputePipelines, PressureSolve, SolverSettings, SortAlgorithm};
 
 const SUBSTEPS_PER_BATCH: u32 = 20;
 const WARMUP_BATCHES: u32 = 3;

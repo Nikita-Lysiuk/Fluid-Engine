@@ -2,8 +2,8 @@ use std::sync::Arc;
 use vulkano::buffer::{Buffer, BufferCreateInfo, BufferUsage, Subbuffer};
 use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter, StandardMemoryAllocator};
 use crate::scene::Scene;
-use crate::particle_buffers::{stats_layout, ParticleBuffers};
-use crate::params::SimulationParams;
+use crate::sim::particle_buffers::{stats_layout, ParticleBuffers};
+use crate::sim::params::SimulationParams;
 use crate::constants::MAX_FRAMES_IN_FLIGHT;
 
 /// GPU buffers owned by the simulation.

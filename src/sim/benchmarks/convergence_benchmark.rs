@@ -33,8 +33,11 @@ use vulkano::memory::allocator::{AllocationCreateInfo, MemoryTypeFilter};
 use vulkano::sync::GpuFuture;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 
-use crate::particle::{stats_layout, ParticleBuffers, spawn_block, SimulationParams};
-use crate::sim_pipelines::{ComputePipelines, SolverSettings};
+use crate::sim::particle_buffers::stats_layout;
+use crate::sim::particle_buffers::ParticleBuffers;
+use crate::sim::spawn::spawn_block;
+use crate::sim::params::SimulationParams;
+use crate::sim::pipelines::{ComputePipelines, SolverSettings};
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
@@ -208,7 +211,7 @@ fn solver_convergence_benchmark() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos,
         Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
@@ -434,7 +437,7 @@ fn rest_density_diagnostic() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos,
         Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
@@ -581,7 +584,7 @@ fn density_after_warmup_diagnostic() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos,
         Vec3::new(0.8, 0.8, 0.5),
         particle_radius,
@@ -755,7 +758,7 @@ fn cfl_comparison() {
     let box_max = Vec3::new(0.8, 4.0, 1.0);
     let spawn_pos = Vec3::new(-0.8, 0.5, -0.4);
 
-    let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+    let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
         spawn_pos, Vec3::new(0.8, 0.8, 0.5), particle_radius, target_density, spacing, 0.01,
     );
     println!(

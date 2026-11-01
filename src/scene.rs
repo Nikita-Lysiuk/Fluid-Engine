@@ -1,8 +1,9 @@
 use glam::{IVec3, Vec2, Vec3};
 use log::info;
 use crate::camera::Camera;
-use crate::collision_box::CollisionBox;
-use crate::particle::{spawn_block, SimulationParams};
+use crate::sim::collision_box::CollisionBox;
+use crate::sim::spawn::spawn_block;
+use crate::sim::params::SimulationParams;
 
 pub struct Scene {
     pub initial_positions: Vec<[f32; 3]>,
@@ -79,7 +80,7 @@ impl Scene {
         let water_depth = 1.6 * scale;
         let spawn_pos = Vec3::new(box_min.x + 0.05, 0.5, -0.5 * water_depth);
 
-        let crate::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
+        let crate::sim::spawn::SpawnedBlock { positions: initial_positions, particle_mass } = spawn_block(
             spawn_pos,
             Vec3::new(water_width, water_height, water_depth),
             particle_radius,
