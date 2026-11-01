@@ -35,3 +35,6 @@ mod compute_pass;
 
 #[path = "render/gpu_context.rs"]
 mod gpu_context;
+
+#[path = "sim/stats.rs"]
+mod simulation_stats;

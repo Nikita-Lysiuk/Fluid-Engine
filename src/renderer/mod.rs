@@ -1,5 +1,5 @@
 use crate::core::scene::Scene;
-use crate::entities::particle::stats_layout;
+use crate::simulation_stats::{SimulationStats, cfl_time_step};
 use crate::entities::sky::SkyData;
 use crate::entities::water::WaterRenderer;
 use crate::renderer::pipelines::{ComputePipelines, Pipelines, SolverSettings, SortAlgorithm};
@@ -140,31 +140,15 @@ impl Renderer {
         previous_future: Box<dyn GpuFuture>,
     ) -> Box<dyn GpuFuture> {
         if let Some(stats) = self.resources.oldest_stats() {
-            let solver_stats = |range: std::ops::Range<u64>| {
-                let state = &stats[range.start as usize..range.end as usize];
-                (
-                    state[stats_layout::ITERATIONS],
-                    f32::from_bits(state[stats_layout::AVG_ERROR]),
-                )
-            };
-            let max_speed = f32::from_bits(stats[stats_layout::MAX_SPEED]);
-            self.app_ui.display_max_speed = max_speed;
-            (
-                self.app_ui.display_density_iters_used,
-                self.app_ui.display_avg_density_error,
-            ) = solver_stats(stats_layout::DENSITY_SOLVER);
-            (
-                self.app_ui.display_divergence_iters_used,
-                self.app_ui.display_avg_divergence_error,
-            ) = solver_stats(stats_layout::DIVERGENCE_SOLVER);
+            let stats = SimulationStats::read(&stats);
+            self.app_ui.display_max_speed = stats.max_speed;
+            self.app_ui.display_density_iters_used = stats.density_iterations;
+            self.app_ui.display_avg_density_error = stats.density_error;
+            self.app_ui.display_divergence_iters_used = stats.divergence_iterations;
+            self.app_ui.display_avg_divergence_error = stats.divergence_error;
 
             if self.app_ui.use_cfl {
-                let p = &scene.sim_params;
-                let diameter = 2.0 * p.particle_radius;
-                let gravity = glam::Vec4::from(p.gravity).length();
-                let speed = (max_speed + gravity * p.dt).max(1e-9);
-                let cfl_dt = (self.app_ui.cfl_factor * 0.4 * diameter / speed)
-                    .clamp(self.app_ui.cfl_min_dt, self.app_ui.cfl_max_dt);
+                let cfl_dt = cfl_time_step(&scene.sim_params, stats.max_speed, self.app_ui.cfl_factor, self.app_ui.cfl_min_dt, self.app_ui.cfl_max_dt);
                 scene.sim_params.dt = cfl_dt;
                 self.app_ui.display_cfl_dt = cfl_dt;
             }
