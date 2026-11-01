@@ -7,7 +7,7 @@
 use std::sync::Arc;
 use vulkano::command_buffer::allocator::StandardCommandBufferAllocator;
 use vulkano::command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, PrimaryAutoCommandBuffer};
-use crate::renderer::pipelines::{ComputePipelines, SolverSettings, SortAlgorithm};
+use crate::sim_pipelines::{ComputePipelines, SolverSettings, SortAlgorithm};
 
 /// Owns the simulation pipelines and reusable substep commands.
 pub struct Simulation {

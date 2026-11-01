@@ -30,7 +30,7 @@ use vulkano::sync::{self, GpuFuture, PipelineStage};
 use super::convergence_benchmark::{make_context, prepare_all_pipelines};
 use crate::core::scene::Scene;
 use crate::entities::particle::ParticleBuffers;
-use crate::renderer::pipelines::{ComputePipelines, PressureSolve, SolverSettings, SortAlgorithm};
+use crate::sim_pipelines::{ComputePipelines, PressureSolve, SolverSettings, SortAlgorithm};
 
 const SUBSTEPS_PER_BATCH: u32 = 20;
 const WARMUP_BATCHES: u32 = 3;
@@ -155,7 +155,7 @@ fn run_substep_benchmark(particle_count: u32) {
 
     let scene = Scene::new(particle_count);
     // Same solver settings as the application defaults.
-    let solver = crate::renderer::ui::AppUI::new().solver_settings(&scene.sim_params);
+    let solver = SolverSettings::default_for(&scene.sim_params);
 
     println!(
         "substep_benchmark: {} particles, dt={} s, {:?}, {} substeps/batch",
@@ -292,7 +292,7 @@ fn solver_iterations_over_time() {
 
     let particle_count = std::env::var("FLUID_PARTICLES").ok().and_then(|v| v.parse().ok()).unwrap_or(25_000);
     let scene = Scene::new(particle_count);
-    let solver = crate::renderer::ui::AppUI::new().solver_settings(&scene.sim_params);
+    let solver = SolverSettings::default_for(&scene.sim_params);
     let dt = scene.sim_params.dt;
 
     let cb_alloc = Arc::new(StandardCommandBufferAllocator::new(
@@ -370,7 +370,7 @@ fn attractor_gathers_water() {
     let queue = ctx.graphics_queue().clone();
 
     let mut scene = Scene::new(25_000);
-    let solver = crate::renderer::ui::AppUI::new().solver_settings(&scene.sim_params);
+    let solver = SolverSettings::default_for(&scene.sim_params);
     let cb_alloc = Arc::new(StandardCommandBufferAllocator::new(
         device.clone(),
         StandardCommandBufferAllocatorCreateInfo::default(),

@@ -34,7 +34,7 @@ use vulkano::sync::GpuFuture;
 use vulkano_util::context::{VulkanoConfig, VulkanoContext};
 
 use crate::entities::particle::{stats_layout, ParticleBuffers, spawn_block, SimulationParams};
-use crate::renderer::pipelines::{ComputePipelines, SolverSettings};
+use crate::sim_pipelines::{ComputePipelines, SolverSettings};
 
 // ── Configuration ────────────────────────────────────────────────────────────
 

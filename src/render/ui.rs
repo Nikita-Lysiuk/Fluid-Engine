@@ -1,6 +1,6 @@
 use crate::core::scene::Scene;
 use crate::entities::particle::SimulationParams;
-use crate::renderer::pipelines::{SolveSettings, SolverSettings, SortAlgorithm};
+use crate::sim_pipelines::{SolveSettings, SolverSettings, SortAlgorithm};
 use egui::{Color32, Context, Id, LayerId, Order, Pos2, Slider, Stroke, Window};
 use glam::{Vec2, Vec4};
 
