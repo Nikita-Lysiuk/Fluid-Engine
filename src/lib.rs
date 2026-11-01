@@ -47,3 +47,6 @@ mod density_texture;
 
 #[path = "sim/pipelines.rs"]
 mod sim_pipelines;
+
+#[path = "sim/simulation_resources.rs"]
+mod simulation_resources;

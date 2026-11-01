@@ -5,6 +5,7 @@ use crate::entities::water::WaterRenderer;
 use crate::renderer::pipelines::Pipelines;
 use crate::sim_pipelines::ComputePipelines;
 use crate::simulation::Simulation;
+use crate::simulation_resources::SimulationResources;
 use crate::density_texture::DensityTexturePipeline;
 use crate::renderer::resources::GpuSceneResources;
 use crate::renderer::ui::AppUI;
@@ -18,7 +19,7 @@ use vulkano::command_buffer::allocator::{
 };
 use vulkano::command_buffer::{
     AutoCommandBufferBuilder, ClearColorImageInfo, CommandBufferUsage, CopyBufferInfo,
-    PrimaryAutoCommandBuffer, RenderingAttachmentInfo, RenderingInfo,
+    RenderingAttachmentInfo, RenderingInfo,
 };
 use vulkano::format::ClearColorValue;
 use vulkano::pipeline::Pipeline;
@@ -65,6 +66,7 @@ impl Renderer {
         );
 
         let resources = GpuSceneResources::new(context.memory_allocator().clone(), scene);
+        let simulation_resources = SimulationResources::new(context.memory_allocator().clone(), scene);
 
         let sky_data = SkyData::new(
             500.0,
@@ -81,7 +83,7 @@ impl Renderer {
             ),
         );
 
-        let sort_buffer_size = resources.physics_data.grid_entries.len() as u32;
+        let sort_buffer_size = simulation_resources.physics_data.grid_entries.len() as u32;
         let mut gpu_physics = ComputePipelines::new(
             context.device().clone(),
             context.memory_allocator().clone(),
@@ -90,15 +92,15 @@ impl Renderer {
 
         gpu_physics.prepare(
             descriptor_set_allocator.clone(),
-            &resources.physics_data,
-            &resources.sim_params_buffer,
+            &simulation_resources.physics_data,
+            &simulation_resources.sim_params_buffer,
         );
         let mut density_texture = DensityTexturePipeline::new(context.device().clone());
         density_texture.prepare_with_image(
             descriptor_set_allocator.clone(),
-            &resources.physics_data,
+            &simulation_resources.physics_data,
             resources.density_view.clone(),
-            &resources.sim_params_buffer,
+            &simulation_resources.sim_params_buffer,
         );
 
         let gui = Gui::new(
@@ -118,7 +120,7 @@ impl Renderer {
             pipelines.water_renderer_pipeline.inner.layout().clone(),
             resources.density_view.clone(),
             sky_data.texture_view.clone(),
-            &resources.sim_params_buffer,
+            &simulation_resources.sim_params_buffer,
         );
 
         Self {
@@ -130,7 +132,7 @@ impl Renderer {
             sky_data,
             water_renderer,
             density_texture,
-            simulation: Simulation::new(gpu_physics, command_buffer_allocator.clone(), context.graphics_queue().queue_family_index()),
+            simulation: Simulation::new(gpu_physics, simulation_resources, command_buffer_allocator.clone(), context.graphics_queue().queue_family_index()),
             gui,
             app_ui: AppUI::new(),
         }
@@ -141,7 +143,7 @@ impl Renderer {
         max_dt: f32,
         previous_future: Box<dyn GpuFuture>,
     ) -> Box<dyn GpuFuture> {
-        if let Some(stats) = self.resources.oldest_stats() {
+        if let Some(stats) = self.simulation.resources.oldest_stats(self.resources.current_frame_idx) {
             let stats = SimulationStats::read(&stats);
             self.app_ui.display_max_speed = stats.max_speed;
             self.app_ui.display_density_iters_used = stats.density_iterations;
@@ -162,71 +164,21 @@ impl Renderer {
         scene.sim_params.attractor_radius = scene.attractor.radius;
         self.resources.sync_with_scene(scene);
 
-        let queue = self.context.graphics_queue().clone();
-
-        let mut builder = self.primary_builder(CommandBufferUsage::OneTimeSubmit);
-        builder
-            .update_buffer(self.resources.sim_params_buffer.clone(), Box::new(scene.sim_params))
-            .unwrap();
-        self.simulation.record_init(&mut builder);
-        let mut future = previous_future
-            .then_execute(queue.clone(), builder.build().unwrap())
-            .unwrap()
-            .boxed();
-
-        let wanted = (max_dt / scene.sim_params.dt).ceil() as u32;
-        // A cap of 0 pauses the simulation (used to measure rendering alone).
-        let substeps = wanted.max(1).min(self.app_ui.max_substeps_per_frame);
-        self.app_ui.display_substeps = substeps;
-        // Animate the box in simulated time so it stays in step with the fluid.
-        scene.boundary.update(substeps as f32 * scene.sim_params.dt);
-
-        let substep = self.simulation.substep_command_buffer(solver, self.app_ui.sort_algorithm);
-        for _ in 0..substeps {
-            future = future.then_execute(queue.clone(), substep.clone()).unwrap().boxed();
-        }
-
-        let mut builder = self.primary_builder(CommandBufferUsage::OneTimeSubmit);
-        self.simulation.pipelines.stats.execute(&mut builder);
-        builder
-            .copy_buffer(CopyBufferInfo::buffers(
-                self.resources.physics_data.stats_buffer.clone(),
-                self.resources.stats_readback[self.resources.current_frame_idx].clone(),
-            ))
-            .unwrap();
-
         let next_frame = (self.resources.current_frame_idx + 1) % MAX_FRAMES_IN_FLIGHT;
-
-        builder
-            .copy_buffer(CopyBufferInfo::buffers(
-                self.resources.physics_data.position_a.clone(),
-                self.resources.render_data.position_buffers[next_frame].clone(),
-            ))
-            .unwrap();
-
-        builder
-            .copy_buffer(CopyBufferInfo::buffers(
-                self.resources.physics_data.colors.clone(),
-                self.resources.render_data.color_buffers[next_frame].clone(),
-            ))
-            .unwrap();
-
-        let command_buffer = builder.build().unwrap();
-
+        let position = self.simulation.resources.physics_data.position_a.clone();
+        let colors = self.simulation.resources.physics_data.colors.clone();
+        let render_positions = self.resources.render_data.position_buffers[next_frame].clone();
+        let render_colors = self.resources.render_data.color_buffers[next_frame].clone();
+        let (future, substeps) = self.simulation.step(
+            scene, max_dt, self.app_ui.max_substeps_per_frame, solver, self.app_ui.sort_algorithm,
+            self.resources.current_frame_idx, self.context.graphics_queue().clone(), previous_future,
+            |builder| {
+                builder.copy_buffer(CopyBufferInfo::buffers(position, render_positions)).unwrap();
+                builder.copy_buffer(CopyBufferInfo::buffers(colors, render_colors)).unwrap();
+            },
+        );
+        self.app_ui.display_substeps = substeps;
         future
-            .then_execute(queue, command_buffer)
-            .unwrap()
-            .then_signal_semaphore()
-            .boxed()
-    }
-
-    fn primary_builder(&self, usage: CommandBufferUsage) -> AutoCommandBufferBuilder<PrimaryAutoCommandBuffer> {
-        AutoCommandBufferBuilder::primary(
-            self.command_buffer_allocator.clone(),
-            self.context.graphics_queue().queue_family_index(),
-            usage,
-        )
-        .unwrap()
     }
 
     pub fn update_and_render(&mut self, scene: &mut Scene, safe_dt: f32, fps: u32) {
@@ -333,7 +285,7 @@ impl Renderer {
                     &self.pipelines,
                     self.resources.camera_addr(),
                     self.resources.current_frame_idx,
-                    self.resources.physics_data.count,
+                    self.simulation.resources.physics_data.count,
                 );
             }
         }
